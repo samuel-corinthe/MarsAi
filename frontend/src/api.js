@@ -1,4 +1,5 @@
-const WP_V2 = "http://127.0.0.1:8080/wp-json/wp/v2";
+// frontend/src/api.js
+const WP_V2 = "/wp-json/wp/v2";
 
 export async function getPageBySlug(slug) {
   const res = await fetch(`${WP_V2}/pages?slug=${encodeURIComponent(slug)}`);

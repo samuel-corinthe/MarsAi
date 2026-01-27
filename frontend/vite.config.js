@@ -4,4 +4,14 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    port: 5173,
+    proxy: {
+      "/wp-json": {
+        target: "https://samuel-corinthe.students-laplateforme.io/MarsAi",
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
 });
