@@ -1,4 +1,4 @@
-// frontend/src/api.js
+
 const WP_V2 = "/wp-json/wp/v2";
 
 export async function getPageBySlug(slug) {
