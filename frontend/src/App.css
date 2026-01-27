@@ -1,42 +1,82 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
   text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+/* Layout for mockup: hero, circular panel and news */
+.hero {
+  background: #007bff;
+  color: #fff;
+  position: relative;
+  overflow: visible;
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+.hero .hero-badge {
+  background: #fff;
+  color: #007bff;
+  border-radius: 0 28px 28px 0;
 }
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.hero .hero-content h1 { margin: 0; }
+
+.circle-panel {
+  width: 100%;
+  max-width: none;
+  height: clamp(480px, 70vw, 900px);
+  border-radius: 50%;
+  background: #ffffff;
+  margin-top: calc(-1 * (35vw));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 30px rgba(2,6,23,0.08);
+}
+.circle-inner { width: 86%; height: 86%; overflow: auto; }
+.about-top { display: flex; align-items: center; justify-content: space-between; }
+
+.img-placeholder { background-size: cover; background-position: center; }
+
+.news-section { position: relative; }
+.news-card { align-items: center; }
+
+@media (max-width: 640px) {
+  .circle-panel { width: 100%; height: calc(92vw); margin-top: -44vw; }
+  .circle-inner { padding: 1.25rem; }
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Shapes on hero to match mockup */
+.hero::before {
+  /* top-left white curved shape */
+  content: '';
+  position: absolute;
+  left: -6vw;
+  top: -6vw;
+  width: 32vw;
+  height: 32vw;
+  background: #ffffff;
+  border-bottom-right-radius: 50% 40%;
+  transform: rotate(-10deg);
+  box-shadow: 0 8px 24px rgba(2,6,23,0.06);
+  z-index: 0;
+}
+.hero::after {
+  /* large right-side white curve / cut */
+  content: '';
+  position: absolute;
+  right: -8vw;
+  bottom: -20vw;
+  width: 48vw;
+  height: 48vw;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 10px 30px rgba(2,6,23,0.08);
+  z-index: 0;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
+/* make sure hero content sits above shapes */
+.hero .hero-inner, .hero .hero-content, .hero .hero-badge { position: relative; z-index: 2; }
 
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+@media (max-width: 640px) {
+  .hero::before { left: -12vw; top: -12vw; width: 40vw; height: 40vw; }
+  .hero::after { right: -18vw; bottom: -28vw; width: 70vw; height: 70vw; }
 }
