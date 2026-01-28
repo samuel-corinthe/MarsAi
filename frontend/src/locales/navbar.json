@@ -1,0 +1,40 @@
+{
+  "fr": {
+    "nav": {
+      "home": "Accueil",
+      "about": "À propos",
+      "films": "Films",
+      "agenda": "Agenda",
+      "callForProjects": "Appel à projet",
+      "jury": "Jury",
+      "more": "Plus",
+      "terms": "CGV & CGU",
+      "privacy": "Confidentialité",
+      "legal": "Mentions légales",
+      "examplePage": "Page d'exemple",
+      "contact": "Contact",
+      "language": "Langue",
+      "login": "Connexion",
+      "submitFilm": "Déposer un film"
+    }
+  },
+  "en": {
+    "nav": {
+      "home": "Home",
+      "about": "About",
+      "films": "Films",
+      "agenda": "Schedule",
+      "callForProjects": "Call for Projects",
+      "jury": "Jury",
+      "more": "More",
+      "terms": "Terms & Conditions",
+      "privacy": "Privacy",
+      "legal": "Legal Notice",
+      "examplePage": "Example Page",
+      "contact": "Contact",
+      "language": "Language",
+      "login": "Login",
+      "submitFilm": "Submit a Film"
+    }
+  }
+}
