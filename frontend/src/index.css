@@ -1,9 +1,6 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
-/* =========================
-   Root
-========================= */
 :root{
   --lp-bg: 210 40% 98%;
   --lp-surface: 0 0% 100%;
@@ -11,18 +8,13 @@
   --lp-muted: 215 16% 47%;
   --lp-border: 214 20% 90%;
 
-  /* accent “La Plateforme-like” */
-  --lp-accent: 158 84% 39%; /* emerald-ish */
-  --lp-accent-2: 222 84% 56%; /* blue-ish */
+  --lp-accent: 158 84% 39%; 
+  --lp-accent-2: 222 84% 56%; 
 
   --lp-radius: 1.25rem;
   --lp-shadow: 0 12px 30px rgba(2, 6, 23, .08);
 }
 
-
-/* =========================
-   Base
-========================= */
 @layer components {
   .app-container { @apply mx-auto w-full max-w-6xl px-4; }
   .page { @apply py-10 md:py-12; }
@@ -39,12 +31,11 @@
 
   .card-pad { @apply p-5 md:p-7; }
 
-  /* sections */
   .section { @apply py-10 md:py-14; }
   .section-title { @apply text-2xl md:text-3xl font-semibold tracking-tight; }
   .section-subtitle { @apply mt-2 text-slate-600 md:text-lg; }
 
-  /* buttons modern */
+
   .btn-primary {
     @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition;
     background: hsl(var(--lp-accent));
@@ -57,10 +48,8 @@
     @apply hover:bg-slate-100 text-slate-900;
   }
 
-  /* liens */
   .navlink { @apply text-sm font-medium text-slate-600 hover:text-slate-900 transition; }
 
-  /* WP rich text */
   .richtext { @apply prose prose-slate max-w-none; }
   .richtext :where(a) { color: hsl(var(--lp-accent)); @apply underline underline-offset-4; }
   .richtext :where(h2, h3) { @apply scroll-mt-24; }
