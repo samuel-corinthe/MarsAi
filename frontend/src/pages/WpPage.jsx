@@ -18,7 +18,7 @@ export default function WpPage({ isHome = false }) {
       try {
         const data = await getPageBySlug(slug);
         if (!cancelled) {
-          setPage(data); // data peut être null
+          setPage(data); 
           setLoading(false);
         }
       } catch {
