@@ -1,61 +1,77 @@
 h1 {
   text-align: center;
 }
-/* On utilise .wpcf7 qui est la classe parente générée par le plugin */
-.wpcf7 {
-  background: #ffffff;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  max-width: 600px;
-  margin: 2rem auto; /* Centre le formulaire */
-  font-family: sans-serif;
+/* --- Style du Formulaire Brevo avec Bouton Bleu --- */
+
+/* Conteneur de chaque bloc de champ */
+.richtext div[class*="sib-"] {
+  margin-bottom: 20px;
+  max-width: 500px;
 }
 
-/* On ne stylise que les paragraphes à l'intérieur du formulaire */
-.wpcf7 p {
-  margin-bottom: 1.2rem;
-}
-
-/* Les champs de saisie */
-.wpcf7 input[type="text"],
-.wpcf7 input[type="email"],
-.wpcf7 textarea {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: #fafafa;
-  transition: border-color 0.3s;
-}
-
-.wpcf7 input:focus,
-.wpcf7 textarea:focus {
-  border-color: #3b82f6;
-  outline: none;
-  background: #fff;
-}
-
-/* Le bouton spécifique de CF7 */
-.wpcf7-submit {
-  background: #3b82f6;
-  color: white;
-  padding: 12px 25px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-  width: 100%;
-}
-
-.wpcf7-submit:hover {
-  background: #2563eb;
-}
-
-/* Masquer les labels vides ou ajuster les erreurs sans toucher aux autres pages */
-.wpcf7-not-valid-tip {
-  color: #d93025;
-  font-size: 0.85em;
+/* Labels */
+.richtext .sib-label-area label {
   display: block;
-  margin-top: 5px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+/* Inputs et Textarea */
+.richtext input[class*="sib-"],
+.richtext textarea[class*="sib-"] {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  background-color: #f8fafc;
+  transition: all 0.2s ease-in-out;
+  box-sizing: border-box;
+}
+
+.richtext input:focus,
+.richtext textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+/* --- LE BOUTON BLEU --- */
+.richtext .sib-default-btn {
+  /* Couleur bleue forcée dès le départ */
+  background-color: #3b82f6 !important;
+  color: #ffffff !important;
+
+  /* Structure */
+  width: 100%;
+  max-width: 500px;
+  padding: 14px 28px;
+  font-weight: 700;
+  font-size: 1rem;
+  text-align: center;
+
+  /* Bordures et coins */
+  border: none;
+  border-radius: 8px;
+
+  /* Curseur et transition */
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    transform 0.1s ease;
+  display: block;
+}
+
+/* Effet au survol (un bleu un peu plus foncé) */
+.richtext .sib-default-btn:hover {
+  background-color: #2563eb !important;
+  transform: translateY(-1px);
+}
+
+/* Effet au clic */
+.richtext .sib-default-btn:active {
+  transform: translateY(0);
 }
