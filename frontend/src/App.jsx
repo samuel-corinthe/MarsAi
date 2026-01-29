@@ -1,6 +1,8 @@
 import { Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
 import Home from "./pages/Home";
+import React from "react";
+import About from "./pages/About";
 import WpPage from "./pages/WpPage";
 import NotFound from "./pages/NotFound";
 
@@ -15,7 +17,10 @@ export default function App() {
 
         {/* Toutes les pages WordPress (par slug) */}
         <Route path="/:slug" element={<WpPage />} />
-
+ 
+        {/* About = React */}
+          <Route path="/about" element={<About />} />
+          
         {/* 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>

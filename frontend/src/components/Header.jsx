@@ -1,7 +1,7 @@
 import { Link, NavLink } from "react-router-dom";
 
 const NAV_ITEMS = [
-  { label: "À propos", to: "/a-propos" },
+  { label: "About", to: "/about" },
   { label: "Agenda", to: "/agenda" },
   { label: "Appel à projet", to: "/appel-a-projet" },
   { label: "CGV & CGU", to: "/cgv-cgu" },
