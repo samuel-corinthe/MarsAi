@@ -1,5 +1,7 @@
 import { Routes, Route } from "react-router-dom";
-import Navbar from './components/Navbar';
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+
 import Home from "./pages/Home";
 import WpPage from "./pages/WpPage";
 import NotFound from "./pages/NotFound";
@@ -16,6 +18,7 @@ export default function App() {
         {/* 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <Footer />
     </>
   );
 }
