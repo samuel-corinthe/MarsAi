@@ -13,13 +13,12 @@ export default function WpPage({ isHome = false }) {
 
   useEffect(() => {
     let cancelled = false;
-
     (async () => {
       setLoading(true);
       try {
         const data = await getPageBySlug(slug);
         if (!cancelled) {
-          setPage(data); // data peut être null
+          setPage(data);
           setLoading(false);
         }
       } catch {
@@ -29,12 +28,18 @@ export default function WpPage({ isHome = false }) {
         }
       }
     })();
-
     return () => (cancelled = true);
   }, [slug]);
 
-  if (loading) return <div className="app-container page">Chargement…</div>;
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const data = new FormData(e.target);
+    console.log("Données Front envoyées :", Object.fromEntries(data));
+    alert("Message reçu ! (Simulation Front)");
+    e.target.reset();
+  };
 
+  if (loading) return <div className="app-container page">Chargement…</div>;
   if (!page) return <NotFound />;
 
   return (
@@ -44,10 +49,61 @@ export default function WpPage({ isHome = false }) {
           className="h1"
           dangerouslySetInnerHTML={{ __html: page.title.rendered }}
         />
+
         <div
           className="richtext mt-6"
           dangerouslySetInnerHTML={{ __html: page.content.rendered }}
         />
+
+        {slug === "contact" && (
+          <form onSubmit={handleSubmit} className="contact-form">
+            <div className="form-group">
+              <label htmlFor="name">Nom complet</label>
+              <input
+                type="text"
+                id="name"
+                name="NAME"
+                className="form-input"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="email">Adresse e-mail</label>
+              <input
+                type="email"
+                id="email"
+                name="EMAIL"
+                className="form-input"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="subject">Objet </label>
+              <input
+                type="text"
+                id="subject"
+                name="SUBJECT"
+                className="form-input"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="message">Votre message</label>
+              <textarea
+                id="message"
+                name="MESSAGE"
+                className="form-textarea"
+                rows="5"
+                required
+              ></textarea>
+            </div>
+
+            <button type="submit" className="btn-submit">
+              Envoyer le message
+            </button>
+          </form>
+        )}
       </div>
     </main>
   );
