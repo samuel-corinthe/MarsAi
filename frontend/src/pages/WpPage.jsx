@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getPageBySlug, getPosts } from "../api"; // Import des deux fonctions
+import { getPageBySlug, getAgendaPosts } from "../api";
 import NotFound from "./NotFound";
 import "./Agenda.css";
 
@@ -10,8 +10,6 @@ export default function WpPage({ isHome = false }) {
 
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // État pour stocker les articles transformés en événements
   const [agendaItems, setAgendaItems] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -19,35 +17,60 @@ export default function WpPage({ isHome = false }) {
     (async () => {
       setLoading(true);
       try {
-        // 1. Récupérer la page courante
+        // 1. Récupération de la page principale (ex: "agenda")
         const pageData = await getPageBySlug(slug);
-        setPage(pageData);
 
-        // 2. Si on est sur l'agenda, on récupère les articles (posts)
-        if (slug === "agenda") {
-          const posts = await getPosts();
+        if (!pageData) {
+          setPage(null);
+        } else {
+          setPage(pageData);
 
-          // Transformation des articles WordPress en format "Evenement"
-          const formattedEvents = posts.map((post) => ({
-            id: post.id,
-            // post.date est au format "2026-01-30T10:00:00", on garde "2026-01-30"
-            date: post.date.split("T")[0],
-            titre: post.title.rendered,
-            heure: new Date(post.date).toLocaleTimeString("fr-FR", {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-            lieu: "Voir l'article", // Par défaut car WP n'a pas de champ "lieu"
-            link: post.link,
-          }));
+          // 2. Si on est sur la page agenda, on récupère les articles
+          if (slug === "agenda") {
+            try {
+              const allPosts = await getAgendaPosts();
 
-          setAgendaItems(formattedEvents);
+              // LOG de debug : pour voir ce que l'API renvoie réellement
+              console.log("Articles bruts reçus de WP :", allPosts);
+
+              const ID_AGENDA = 14; // Ton ID de catégorie
+
+              if (allPosts && Array.isArray(allPosts)) {
+                const formattedEvents = allPosts
+                  .filter(
+                    (post) =>
+                      post.categories && post.categories.includes(ID_AGENDA),
+                  )
+                  .map((post) => ({
+                    id: post.id,
+                    // post.date format: "2026-06-13T10:00:00" -> "2026-06-13"
+                    date: post.date.split("T")[0],
+                    titre: post.title.rendered,
+                    heure: new Date(post.date).toLocaleTimeString("fr-FR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    }),
+                    lieu: "Marseille",
+                    link: post.link,
+                  }));
+
+                console.log(
+                  "Événements filtrés pour le calendrier :",
+                  formattedEvents,
+                );
+                setAgendaItems(formattedEvents);
+              }
+            } catch (postError) {
+              console.error("Erreur articles agenda:", postError);
+            }
+          }
         }
       } catch (error) {
-        console.error("Erreur API:", error);
+        console.error("Erreur API Globale:", error);
         setPage(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     })();
   }, [slug]);
 
@@ -59,6 +82,7 @@ export default function WpPage({ isHome = false }) {
   const currentMonth = selectedDate.getMonth();
 
   const days = [];
+  // Ajustement pour commencer par Lundi
   const startOffset =
     firstDayOfMonth(currentYear, currentMonth) === 0
       ? 6
@@ -83,7 +107,7 @@ export default function WpPage({ isHome = false }) {
     return agendaItems.some((item) => item.date === dateStr);
   };
 
-  // Filtrage des événements pour le jour cliqué
+  // Filtrage des événements pour la date sélectionnée (cliquée)
   const displayDateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
   const activeEvents = agendaItems.filter(
     (item) => item.date === displayDateStr,
@@ -112,7 +136,7 @@ export default function WpPage({ isHome = false }) {
                   {" "}
                   &lt;{" "}
                 </button>
-                <h3>
+                <h3 className="capitalize">
                   {selectedDate.toLocaleDateString("fr-FR", {
                     month: "long",
                     year: "numeric",
@@ -152,7 +176,7 @@ export default function WpPage({ isHome = false }) {
 
             <div className="events-sidebar">
               <h3>
-                Événements du {selectedDate.getDate()}{" "}
+                {selectedDate.getDate()}{" "}
                 {selectedDate.toLocaleDateString("fr-FR", { month: "long" })}
               </h3>
               {activeEvents.length > 0 ? (
@@ -161,7 +185,12 @@ export default function WpPage({ isHome = false }) {
                     <strong dangerouslySetInnerHTML={{ __html: ev.titre }} />
                     <p>🕒 {ev.heure}</p>
                     <p>📍 {ev.lieu}</p>
-                    <a href={ev.link} className="event-link">
+                    <a
+                      href={ev.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="event-link"
+                    >
                       Lire l'article
                     </a>
                   </div>

@@ -8,9 +8,9 @@ export async function getPageBySlug(slug) {
   return data[0] || null;
 }
 
-// Nouvelle fonction pour récupérer les articles
-export async function getPosts() {
-  const res = await fetch(`${WP_V2}/posts?per_page=100`);
+export async function getAgendaPosts() {
+  const res = await fetch("/wp-json/wp/v2/posts?per_page=100");
+
   if (!res.ok) throw new Error(`WP error ${res.status}`);
   return await res.json();
 }
