@@ -7,3 +7,10 @@ export async function getPageBySlug(slug) {
   const data = await res.json();
   return data[0] || null;
 }
+
+// Nouvelle fonction pour récupérer les articles
+export async function getPosts() {
+  const res = await fetch(`${WP_V2}/posts?per_page=100`);
+  if (!res.ok) throw new Error(`WP error ${res.status}`);
+  return await res.json();
+}

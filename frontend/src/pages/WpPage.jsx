@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getPageBySlug } from "../api";
+import { getPageBySlug, getPosts } from "../api"; // Import des deux fonctions
 import NotFound from "./NotFound";
 import "./Agenda.css";
 
@@ -11,34 +11,40 @@ export default function WpPage({ isHome = false }) {
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // État pour la date sélectionnée (par défaut aujourd'hui)
+  // État pour stocker les articles transformés en événements
+  const [agendaItems, setAgendaItems] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
-
-  // Tes données d'événements
-  const agendaItems = [
-    {
-      id: 1,
-      date: "2026-01-29",
-      titre: "Atelier IA",
-      heure: "14:00",
-      lieu: "Marseille",
-    },
-    {
-      id: 2,
-      date: "2026-02-14",
-      titre: "Meetup Tech",
-      heure: "10:00",
-      lieu: "En ligne",
-    },
-  ];
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       try {
-        const data = await getPageBySlug(slug);
-        setPage(data);
-      } catch {
+        // 1. Récupérer la page courante
+        const pageData = await getPageBySlug(slug);
+        setPage(pageData);
+
+        // 2. Si on est sur l'agenda, on récupère les articles (posts)
+        if (slug === "agenda") {
+          const posts = await getPosts();
+
+          // Transformation des articles WordPress en format "Evenement"
+          const formattedEvents = posts.map((post) => ({
+            id: post.id,
+            // post.date est au format "2026-01-30T10:00:00", on garde "2026-01-30"
+            date: post.date.split("T")[0],
+            titre: post.title.rendered,
+            heure: new Date(post.date).toLocaleTimeString("fr-FR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            lieu: "Voir l'article", // Par défaut car WP n'a pas de champ "lieu"
+            link: post.link,
+          }));
+
+          setAgendaItems(formattedEvents);
+        }
+      } catch (error) {
+        console.error("Erreur API:", error);
         setPage(null);
       }
       setLoading(false);
@@ -53,13 +59,12 @@ export default function WpPage({ isHome = false }) {
   const currentMonth = selectedDate.getMonth();
 
   const days = [];
-  // On ajuste pour que la semaine commence le Lundi (0=Dimanche en JS)
   const startOffset =
     firstDayOfMonth(currentYear, currentMonth) === 0
       ? 6
       : firstDayOfMonth(currentYear, currentMonth) - 1;
 
-  for (let i = 0; i < startOffset; i++) days.push(null); // Cases vides
+  for (let i = 0; i < startOffset; i++) days.push(null);
   for (let d = 1; d <= daysInMonth(currentYear, currentMonth); d++)
     days.push(d);
 
@@ -104,7 +109,8 @@ export default function WpPage({ isHome = false }) {
                     setSelectedDate(new Date(currentYear, currentMonth - 1, 1))
                   }
                 >
-                  &lt;
+                  {" "}
+                  &lt;{" "}
                 </button>
                 <h3>
                   {selectedDate.toLocaleDateString("fr-FR", {
@@ -117,7 +123,8 @@ export default function WpPage({ isHome = false }) {
                     setSelectedDate(new Date(currentYear, currentMonth + 1, 1))
                   }
                 >
-                  &gt;
+                  {" "}
+                  &gt;{" "}
                 </button>
               </div>
 
@@ -151,10 +158,12 @@ export default function WpPage({ isHome = false }) {
               {activeEvents.length > 0 ? (
                 activeEvents.map((ev) => (
                   <div key={ev.id} className="mini-event-card">
-                    <strong>
-                      {ev.heure} - {ev.titre}
-                    </strong>
+                    <strong dangerouslySetInnerHTML={{ __html: ev.titre }} />
+                    <p>🕒 {ev.heure}</p>
                     <p>📍 {ev.lieu}</p>
+                    <a href={ev.link} className="event-link">
+                      Lire l'article
+                    </a>
                   </div>
                 ))
               ) : (
