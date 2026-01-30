@@ -33,7 +33,7 @@ export default function WpPage({ isHome = false }) {
               // LOG de debug : pour voir ce que l'API renvoie réellement
               console.log("Articles bruts reçus de WP :", allPosts);
 
-              const ID_AGENDA = 14; // Ton ID de catégorie
+              const ID_AGENDA = 14; //  ID de catégorie
 
               if (allPosts && Array.isArray(allPosts)) {
                 const formattedEvents = allPosts
