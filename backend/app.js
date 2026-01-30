@@ -58,7 +58,7 @@ app.post("/send-email", async (req, res) => {
       from: `"${name}" <namasse.medamine@gmail.com>`,
       replyTo: email, // L'adresse du client pour pouvoir lui répondre
       to: "namasse.medamine@gmail.com",
-      subject: `[Contact Form] ${subject} - de ${name}`,
+      subject: `${subject} `,
       text: `Nouveau message reçu de : ${name} (${email})\n\nMessage :\n${message}`,
     };
 
