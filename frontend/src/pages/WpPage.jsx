@@ -10,6 +10,7 @@ export default function WpPage({ isHome = false }) {
 
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false); // État pour le chargement
 
   useEffect(() => {
     let cancelled = false;
@@ -31,12 +32,33 @@ export default function WpPage({ isHome = false }) {
     return () => (cancelled = true);
   }, [slug]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const data = new FormData(e.target);
-    console.log("Données Front envoyées :", Object.fromEntries(data));
-    alert("Message reçu ! (Simulation Front)");
-    e.target.reset();
+    setIsSending(true);
+
+    const formData = new FormData(e.target);
+    const dataToSend = Object.fromEntries(formData);
+
+    try {
+      const response = await fetch("http://localhost:3000/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dataToSend),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert("Message envoyé avec succès !");
+        e.target.reset();
+      } else {
+        alert("Erreur : " + result.message);
+      }
+    } catch (error) {
+      alert("Impossible de contacter le serveur.");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   if (loading) return <div className="app-container page">Chargement…</div>;
@@ -49,7 +71,6 @@ export default function WpPage({ isHome = false }) {
           className="h1"
           dangerouslySetInnerHTML={{ __html: page.title.rendered }}
         />
-
         <div
           className="richtext mt-6"
           dangerouslySetInnerHTML={{ __html: page.content.rendered }}
@@ -62,7 +83,7 @@ export default function WpPage({ isHome = false }) {
               <input
                 type="text"
                 id="name"
-                name="NAME"
+                name="name"
                 className="form-input"
                 required
               />
@@ -73,34 +94,36 @@ export default function WpPage({ isHome = false }) {
               <input
                 type="email"
                 id="email"
-                name="EMAIL"
+                name="email"
                 className="form-input"
                 required
               />
             </div>
+
             <div className="form-group">
-              <label htmlFor="subject">Objet </label>
+              <label htmlFor="subject">Objet</label>
               <input
                 type="text"
                 id="subject"
-                name="SUBJECT"
+                name="subject"
                 className="form-input"
                 required
               />
             </div>
+
             <div className="form-group">
               <label htmlFor="message">Votre message</label>
               <textarea
                 id="message"
-                name="MESSAGE"
+                name="message"
                 className="form-textarea"
                 rows="5"
                 required
               ></textarea>
             </div>
 
-            <button type="submit" className="btn-submit">
-              Envoyer le message
+            <button type="submit" className="btn-submit" disabled={isSending}>
+              {isSending ? "Envoi en cours..." : "Envoyer le message"}
             </button>
           </form>
         )}
