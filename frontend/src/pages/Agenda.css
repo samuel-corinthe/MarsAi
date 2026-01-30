@@ -160,7 +160,27 @@
   border-radius: 8px;
   text-align: center;
 }
+.category-badges {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 8px;
+}
 
+.badge {
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.mini-event-card {
+  border-left: 4px solid #eee; /* Bordure discrète */
+  padding-left: 15px;
+  margin-bottom: 20px;
+  position: relative;
+}
 /* Responsive mobile */
 @media (max-width: 800px) {
   .agenda-custom-wrapper {

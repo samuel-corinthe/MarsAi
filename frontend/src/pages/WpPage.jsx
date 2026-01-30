@@ -11,9 +11,18 @@ export default function WpPage({ isHome = false }) {
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [agendaItems, setAgendaItems] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(new Date(2026, 5, 8));
 
-  // On affiche la semaine du 13 Juin 2026
-  const [selectedDate, setSelectedDate] = useState(new Date(2026, 5, 13));
+  // Fonction pour définir les couleurs des sous-catégories
+  const getCategoryColor = (catId) => {
+    const colors = {
+      15: "#e74c3c", // Exemple: Rouge pour "Concerts"
+      16: "#3498db", // Exemple: Bleu pour "Conférences"
+      17: "#f1c40f", // Exemple: Jaune pour "Ateliers"
+      default: "#2ecc71", // Vert par défaut
+    };
+    return colors[catId] || colors.default;
+  };
 
   useEffect(() => {
     (async () => {
@@ -27,31 +36,34 @@ export default function WpPage({ isHome = false }) {
 
           if (slug === "agenda") {
             try {
-              const allPosts = await getAgendaPosts();
-              const ID_AGENDA = 14;
+              // On utilise une URL qui inclut les détails des catégories (embed)
+              const res = await fetch(
+                "/wp-json/wp/v2/posts?categories=14&_embed&per_page=100",
+              );
+              const allPosts = await res.json();
 
               if (allPosts && Array.isArray(allPosts)) {
-                const formattedEvents = allPosts
-                  .filter(
-                    (post) =>
-                      post.categories && post.categories.includes(ID_AGENDA),
-                  )
-                  .map((post) => {
-                    // RÉPARATION DATE : On prend la chaîne brute YYYY-MM-DD sans conversion UTC
-                    const datePart = post.date.split("T")[0];
+                const formattedEvents = allPosts.map((post) => {
+                  const datePart = post.date.split("T")[0];
 
-                    return {
-                      id: post.id,
-                      date: datePart,
-                      titre: post.title.rendered,
-                      heure: new Date(post.date).toLocaleTimeString("fr-FR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      }),
-                      lieu: "Marseille",
-                      link: post.link,
-                    };
-                  });
+                  // On récupère les noms des catégories via _embedded
+                  const categoriesData = post._embedded?.["wp:term"]?.[0] || [];
+                  // On filtre pour ne pas afficher la catégorie parente "Agenda" (ID 14)
+                  const subCats = categoriesData.filter((cat) => cat.id !== 14);
+
+                  return {
+                    id: post.id,
+                    date: datePart,
+                    titre: post.title.rendered,
+                    heure: new Date(post.date).toLocaleTimeString("fr-FR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    }),
+                    lieu: "Marseille",
+                    link: post.link,
+                    subCategories: subCats, // On stocke les sous-catégories ici
+                  };
+                });
                 setAgendaItems(formattedEvents);
               }
             } catch (postError) {
@@ -68,8 +80,7 @@ export default function WpPage({ isHome = false }) {
     })();
   }, [slug]);
 
-  // --- LOGIQUE AFFICHAGE SEMAINE (13 JUIN 2026) ---
-
+  // --- LOGIQUE SEMAINE ---
   const weekStart = new Date(2026, 5, 8);
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
@@ -77,7 +88,6 @@ export default function WpPage({ isHome = false }) {
     return d;
   });
 
-  // Fonction de comparaison de date sécurisée (format YYYY-MM-DD local)
   const getLocalDateString = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -85,10 +95,8 @@ export default function WpPage({ isHome = false }) {
     return `${year}-${month}-${day}`;
   };
 
-  const hasEvent = (date) => {
-    return agendaItems.some((item) => item.date === getLocalDateString(date));
-  };
-
+  const hasEvent = (date) =>
+    agendaItems.some((item) => item.date === getLocalDateString(date));
   const activeEvents = agendaItems.filter(
     (item) => item.date === getLocalDateString(selectedDate),
   );
@@ -106,29 +114,23 @@ export default function WpPage({ isHome = false }) {
 
         {slug === "agenda" ? (
           <div className="agenda-custom-wrapper mt-8">
+            {/* Calendrier Semaine */}
             <div className="calendar-box week-view">
-              <div className="calendar-header">
-                <h3>Événements - Juin 2026</h3>
-              </div>
-
               <div className="calendar-grid week-grid">
                 {weekDays.map((date, idx) => {
                   const isSelected =
                     getLocalDateString(selectedDate) ===
                     getLocalDateString(date);
-                  const dayLabel = date.toLocaleDateString("fr-FR", {
-                    weekday: "short",
-                  });
-                  const dayNum = date.getDate();
-
                   return (
                     <div
                       key={idx}
                       className={`day-cell ${isSelected ? "selected" : ""}`}
                       onClick={() => setSelectedDate(date)}
                     >
-                      <span className="day-name">{dayLabel}</span>
-                      <span className="day-number">{dayNum}</span>
+                      <span className="day-name">
+                        {date.toLocaleDateString("fr-FR", { weekday: "short" })}
+                      </span>
+                      <span className="day-number">{date.getDate()}</span>
                       {hasEvent(date) && <span className="event-dot"></span>}
                     </div>
                   );
@@ -136,6 +138,7 @@ export default function WpPage({ isHome = false }) {
               </div>
             </div>
 
+            {/* Liste des Événements */}
             <div className="events-sidebar">
               <h3>
                 {selectedDate.toLocaleDateString("fr-FR", {
@@ -147,9 +150,23 @@ export default function WpPage({ isHome = false }) {
               {activeEvents.length > 0 ? (
                 activeEvents.map((ev) => (
                   <div key={ev.id} className="mini-event-card">
+                    {/* Affichage des Badges de Catégories */}
+                    <div className="category-badges">
+                      {ev.subCategories.map((cat) => (
+                        <span
+                          key={cat.id}
+                          className="badge"
+                          style={{ backgroundColor: getCategoryColor(cat.id) }}
+                        >
+                          {cat.name}
+                        </span>
+                      ))}
+                    </div>
+
                     <strong dangerouslySetInnerHTML={{ __html: ev.titre }} />
-                    <p>🕒 {ev.heure}</p>
-                    <p>📍 {ev.lieu}</p>
+                    <p>
+                      🕒 {ev.heure} | 📍 {ev.lieu}
+                    </p>
                     <a
                       href={ev.link}
                       target="_blank"
@@ -161,7 +178,7 @@ export default function WpPage({ isHome = false }) {
                   </div>
                 ))
               ) : (
-                <p className="no-data">Rien de prévu ce jour.</p>
+                <p className="no-data">Aucun événement ce jour.</p>
               )}
             </div>
           </div>
