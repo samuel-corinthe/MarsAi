@@ -19,8 +19,8 @@ app.use(express.json());
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.EMAIL_USER, // Ton adresse @laplateforme.io
-    pass: process.env.MAIL_PASS, // TON MOT DE PASSE D'APPLICATION (16 caractères)
+    user: process.env.EMAIL_USER,
+    pass: process.env.MAIL_PASS,
   },
 });
 
@@ -52,8 +52,8 @@ app.post("/send-email", async (req, res) => {
 
     // 2. Préparation de l'email
     const mailOptions = {
-      from: process.env.EMAIL_USER, // Il est préférable de mettre ton propre email ici pour éviter d'être bloqué par le spam
-      replyTo: email, // L'adresse de l'utilisateur pour pouvoir lui répondre directement
+      from: process.env.EMAIL_USER,
+      replyTo: email,
       to: process.env.EMAIL_USER,
       subject: `Nouveau message de ${name} : ${subject}`,
       text: `Nom: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
@@ -67,16 +67,13 @@ app.post("/send-email", async (req, res) => {
       .json({ status: "success", message: "Email envoyé avec succès !" });
   } catch (error) {
     console.error("Erreur d'envoi :", error);
-    res
-      .status(500)
-      .json({
-        status: "error",
-        message: "Le serveur de mail a rencontré un problème.",
-      });
+    res.status(500).json({
+      status: "error",
+      message: "Le serveur de mail a rencontré un problème.",
+    });
   }
 });
 
-// N'oublie pas d'ajouter l'écoute du port si ce n'est pas fait ailleurs
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`);
