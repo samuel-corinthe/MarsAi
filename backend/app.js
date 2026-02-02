@@ -39,10 +39,14 @@ app.post("/send-email", async (req, res) => {
 
   try {
     // 1. Validation de l'email (Format, fautes de frappe et jetable)
-    // On laisse validateSMTP à false car Brevo gère déjà la délivrabilité
+
     const validateResult = await validate({
       email: email,
-      validateSMTP: false,
+      validateRegex: true, // Vérifie le format @
+      validateMX: true, // Vérifie que le domaine existe
+      validateTypo: false, // DESACTIVÉ : Empêche de bloquer laplateforme.io
+      validateDisposable: true, // Bloque les emails jetables
+      validateSMTP: false, // Désactivé car instable en local/cloud
     });
 
     if (!validateResult.valid) {
