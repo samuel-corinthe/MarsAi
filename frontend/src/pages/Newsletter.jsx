@@ -1,28 +1,28 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 const Newsletter = () => {
   const [formData, setFormData] = useState({
-    firstName: '',
-    email: '',
-    preferences: []
+    firstName: "",
+    email: "",
+    preferences: [],
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleCheckboxChange = (preference) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       preferences: prev.preferences.includes(preference)
-        ? prev.preferences.filter(p => p !== preference)
-        : [...prev.preferences, preference]
+        ? prev.preferences.filter((p) => p !== preference)
+        : [...prev.preferences, preference],
     }));
   };
 
@@ -30,63 +30,110 @@ const Newsletter = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simuler un appel API
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      const response = await fetch(
+        "http://localhost:3000/subscribe-newsletter",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData), // Envoie firstName, email et preferences
+        },
+      );
 
-    setIsLoading(false);
-    setIsSubmitted(true);
+      const data = await response.json();
 
-    // Reset après 5 secondes
-    setTimeout(() => {
-      setIsSubmitted(false);
-      setFormData({ firstName: '', email: '', preferences: [] });
-    }, 5000);
+      if (response.ok) {
+        setIsSubmitted(true);
+        // Reset après 5 sec
+        setTimeout(() => {
+          setIsSubmitted(false);
+          setFormData({ firstName: "", email: "", preferences: [] });
+        }, 5000);
+      } else {
+        alert(data.message);
+      }
+    } catch (error) {
+      alert("Le serveur ne répond pas.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Stats de la newsletter
   const stats = [
-    { number: '15K+', label: 'Abonnés' },
-    { number: '2x/mois', label: 'Fréquence' },
-    { number: '95%', label: "Taux d'ouverture" },
+    { number: "15K+", label: "Abonnés" },
+    { number: "2x/mois", label: "Fréquence" },
+    { number: "95%", label: "Taux d'ouverture" },
   ];
 
   // Avantages de s'inscrire
   const benefits = [
     {
       icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        <svg
+          className="w-8 h-8"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M13 10V3L4 14h7v7l9-11h-7z"
+          />
         </svg>
       ),
-      title: 'En avant-première',
-      description: 'Soyez les premiers informés des annonces et sélections officielles'
+      title: "En avant-première",
+      description:
+        "Soyez les premiers informés des annonces et sélections officielles",
     },
     {
       icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+        <svg
+          className="w-8 h-8"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+          />
         </svg>
       ),
-      title: 'Offres exclusives',
-      description: 'Accédez à des réductions sur les billets et pass VIP'
+      title: "Offres exclusives",
+      description: "Accédez à des réductions sur les billets et pass VIP",
     },
     {
       icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+        <svg
+          className="w-8 h-8"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+          />
         </svg>
       ),
-      title: 'Contenus exclusifs',
-      description: 'Interviews, making-of et coulisses du festival'
-    }
+      title: "Contenus exclusifs",
+      description: "Interviews, making-of et coulisses du festival",
+    },
   ];
 
   // Préférences de contenu
   const contentPreferences = [
-    { id: 'news', label: 'Actualités du festival' },
-    { id: 'films', label: 'Nouveaux films sélectionnés' },
-    { id: 'events', label: 'Événements et projections' },
-    { id: 'partners', label: 'Offres partenaires' }
+    { id: "news", label: "Actualités du festival" },
+    { id: "films", label: "Nouveaux films sélectionnés" },
+    { id: "events", label: "Événements et projections" },
+    { id: "partners", label: "Offres partenaires" },
   ];
 
   return (
@@ -95,7 +142,7 @@ const Newsletter = () => {
       <section className="relative pt-32 pb-20 px-4 overflow-hidden">
         {/* Gradient Background */}
         <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/10 via-transparent to-transparent"></div>
-        
+
         <div className="max-w-4xl mx-auto relative z-10">
           <div className="text-center space-y-6">
             {/* Badge */}
@@ -108,7 +155,7 @@ const Newsletter = () => {
             </div>
 
             {/* Title */}
-            <h1 
+            <h1
               className="text-4xl md:text-6xl lg:text-7xl font-black text-white leading-tight"
               style={{ fontFamily: "'Bebas Neue', sans-serif" }}
             >
@@ -120,11 +167,12 @@ const Newsletter = () => {
             </h1>
 
             {/* Description */}
-            <p 
+            <p
               className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed"
               style={{ fontFamily: "'Inter', sans-serif" }}
             >
-              Recevez les dernières actualités, les films sélectionnés et les offres exclusives du festival directement dans votre boîte mail.
+              Recevez les dernières actualités, les films sélectionnés et les
+              offres exclusives du festival directement dans votre boîte mail.
             </p>
           </div>
         </div>
@@ -140,13 +188,13 @@ const Newsletter = () => {
           <div className="grid grid-cols-3 gap-4 md:gap-8">
             {stats.map((stat, index) => (
               <div key={index} className="text-center space-y-2">
-                <div 
+                <div
                   className="text-3xl md:text-5xl font-black text-transparent bg-gradient-to-r from-cyan-400 to-pink-500 bg-clip-text"
                   style={{ fontFamily: "'Bebas Neue', sans-serif" }}
                 >
                   {stat.number}
                 </div>
-                <div 
+                <div
                   className="text-gray-400 text-xs md:text-base"
                   style={{ fontFamily: "'Inter', sans-serif" }}
                 >
@@ -164,13 +212,13 @@ const Newsletter = () => {
           {!isSubmitted ? (
             <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-3xl p-6 md:p-12 shadow-2xl">
               <div className="text-center mb-8">
-                <h2 
+                <h2
                   className="text-3xl md:text-4xl font-black text-white mb-3"
                   style={{ fontFamily: "'Bebas Neue', sans-serif" }}
                 >
                   Inscrivez-vous
                 </h2>
-                <p 
+                <p
                   className="text-gray-400"
                   style={{ fontFamily: "'Inter', sans-serif" }}
                 >
@@ -181,8 +229,8 @@ const Newsletter = () => {
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Prénom */}
                 <div>
-                  <label 
-                    htmlFor="firstName" 
+                  <label
+                    htmlFor="firstName"
                     className="block text-sm font-medium text-gray-300 mb-2"
                     style={{ fontFamily: "'Inter', sans-serif" }}
                   >
@@ -203,8 +251,8 @@ const Newsletter = () => {
 
                 {/* Email */}
                 <div>
-                  <label 
-                    htmlFor="email" 
+                  <label
+                    htmlFor="email"
                     className="block text-sm font-medium text-gray-300 mb-2"
                     style={{ fontFamily: "'Inter', sans-serif" }}
                   >
@@ -225,7 +273,7 @@ const Newsletter = () => {
 
                 {/* Préférences */}
                 <div>
-                  <label 
+                  <label
                     className="block text-sm font-medium text-gray-300 mb-3"
                     style={{ fontFamily: "'Inter', sans-serif" }}
                   >
@@ -233,7 +281,7 @@ const Newsletter = () => {
                   </label>
                   <div className="space-y-3">
                     {contentPreferences.map((pref) => (
-                      <label 
+                      <label
                         key={pref.id}
                         className="flex items-center space-x-3 cursor-pointer group"
                       >
@@ -243,7 +291,7 @@ const Newsletter = () => {
                           onChange={() => handleCheckboxChange(pref.id)}
                           className="w-5 h-5 rounded border-gray-700 text-cyan-400 focus:ring-2 focus:ring-cyan-400/50 focus:ring-offset-0 bg-gray-900 cursor-pointer"
                         />
-                        <span 
+                        <span
                           className="text-gray-400 group-hover:text-gray-300 transition-colors"
                           style={{ fontFamily: "'Inter', sans-serif" }}
                         >
@@ -255,10 +303,16 @@ const Newsletter = () => {
                 </div>
 
                 {/* RGPD */}
-                <p className="text-xs text-gray-500 leading-relaxed" style={{ fontFamily: "'Inter', sans-serif" }}>
-                  En vous inscrivant, vous acceptez de recevoir des emails de marsAI Festival. 
-                  Vous pouvez vous désabonner à tout moment. 
-                  <a href="/politique-de-confidentialite" className="text-cyan-400 hover:underline ml-1">
+                <p
+                  className="text-xs text-gray-500 leading-relaxed"
+                  style={{ fontFamily: "'Inter', sans-serif" }}
+                >
+                  En vous inscrivant, vous acceptez de recevoir des emails de
+                  marsAI Festival. Vous pouvez vous désabonner à tout moment.
+                  <a
+                    href="/politique-de-confidentialite"
+                    className="text-cyan-400 hover:underline ml-1"
+                  >
                     Politique de confidentialité
                   </a>
                 </p>
@@ -273,16 +327,41 @@ const Newsletter = () => {
                   <span className="relative z-10 flex items-center justify-center space-x-2">
                     {isLoading ? (
                       <>
-                        <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <svg
+                          className="animate-spin w-5 h-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
                         </svg>
                         <span>Inscription en cours...</span>
                       </>
                     ) : (
                       <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                          />
                         </svg>
                         <span>S'inscrire à la newsletter</span>
                       </>
@@ -296,27 +375,39 @@ const Newsletter = () => {
             // Success Message
             <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-3xl p-6 md:p-12 text-center animate-fadeIn">
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center mx-auto mb-6">
-                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="w-10 h-10 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               </div>
-              <h3 
+              <h3
                 className="text-3xl md:text-4xl font-black text-white mb-4"
                 style={{ fontFamily: "'Bebas Neue', sans-serif" }}
               >
                 Inscription confirmée !
               </h3>
-              <p 
+              <p
                 className="text-lg text-gray-300 mb-6"
                 style={{ fontFamily: "'Inter', sans-serif" }}
               >
-                Bienvenue dans la communauté marsAI ! Vous recevrez bientôt votre première newsletter.
+                Bienvenue dans la communauté marsAI ! Vous recevrez bientôt
+                votre première newsletter.
               </p>
-              <p 
+              <p
                 className="text-sm text-gray-400"
                 style={{ fontFamily: "'Inter', sans-serif" }}
               >
-                Vérifiez votre boîte mail (et vos spams) pour confirmer votre inscription.
+                Vérifiez votre boîte mail (et vos spams) pour confirmer votre
+                inscription.
               </p>
             </div>
           )}
@@ -327,13 +418,13 @@ const Newsletter = () => {
       <section className="py-20 px-4 border-t border-gray-900">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 
+            <h2
               className="text-3xl md:text-5xl font-black text-white mb-4"
               style={{ fontFamily: "'Bebas Neue', sans-serif" }}
             >
               Pourquoi s'abonner ?
             </h2>
-            <p 
+            <p
               className="text-xl text-gray-400"
               style={{ fontFamily: "'Inter', sans-serif" }}
             >
@@ -343,20 +434,20 @@ const Newsletter = () => {
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {benefits.map((benefit, index) => (
-              <div 
+              <div
                 key={index}
                 className="group p-6 md:p-8 bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-2xl hover:border-cyan-400/50 transition-all duration-300"
               >
                 <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-gradient-to-br from-cyan-400 to-pink-500 flex items-center justify-center text-black mb-6 group-hover:scale-110 transition-transform duration-300">
                   {benefit.icon}
                 </div>
-                <h3 
+                <h3
                   className="text-xl md:text-2xl font-bold text-white mb-3"
                   style={{ fontFamily: "'Inter', sans-serif" }}
                 >
                   {benefit.title}
                 </h3>
-                <p 
+                <p
                   className="text-gray-400 leading-relaxed text-sm md:text-base"
                   style={{ fontFamily: "'Inter', sans-serif" }}
                 >
@@ -371,7 +462,7 @@ const Newsletter = () => {
       {/* FAQ Section */}
       <section className="py-20 px-4">
         <div className="max-w-3xl mx-auto">
-          <h2 
+          <h2
             className="text-3xl md:text-4xl font-black text-white text-center mb-12"
             style={{ fontFamily: "'Bebas Neue', sans-serif" }}
           >
@@ -381,29 +472,29 @@ const Newsletter = () => {
           <div className="space-y-4">
             {[
               {
-                q: 'À quelle fréquence recevrai-je la newsletter ?',
-                a: 'Nous envoyons 2 newsletters par mois : une en début de mois avec les actualités, et une en milieu de mois avec les contenus exclusifs.'
+                q: "À quelle fréquence recevrai-je la newsletter ?",
+                a: "Nous envoyons 2 newsletters par mois : une en début de mois avec les actualités, et une en milieu de mois avec les contenus exclusifs.",
               },
               {
-                q: 'Puis-je me désabonner à tout moment ?',
-                a: 'Oui, absolument. Chaque email contient un lien de désinscription en bas de page. Vous pouvez aussi gérer vos préférences à tout moment.'
+                q: "Puis-je me désabonner à tout moment ?",
+                a: "Oui, absolument. Chaque email contient un lien de désinscription en bas de page. Vous pouvez aussi gérer vos préférences à tout moment.",
               },
               {
-                q: 'Mes données sont-elles sécurisées ?',
-                a: 'Nous prenons la confidentialité très au sérieux. Vos données ne sont jamais vendues ou partagées avec des tiers. Consultez notre politique de confidentialité pour plus de détails.'
-              }
+                q: "Mes données sont-elles sécurisées ?",
+                a: "Nous prenons la confidentialité très au sérieux. Vos données ne sont jamais vendues ou partagées avec des tiers. Consultez notre politique de confidentialité pour plus de détails.",
+              },
             ].map((faq, index) => (
-              <div 
+              <div
                 key={index}
                 className="p-6 bg-gray-900 border border-gray-800 rounded-xl"
               >
-                <h3 
+                <h3
                   className="text-lg font-bold text-white mb-2"
                   style={{ fontFamily: "'Inter', sans-serif" }}
                 >
                   {faq.q}
                 </h3>
-                <p 
+                <p
                   className="text-gray-400 leading-relaxed"
                   style={{ fontFamily: "'Inter', sans-serif" }}
                 >
