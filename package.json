@@ -1,0 +1,29 @@
+{
+  "name": "marsai",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "serve": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/samuel-corinthe/MarsAi.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/samuel-corinthe/MarsAi/issues"
+  },
+  "homepage": "https://github.com/samuel-corinthe/MarsAi#readme",
+  "dependencies": {
+    "express": "^5.2.1",
+    "ffprobe-static": "^3.1.0",
+    "googleapis": "^171.0.0",
+    "multer": "^2.0.2",
+    "open": "^11.0.0"
+  }
+}
