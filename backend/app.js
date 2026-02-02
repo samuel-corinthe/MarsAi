@@ -9,7 +9,7 @@ const app = express();
 // --- Middlewares ---
 app.use(
   cors({
-    origin: "http://localhost:5173", // Port de ton Front React (Vite)
+    origin: "http://localhost:5173", // Port du Front React
     methods: ["POST"],
   }),
 );
