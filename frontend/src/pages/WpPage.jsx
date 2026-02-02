@@ -158,17 +158,21 @@ export default function WpPage({ isHome = false }) {
         )}
       </div>
 
-      <div className="mt-12">
-        <iframe
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2903.003971135914!2d5.368781999999999!3d43.3141763!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x12c9c13ddc0211b9%3A0xd1642ae4b32c4bc4!2s%C3%89cole%20La%20Plateforme_%20Marseille%20-%20Entr%C3%A9e%20Sud!5e0!3m2!1sfr!2sfr!4v1770039690847!5m2!1sfr!2sfr"
-          width="600"
-          height="450"
-          style={{ border: 0 }}
-          allowFullScreen=""
-          loading="lazy"
-          referrerPolicy="no-referrer-when-downgrade"
-        ></iframe>
-      </div>
+      {slug === "contact" && (
+        <div className="max-w-3xl mt-12 overflow-hidden rounded-xl border border-gray-200 shadow-sm bg-white p-2">
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2903.9622303031174!2d5.3697!3d43.2965!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDPCsDE3JzQ3LjQiTiA1wrAyMicxMC45IkU!5e0!3m2!1sfr!2sfr!4v1634567890123"
+            width="100%"
+            height="450"
+            style={{ border: 0 }}
+            allowFullScreen=""
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            title="Localisation marsAI"
+            className="rounded-lg"
+          ></iframe>
+        </div>
+      )}
     </main>
   );
 }
