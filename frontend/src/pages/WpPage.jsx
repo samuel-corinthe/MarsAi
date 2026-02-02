@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getPageBySlug } from "../api";
 import NotFound from "./NotFound";
-//import "./contact.css";
 
 export default function WpPage({ isHome = false }) {
   const { slug: routeSlug } = useParams();
