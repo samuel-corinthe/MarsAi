@@ -3,6 +3,7 @@ import Header from "./components/Header";
 import Home from "./pages/Home";
 import WpPage from "./pages/WpPage";
 import NotFound from "./pages/NotFound";
+import Upload from "./pages/Upload";
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         {/* Home = React */}
         <Route path="/" element={<Home />} />
 
+        <Route path="/upload" element={<Upload />} />
         {/* Toutes les pages WordPress (par slug) */}
         <Route path="/:slug" element={<WpPage />} />
 
