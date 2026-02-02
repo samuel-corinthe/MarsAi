@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { label: "Mentions légales", to: "/mentions-legales" },
   { label: "Page d’exemple", to: "/page-d-exemple" },
   { label: "Confidentialité", to: "/politique-de-confidentialite" },
+  { label: "Participer", to: "/concours" },
 ];
 
 export default function Header() {
