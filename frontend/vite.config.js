@@ -10,13 +10,18 @@ export default defineConfig({
       "/wp-json": {
         target: "https://samuel-corinthe.students-laplateforme.io/MarsAi",
         changeOrigin: true,
-        secure: true
-      }
-    }
+        secure: true,
+      },
+      "/api": {
+        target: "http://localhost:4000",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   test: {
     environment: "jsdom",
     setupFiles: "./src/test/setup.js",
-    globals: false
-  }
+    globals: false,
+  },
 });
