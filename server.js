@@ -1,4 +1,4 @@
-// Minimal API server: validate video then upload to YouTube (no DB, no local keep)
+﻿// Minimal API server: validate video then upload to YouTube (no DB, no local keep)
 // Rules: mp4 only, size <= 300MB, duration 40-120s, ratio ~16:9
 
 const express = require("express");
@@ -136,7 +136,7 @@ async function handleUpload(req, res) {
     (Array.isArray(req.files) && req.files[0]);
 
   console.log(
-    "files reçus:",
+    "files reÃ§us:",
     Array.isArray(req.files) ? req.files.map((f) => `${f.fieldname}:${f.originalname} ${f.mimetype} ${f.size}o`) : "none"
   );
 
@@ -184,4 +184,10 @@ app.use((err, req, res, _next) => {
   res.status(500).json({ error: "Upload failed", detail: err.message });
 });
 
-app.listen(PORT, () => console.log(`API upload dispo sur http://localhost:${PORT}/api/upload`));
+if (require.main === module) {
+  app.listen(PORT, () => console.log(`API upload dispo sur http://localhost:${PORT}/api/upload`));
+}
+
+module.exports = app;
+
+
