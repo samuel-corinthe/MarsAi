@@ -1,15 +1,16 @@
 import { Link, NavLink } from "react-router-dom";
 
 const NAV_ITEMS = [
-  { label: "À propos", to: "/a-propos" },
+  { label: "Dashboard", to: "/dashboard" },
+  { label: "A propos", to: "/a-propos" },
   { label: "Agenda", to: "/agenda" },
-  { label: "Appel à projet", to: "/appel-a-projet" },
+  { label: "Appel a projet", to: "/appel-a-projet" },
   { label: "CGV & CGU", to: "/cgv-cgu" },
   { label: "Contact", to: "/contact" },
   { label: "Jury", to: "/jury" },
-  { label: "Mentions légales", to: "/mentions-legales" },
-  { label: "Page d’exemple", to: "/page-d-exemple" },
-  { label: "Confidentialité", to: "/politique-de-confidentialite" },
+  { label: "Mentions legales", to: "/mentions-legales" },
+  { label: "Page d'exemple", to: "/page-d-exemple" },
+  { label: "Confidentialite", to: "/politique-de-confidentialite" },
 ];
 
 export default function Header() {
@@ -37,11 +38,11 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Link className="btn-ghost" to="/contact">
-            Contact
+          <Link className="btn-ghost" to="/dashboard">
+            Dashboard
           </Link>
           <Link className="btn-primary" to="/appel-a-projet">
-            Déposer un film
+            Deposer un film
           </Link>
         </div>
       </div>

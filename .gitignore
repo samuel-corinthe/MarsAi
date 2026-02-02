@@ -1,0 +1,11 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Logs
+*.log
+*.log.*
+
+# Build output
+dist/
+build/
