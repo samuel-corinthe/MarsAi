@@ -48,7 +48,10 @@ app.post("/subscribe-newsletter", async (req, res) => {
     try {
       let contact = new SibApiV3Sdk.CreateContact();
       contact.email = email;
-      contact.attributes = { PRENOM: firstName };
+      contact.attributes = {
+        PRENOM: firstName,
+        PREFERENCES: preferences.join(", "),
+      };
       contact.listIds = [3]; // l'ID de ta liste sur Brevo
       contact.updateEnabled = true;
 
