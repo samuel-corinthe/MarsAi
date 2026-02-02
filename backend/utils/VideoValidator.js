@@ -26,6 +26,13 @@ export function validateVideoData(data) {
             value: data.duration,
             required: VIDEO_CONSTRAINTS.DURATION.MIN
         });
+    } else if (data.duration > VIDEO_CONSTRAINTS.DURATION.MAX) {
+        errors.push({
+            field: 'duration',
+            message: `La vidéo est trop longue : ${data.duration.toFixed(1)}s (max ${VIDEO_CONSTRAINTS.DURATION.MAX}s)`,
+            value: data.duration,
+            required: VIDEO_CONSTRAINTS.DURATION.MAX
+        });
     }
 
     const expectedRatio = VIDEO_CONSTRAINTS.ASPECT_RATIO.STANDARD;
@@ -33,10 +40,19 @@ export function validateVideoData(data) {
     if (Math.abs(data.aspectRatio - expectedRatio) > tolerance) {
         errors.push({
             field: 'aspectRatio',
-            message: `Le ratio de la vidéo est incorrect : ${data.aspectRatio.toFixed(2)} (attendu ${expectedRatio.toFixed(2)})`,
+            message: `Le ratio de la vidéo est incorrect : ${data.aspectRatio.toFixed(2)} (attendu 16:9)`,
             value: data.aspectRatio.toFixed(2),
             required: expectedRatio.toFixed(2),
             dimensions: `${data.width}x${data.height}`
+        });
+    }
+
+    if (data.fileSize > VIDEO_CONSTRAINTS.FILE.MAX_SIZE) {
+        errors.push({
+            field: 'fileSize',
+            message: `Le fichier est trop volumineux : ${(data.fileSize / (1024 * 1024)).toFixed(2)}MB (max ${VIDEO_CONSTRAINTS.FILE.MAX_SIZE / (1024 * 1024)}MB)`,
+            value: data.fileSize,
+            required: VIDEO_CONSTRAINTS.FILE.MAX_SIZE
         });
     }
 
