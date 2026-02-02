@@ -34,8 +34,11 @@ app.post("/subscribe-newsletter", async (req, res) => {
     // 2. Validation
     const validateResult = await validate({
       email: email,
-      validateSMTP: false,
-      validateTypo: false,
+      validateRegex: true, // Vérifie le format @
+      validateMX: true, // Vérifie que le domaine existe
+      validateTypo: false, // DESACTIVÉ : Empêche de bloquer laplateforme.io
+      validateDisposable: true, // Bloque les emails jetables
+      validateSMTP: false, // Désactivé car instable en local/cloud
     });
 
     if (!validateResult.valid) {
