@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getPageBySlug, getAgendaPosts } from "../api";
+import { getPageBySlug } from "../api";
 import NotFound from "./NotFound";
-import "./Agenda.css";
 
 export default function WpPage({ isHome = false }) {
   const { slug: routeSlug } = useParams();
@@ -13,13 +12,13 @@ export default function WpPage({ isHome = false }) {
   const [agendaItems, setAgendaItems] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date(2026, 5, 8));
 
-  // Fonction pour définir les couleurs des sous-catégories
+  // Style des badges (optionnel, sinon on garde le bleu partout)
   const getCategoryColor = (catId) => {
     const colors = {
-      15: "#e74c3c", // Exemple: Rouge pour "Concerts"
-      16: "#3498db", // Exemple: Bleu pour "Conférences"
-      17: "#f1c40f", // Exemple: Jaune pour "Ateliers"
-      default: "#2ecc71", // Vert par défaut
+      15: "#ff4757", // Rouge pour Concerts
+      16: "#007bff", // Bleu pour Conférences
+      17: "#ffa502", // Orange pour Ateliers
+      default: "#2ed573", // Vert
     };
     return colors[catId] || colors.default;
   };
@@ -33,24 +32,17 @@ export default function WpPage({ isHome = false }) {
           setPage(null);
         } else {
           setPage(pageData);
-
           if (slug === "agenda") {
             try {
-              // On utilise une URL qui inclut les détails des catégories (embed)
               const res = await fetch(
                 "/wp-json/wp/v2/posts?categories=14&_embed&per_page=100",
               );
               const allPosts = await res.json();
-
               if (allPosts && Array.isArray(allPosts)) {
                 const formattedEvents = allPosts.map((post) => {
                   const datePart = post.date.split("T")[0];
-
-                  // On récupère les noms des catégories via _embedded
                   const categoriesData = post._embedded?.["wp:term"]?.[0] || [];
-                  // On filtre pour ne pas afficher la catégorie parente "Agenda" (ID 14)
                   const subCats = categoriesData.filter((cat) => cat.id !== 14);
-
                   return {
                     id: post.id,
                     date: datePart,
@@ -61,18 +53,17 @@ export default function WpPage({ isHome = false }) {
                     }),
                     lieu: "Marseille",
                     link: post.link,
-                    subCategories: subCats, // On stocke les sous-catégories ici
+                    subCategories: subCats,
                   };
                 });
                 setAgendaItems(formattedEvents);
               }
-            } catch (postError) {
-              console.error("Erreur articles agenda:", postError);
+            } catch (err) {
+              console.error(err);
             }
           }
         }
-      } catch (error) {
-        console.error("Erreur API Globale:", error);
+      } catch (err) {
         setPage(null);
       } finally {
         setLoading(false);
@@ -80,7 +71,6 @@ export default function WpPage({ isHome = false }) {
     })();
   }, [slug]);
 
-  // --- LOGIQUE SEMAINE ---
   const weekStart = new Date(2026, 5, 8);
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
@@ -101,90 +91,128 @@ export default function WpPage({ isHome = false }) {
     (item) => item.date === getLocalDateString(selectedDate),
   );
 
-  if (loading) return <div className="app-container page">Chargement…</div>;
+  if (loading)
+    return (
+      <div className="flex justify-center py-20 text-gray-400">Chargement…</div>
+    );
   if (!page) return <NotFound />;
 
   return (
-    <main className="app-container page">
-      <div className="card card-pad">
+    <main className="min-h-screen bg-[#fcfcfc] text-[#333] p-4 md:p-12">
+      <div className="max-w-6xl mx-auto">
         <h1
-          className="h1"
+          className="text-3xl font-bold mb-10 text-[#1a1a1a]"
           dangerouslySetInnerHTML={{ __html: page.title.rendered }}
         />
 
         {slug === "agenda" ? (
-          <div className="agenda-custom-wrapper mt-8">
-            {/* Calendrier Semaine */}
-            <div className="calendar-box week-view">
-              <div className="calendar-grid week-grid">
+          <div className="flex flex-col lg:flex-row gap-10">
+            {/* SECTION CALENDRIER (calendar-box) */}
+            <div className="flex-1 bg-white p-6 rounded-[16px] border border-[#eaeaea] shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-bold capitalize">Juin 2026</h3>
+              </div>
+
+              {/* Grille du calendrier (calendar-grid) */}
+              <div className="grid grid-cols-7 gap-2">
+                {["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map(
+                  (day) => (
+                    <span
+                      key={day}
+                      className="text-[10px] md:text-xs font-semibold text-[#a0a0a0] uppercase pb-2 text-center"
+                    >
+                      {day}
+                    </span>
+                  ),
+                )}
+
                 {weekDays.map((date, idx) => {
                   const isSelected =
                     getLocalDateString(selectedDate) ===
                     getLocalDateString(date);
                   return (
-                    <div
+                    <button
                       key={idx}
-                      className={`day-cell ${isSelected ? "selected" : ""}`}
                       onClick={() => setSelectedDate(date)}
+                      className={`relative aspect-square flex flex-col items-center justify-center rounded-full transition-all text-sm md:text-base ${
+                        isSelected
+                          ? "bg-[#007bff] text-white font-bold shadow-[0_4px_10px_rgba(0,123,255,0.3)]"
+                          : "hover:bg-[#f5f5f5] text-[#333]"
+                      }`}
                     >
-                      <span className="day-name">
-                        {date.toLocaleDateString("fr-FR", { weekday: "short" })}
-                      </span>
-                      <span className="day-number">{date.getDate()}</span>
-                      {hasEvent(date) && <span className="event-dot"></span>}
-                    </div>
+                      <span>{date.getDate()}</span>
+
+                      {/* Point indicateur (event-dot) */}
+                      {hasEvent(date) && (
+                        <div
+                          className={`absolute bottom-1.5 md:bottom-2 w-1 h-1 rounded-full ${isSelected ? "bg-white" : "bg-[#ff4757]"}`}
+                        />
+                      )}
+                    </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Liste des Événements */}
-            <div className="events-sidebar">
-              <h3>
+            {/* SECTION LATERALE (events-sidebar) */}
+            <div className="w-full lg:w-[350px]">
+              <h3 className="text-xl font-bold mb-6 text-[#1a1a1a] capitalize">
                 {selectedDate.toLocaleDateString("fr-FR", {
                   weekday: "long",
                   day: "numeric",
                   month: "long",
                 })}
               </h3>
-              {activeEvents.length > 0 ? (
-                activeEvents.map((ev) => (
-                  <div key={ev.id} className="mini-event-card">
-                    {/* Affichage des Badges de Catégories */}
-                    <div className="category-badges">
-                      {ev.subCategories.map((cat) => (
-                        <span
-                          key={cat.id}
-                          className="badge"
-                          style={{ backgroundColor: getCategoryColor(cat.id) }}
-                        >
-                          {cat.name}
-                        </span>
-                      ))}
-                    </div>
 
-                    <strong dangerouslySetInnerHTML={{ __html: ev.titre }} />
-                    <p>
-                      🕒 {ev.heure} | 📍 {ev.lieu}
-                    </p>
-                    <a
-                      href={ev.link}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="event-link"
+              <div className="space-y-4">
+                {activeEvents.length > 0 ? (
+                  activeEvents.map((ev) => (
+                    <div
+                      key={ev.id}
+                      className="bg-white border border-[#eee] p-5 rounded-[12px] border-l-[5px] border-l-[#007bff] transition-transform hover:scale-[1.02]"
                     >
-                      Voir l'article
-                    </a>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {ev.subCategories.map((cat) => (
+                          <span
+                            key={cat.id}
+                            style={{ color: getCategoryColor(cat.id) }}
+                            className="text-[10px] font-bold uppercase tracking-wide"
+                          >
+                            {cat.name}
+                          </span>
+                        ))}
+                      </div>
+
+                      <h4
+                        className="text-base font-bold text-[#1a1a1a] mb-2 leading-tight"
+                        dangerouslySetInnerHTML={{ __html: ev.titre }}
+                      />
+
+                      <p className="text-xs text-gray-500 mb-4 font-medium ">
+                        🕒 {ev.heure} | 📍 {ev.lieu}
+                      </p>
+
+                      <a
+                        href={ev.link}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-bold text-[#007bff] hover:underline"
+                      >
+                        VOIR L'ARTICLE →
+                      </a>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-8 text-center text-gray-400 bg-white rounded-xl border border-dashed border-gray-200">
+                    <p className="text-sm">Aucun événement ce jour.</p>
                   </div>
-                ))
-              ) : (
-                <p className="no-data">Aucun événement ce jour.</p>
-              )}
+                )}
+              </div>
             </div>
           </div>
         ) : (
           <div
-            className="richtext mt-6"
+            className="prose prose-slate max-w-none bg-white p-8 rounded-xl border border-[#eaeaea]"
             dangerouslySetInnerHTML={{ __html: page.content.rendered }}
           />
         )}
