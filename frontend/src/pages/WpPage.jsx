@@ -206,7 +206,6 @@ export default function WpPage({ isHome = false }) {
                             🕒 {ev.heure} | 📍 {ev.lieu}
                           </p>
 
-                          {/* LE BOUTON QUI CHANGE TOUT */}
                           <button
                             onClick={() => setSelectedArticle(ev)}
                             className="text-xs font-bold text-[#007bff] hover:underline uppercase"
