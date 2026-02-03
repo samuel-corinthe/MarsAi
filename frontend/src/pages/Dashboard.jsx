@@ -1,11 +1,13 @@
-import { useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+
+const selectionTarget = 50;
 
 const adminKpis = {
   noted: 24,
   remaining: 31,
   selected: 42,
-  quota: 55,
+  quota: 50,
 };
 
 const films = [
@@ -22,7 +24,7 @@ const films = [
   {
     title: "Neon Dust",
     country: "États-Unis",
-    status: "accepté",
+    status: "sélectionné",
     rating: 4.6,
     notesCount: 61,
     phase: "Finale",
@@ -61,12 +63,13 @@ const films = [
   },
 ];
 
-const statuses = ["tous", "en cours", "accepté", "refusé"];
+const statuses = ["tous", "en cours", "accepté", "sélectionné", "refusé"];
 const countries = ["tous", "France", "États-Unis", "Canada", "Espagne", "Royaume-Uni"];
-const phases = ["toutes", "Pré-sélection", "Sélection", "Finale"];
+const phaseFilters = ["toutes", "Pré-sélection", "Sélection", "Finale"];
 const notes = ["toutes", "≥ 4", "3 - 4", "< 3"];
 const navItems = [
   { label: "Vue admin", href: "admin-top" },
+  { label: "Profil", href: "profile" },
   { label: "Liste films", href: "films" },
   { label: "Widgets admin", href: "admin-widgets" },
   { label: "Super admin", href: "super-top" },
@@ -75,6 +78,51 @@ const navItems = [
   { label: "Logs", href: "logs" },
   { label: "Newsletter", href: "newsletter" },
 ];
+
+const phaseTimeline = [
+  {
+    key: "depot",
+    label: "Dépôt",
+    start: "2026-01-10T00:00:00Z",
+    end: "2026-02-28T23:59:59Z",
+    quota: selectionTarget,
+    submitted: 128,
+    selected: 12,
+    description: "Collecte des films et vérification des droits.",
+  },
+  {
+    key: "selection",
+    label: "Sélection",
+    start: "2026-03-01T00:00:00Z",
+    end: "2026-03-14T23:59:59Z",
+    quota: selectionTarget,
+    submitted: 128,
+    selected: 42,
+    description: "Notation et choix des finalistes (objectif 50).",
+  },
+  {
+    key: "annonce",
+    label: "Annonce",
+    start: "2026-03-20T00:00:00Z",
+    end: "2026-03-21T23:59:59Z",
+    quota: selectionTarget,
+    submitted: 128,
+    selected: 50,
+    description: "Annonce publique et préparation presse.",
+  },
+];
+
+const mockCurrentUser = {
+  id: "admin-01",
+  name: "Idriss Benali",
+  email: "idriss@festival-ia.io",
+  phone: "+33 6 45 22 01 12",
+  role: "superadmin",
+  status: "actif",
+  timezone: "Europe/Paris",
+  region: "Europe",
+  language: "fr",
+};
 
 function SparkLine({ data, stroke = "#f6c452" }) {
   const max = Math.max(...data);
@@ -126,7 +174,7 @@ function DonutSplit({ accepted, pending, rejected }) {
   return (
     <div className="donut" style={style}>
       <div className="core">
-        <div className="text-xs text-slate-300/80">Statuts</div>
+        <div className="text-xs text-slate-100/85">Statuts</div>
         <div className="font-semibold">{accepted}/{total}</div>
       </div>
     </div>
@@ -136,7 +184,7 @@ function DonutSplit({ accepted, pending, rejected }) {
 function ProgressBar({ label, value, color }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="w-20 text-xs text-slate-300/80">{label}</div>
+      <div className="w-24 text-xs text-slate-100/85">{label}</div>
       <div className="bar-track">
         <div className="bar-fill" style={{ width: `${Math.min(value, 100)}%`, background: color }} />
       </div>
@@ -157,7 +205,7 @@ function Pill({ children, tone = "pink", active = false, onClick }) {
 
 function FilmRow({ film }) {
   const badgeColor =
-    film.status === "accepté"
+    film.status === "accepté" || film.status === "sélectionné"
       ? "bg-emerald-500/20 text-emerald-200"
       : film.status === "en cours"
         ? "bg-amber-400/15 text-amber-200"
@@ -167,7 +215,7 @@ function FilmRow({ film }) {
     <div className="table-row grid grid-cols-12 items-center gap-3 text-sm">
       <div className="col-span-4">
         <div className="font-semibold">{film.title}</div>
-        <div className="text-xs text-slate-300/80">{film.tools}</div>
+        <div className="text-xs text-slate-200">{film.tools}</div>
       </div>
       <div className="col-span-2 text-slate-200">{film.country}</div>
       <div className="col-span-2">
@@ -196,6 +244,35 @@ export default function Dashboard() {
     note: "toutes",
   });
   const [activeNav, setActiveNav] = useState(navItems[0].href);
+  const [currentUser, setCurrentUser] = useState(mockCurrentUser);
+  const [profileForm, setProfileForm] = useState(mockCurrentUser);
+  const [currentPhaseIndex, setCurrentPhaseIndex] = useState(() => {
+    const now = Date.now();
+    const idx = phaseTimeline.findIndex(
+      (phase) =>
+        now >= new Date(phase.start).getTime() &&
+        now <= new Date(phase.end).getTime()
+    );
+    return idx === -1 ? 0 : idx;
+  });
+  const [nowTs, setNowTs] = useState(Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNowTs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const now = useMemo(() => new Date(nowTs), [nowTs]);
+  const currentPhase = phaseTimeline[currentPhaseIndex];
+  const nextPhase = phaseTimeline[currentPhaseIndex + 1] ?? null;
+  const phaseDuration = new Date(currentPhase.end) - new Date(currentPhase.start);
+  const elapsed = Math.max(0, now - new Date(currentPhase.start));
+  const phaseProgress = Math.min(100, (elapsed / (phaseDuration || 1)) * 100);
+  const remainingMs = Math.max(0, new Date(currentPhase.end) - now);
+  const remainingDays = Math.floor(remainingMs / 86400000);
+  const remainingHours = Math.floor((remainingMs % 86400000) / 3600000);
+  const remainingMinutes = Math.floor((remainingMs % 3600000) / 60000);
+  const isSuperAdmin = currentUser.role === "superadmin";
 
   const handleNav = (href) => {
     setActiveNav(href);
@@ -218,12 +295,13 @@ export default function Dashboard() {
   }, [filters]);
 
   const selectionRatio = (adminKpis.selected / adminKpis.quota) * 100;
+  const selectionProgress = Math.min(100, (currentPhase.selected / selectionTarget) * 100);
 
   const superStats = {
-    films: 128,
+    films: currentPhase.submitted,
     admins: 14,
-    phasesProgress: 72,
-    countdown: "12 jours restants (annonce finale 14 mars 2026)",
+    phasesProgress: Math.round(phaseProgress),
+    countdown: `${remainingDays} j ${String(remainingHours).padStart(2, "0")} h ${String(remainingMinutes).padStart(2, "0")} min restantes`,
   };
 
   const logs = [
@@ -232,6 +310,15 @@ export default function Dashboard() {
     "Admin Chloé a noté « Retina » 4/5",
     "Super admin Idriss a exporté la newsletter (1423 emails)",
   ];
+
+  const handleProfileSave = () => {
+    setCurrentUser(profileForm);
+  };
+
+  const handleNextPhase = () => {
+    if (!isSuperAdmin || currentPhaseIndex >= phaseTimeline.length - 1) return;
+    setCurrentPhaseIndex((idx) => Math.min(idx + 1, phaseTimeline.length - 1));
+  };
 
   return (
     <div className="dash-page">
@@ -257,18 +344,162 @@ export default function Dashboard() {
           <div className="flex-1 space-y-8">
         <header id="admin-top" className="glass p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <div className="pill pill-pink">Festival IA - cockpit</div>
-            <h1 className="dash-title mt-3">Dashboard Admin & Super Admin</h1>
-            <p className="dash-subtitle">
+            <div className="pill pill-pink">Festival IA · cockpit</div>
+            <h1 className="dash-title mt-3 text-white">Dashboard Admin & Super Admin</h1>
+            <p className="dash-subtitle text-slate-100/90">
               Vue unifiée : juger les films, piloter les règles et la gouvernance du festival.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Pill tone="cyan">Quotas 55</Pill>
-            <Pill tone="amber">Deadline proche</Pill>
+            <Pill tone="cyan">Quota {selectionTarget}</Pill>
+            <Pill tone="amber">Phase : {currentPhase.label}</Pill>
             <Pill>Traçabilité active</Pill>
           </div>
         </header>
+
+        {/* Profil admin + phase en cours */}
+        <section id="profile" className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+          <div className="glass-strong p-6 space-y-4 xl:col-span-2">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="pill pill-cyan">Profil admin</div>
+                <h2 className="text-xl font-semibold mt-2 text-white">{currentUser.name}</h2>
+                <p className="text-sm text-slate-100/80">
+                  Rôle actuel : {currentUser.role === "superadmin" ? "Super admin" : "Admin"} — statut {currentUser.status}.
+                </p>
+              </div>
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  currentUser.status === "actif"
+                    ? "bg-emerald-500/25 text-emerald-100"
+                    : "bg-amber-500/25 text-amber-100"
+                }`}
+              >
+                {currentUser.status === "actif" ? "Actif" : "Suspendu"}
+              </span>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="flex flex-col gap-1 text-sm text-slate-100/90">
+                Nom complet
+                <input
+                  className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-300"
+                  value={profileForm.name}
+                  onChange={(e) => setProfileForm((f) => ({ ...f, name: e.target.value }))}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm text-slate-100/90">
+                Email
+                <input
+                  className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-300"
+                  value={profileForm.email}
+                  onChange={(e) => setProfileForm((f) => ({ ...f, email: e.target.value }))}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm text-slate-100/90">
+                Téléphone
+                <input
+                  className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-300"
+                  value={profileForm.phone}
+                  onChange={(e) => setProfileForm((f) => ({ ...f, phone: e.target.value }))}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm text-slate-100/90">
+                Fuseau horaire
+                <input
+                  className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-300"
+                  value={profileForm.timezone}
+                  onChange={(e) => setProfileForm((f) => ({ ...f, timezone: e.target.value }))}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm text-slate-100/90">
+                Rôle
+                <select
+                  className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white focus:outline-none focus:border-cyan-300"
+                  value={profileForm.role}
+                  onChange={(e) => setProfileForm((f) => ({ ...f, role: e.target.value }))}
+                >
+                  <option value="admin">Admin</option>
+                  <option value="superadmin">Super admin</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm text-slate-100/90">
+                Région
+                <input
+                  className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-300"
+                  value={profileForm.region}
+                  onChange={(e) => setProfileForm((f) => ({ ...f, region: e.target.value }))}
+                />
+              </label>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button className="btn-primary px-4 py-2 rounded-lg" onClick={handleProfileSave}>
+                Enregistrer
+              </button>
+              <button
+                className="btn-ghost px-4 py-2 rounded-lg border border-white/10"
+                onClick={() => setProfileForm(currentUser)}
+              >
+                Réinitialiser
+              </button>
+              {isSuperAdmin && <span className="pill pill-amber">Super admin : peut changer de phase</span>}
+            </div>
+          </div>
+
+          <div className="glass p-6 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="pill pill-amber">Phase en cours</div>
+                <h3 className="text-lg font-semibold text-white mt-1">{currentPhase.label}</h3>
+                <p className="text-sm text-slate-100/80">{currentPhase.description}</p>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-semibold text-white">
+                  {remainingDays}j {String(remainingHours).padStart(2, "0")}h
+                </div>
+                <div className="text-xs text-slate-200/80">reste</div>
+              </div>
+            </div>
+
+            <div className="bar-track">
+              <div className="bar-fill" style={{ width: `${phaseProgress}%` }} />
+            </div>
+            <div className="text-xs text-slate-100/85">
+              Sélection : {currentPhase.selected}/{selectionTarget} visés · Films déposés : {currentPhase.submitted}
+            </div>
+            <div className="bar-track h-2">
+              <div
+                className="bar-fill"
+                style={{
+                  width: `${selectionProgress}%`,
+                  background: "linear-gradient(90deg,#25d0ff,#f2438b)",
+                }}
+              />
+            </div>
+            <div className="text-xs text-slate-100/75">
+              Progression sélection : {Math.round(selectionProgress)}%
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                className="btn-primary px-4 py-2 rounded-lg disabled:opacity-60"
+                disabled={!isSuperAdmin || !nextPhase}
+                onClick={handleNextPhase}
+              >
+                Passer à {nextPhase ? nextPhase.label : "la dernière phase"}
+              </button>
+              <button
+                className="btn-ghost px-4 py-2 rounded-lg border border-white/10"
+                onClick={() => setCurrentPhaseIndex(0)}
+              >
+                Revenir au dépôt
+              </button>
+            </div>
+            {!isSuperAdmin && (
+              <p className="text-xs text-amber-200/90">Seuls les super admins peuvent changer de phase.</p>
+            )}
+          </div>
+        </section>
 
         {/* Admin area */}
         <section id="films" className="grid grid-cols-1 xl:grid-cols-12 gap-5">
@@ -292,19 +523,19 @@ export default function Dashboard() {
 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="stat-card glass-strong">
-                <div className="kpi-label">Films notés par vous</div>
+                <div className="kpi-label text-slate-100">Films notés par vous</div>
                 <div className="kpi-value">{adminKpis.noted}</div>
                 <div className="kpi-trend text-emerald-300">+4 cette semaine</div>
                 <SparkLine data={[2, 5, 4, 7, 6, 9, 8]} stroke="#25d0ff" />
               </div>
               <div className="stat-card">
-                <div className="kpi-label">Restants à voir</div>
+                <div className="kpi-label text-slate-100">Restants à voir</div>
                 <div className="kpi-value">{adminKpis.remaining}</div>
                 <div className="kpi-trend text-amber-200">Prioriser aujourd'hui</div>
                 <SparkLine data={[9, 8, 7, 6, 5, 4, 4]} stroke="#f6c452" />
               </div>
               <div className="stat-card">
-                <div className="kpi-label">Sélection officielle</div>
+                <div className="kpi-label text-slate-100">Sélection officielle</div>
                 <div className="kpi-value">
                   {adminKpis.selected}/{adminKpis.quota}
                 </div>
@@ -312,7 +543,7 @@ export default function Dashboard() {
                   <div className="bar-fill" style={{ width: `${selectionRatio}%` }} />
                 </div>
                 <div className="kpi-trend text-pink-200 mt-1">
-                  Quota critique à 55
+                  Quota cible {selectionTarget}
                 </div>
               </div>
             </div>
@@ -339,7 +570,7 @@ export default function Dashboard() {
                   Pays : {c}
                 </Pill>
               ))}
-              {phases.map((p) => (
+              {phaseFilters.map((p) => (
                 <Pill
                   key={p}
                   tone="amber"
@@ -386,15 +617,15 @@ export default function Dashboard() {
               <DonutSplit accepted={2} pending={2} rejected={1} />
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-cyan-300" /> Acceptés (2)
+                  <span className="w-3 h-3 rounded-full bg-cyan-300" /> acceptés (2)
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-amber-300" /> En cours (2)
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-rose-300" /> Refusés (1)
+                  <span className="w-3 h-3 rounded-full bg-rose-300" /> refusés (1)
                 </div>
-                <p className="text-xs text-slate-300/80">
+                <p className="text-xs text-slate-100/80">
                   Vue perso basée sur vos notations.
                 </p>
               </div>
@@ -408,7 +639,7 @@ export default function Dashboard() {
               <ul className="space-y-2 text-sm text-slate-200">
                 <li>4 films en attente depuis 72h</li>
                 <li>2 films proches de la deadline (48h)</li>
-                <li>Quota 55 : {adminKpis.selected}/55 utilisés</li>
+                <li>Quota {selectionTarget} : {adminKpis.selected}/{selectionTarget} utilisés</li>
               </ul>
               <div className="bar-track">
                 <div className="bar-fill" style={{ width: `${selectionRatio}%` }} />
@@ -418,7 +649,7 @@ export default function Dashboard() {
             <div className="glass p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Vos indicateurs</h3>
-                <span className="text-xs text-slate-300/70">Auto-refresh 5 min</span>
+                <span className="text-xs text-slate-100/80">Auto-refresh 5 min</span>
               </div>
               <ProgressBar label="Notes déposées" value={68} color="linear-gradient(90deg,#25d0ff,#f6c452)" />
               <ProgressBar label="Commentaires" value={54} color="linear-gradient(90deg,#f2438b,#25d0ff)" />
@@ -433,7 +664,7 @@ export default function Dashboard() {
             <div>
               <div className="pill pill-pink">Espace super admin</div>
               <h2 className="text-2xl font-semibold mt-2">Pilotage & gouvernance</h2>
-              <p className="dash-subtitle">
+              <p className="dash-subtitle text-slate-100/90">
                 Comptes, phases, règles métier, logs et newsletter — tout au même endroit.
               </p>
             </div>
@@ -442,24 +673,24 @@ export default function Dashboard() {
 
           <div className="grid gap-4 md:grid-cols-4">
             <div className="stat-card glass-strong">
-              <div className="kpi-label">Films soumis</div>
+              <div className="kpi-label text-slate-100">Films déposés</div>
               <div className="kpi-value">{superStats.films}</div>
               <div className="kpi-trend text-cyan-200">+12 vs hier</div>
             </div>
             <div className="stat-card">
-              <div className="kpi-label">Admins actifs</div>
+              <div className="kpi-label text-slate-100">Admins actifs</div>
               <div className="kpi-value">{superStats.admins}</div>
               <div className="kpi-trend text-emerald-200">+1 nouveau</div>
             </div>
             <div className="stat-card">
-              <div className="kpi-label">Progression phases</div>
+              <div className="kpi-label text-slate-100">Progression phases</div>
               <div className="kpi-value">{superStats.phasesProgress}%</div>
               <div className="bar-track mt-2">
                 <div className="bar-fill" style={{ width: `${superStats.phasesProgress}%` }} />
               </div>
             </div>
             <div className="stat-card">
-              <div className="kpi-label">Compte à rebours</div>
+              <div className="kpi-label text-slate-100">Compte à rebours</div>
               <div className="kpi-value text-xl">{superStats.countdown}</div>
               <SparkLine data={[5, 4, 3, 3, 2, 1, 0]} stroke="#25d0ff" />
             </div>
@@ -475,7 +706,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-semibold">Idriss</div>
-                    <div className="text-xs text-slate-300/80">Super admin</div>
+                    <div className="text-xs text-slate-200/90">Super admin</div>
                   </div>
                   <div className="flex gap-2">
                     <button className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10">Logs</button>
@@ -485,7 +716,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-semibold">Léa</div>
-                    <div className="text-xs text-slate-300/80">Admin - Europe</div>
+                    <div className="text-xs text-slate-200/90">Admin - Europe</div>
                   </div>
                   <div className="flex gap-2">
                     <button className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10">Désactiver</button>
@@ -495,7 +726,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-semibold">Yuto</div>
-                    <div className="text-xs text-slate-300/80">Admin - Asie</div>
+                    <div className="text-xs text-slate-200/90">Admin - Asie</div>
                   </div>
                   <div className="flex gap-2">
                     <button className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10">Désactiver</button>
@@ -512,13 +743,13 @@ export default function Dashboard() {
               </div>
               <ul className="space-y-2 text-sm">
                 <li>📥 Dépôt : jusqu'au 28 fév 2026</li>
-                <li>🧭 Sélection : 1 mars → 14 mars 2026</li>
+                <li>🧑‍⚖️ Sélection : 1 mars → 14 mars 2026</li>
                 <li>📢 Annonce publique : 20 mars 2026</li>
               </ul>
               <div className="bar-track">
                 <div className="bar-fill" style={{ width: `${superStats.phasesProgress}%` }} />
               </div>
-              <button className="btn-primary w-full mt-2 rounded-lg">Modifier les règles (quota 55, notation)</button>
+              <button className="btn-primary w-full mt-2 rounded-lg">Modifier les règles (quota {selectionTarget}, notation)</button>
             </div>
           </div>
 
@@ -560,6 +791,12 @@ export default function Dashboard() {
 
         {/* Bottom nav mobile */}
         <div className="bottom-nav">
+          <button
+            className={activeNav === "profile" ? "active" : ""}
+            onClick={() => handleNav("profile")}
+          >
+            Profil
+          </button>
           <button
             className={activeNav === "admin-top" ? "active" : ""}
             onClick={() => handleNav("admin-top")}
