@@ -1,4 +1,5 @@
-import { Routes, Route } from "react-router-dom";
+import { useEffect } from "react"; // Ajout de useEffect
+import { Routes, Route, useLocation } from "react-router-dom"; // Ajout de useLocation
 import Header from "./components/Header";
 import Home from "./pages/Home";
 import WpPage from "./pages/WpPage";
@@ -7,23 +8,27 @@ import { CookiesProvider } from "react-cookie";
 import CookieModal from "./components/CookieModal";
 
 export default function App() {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Cette fonction envoie la vue à GA4 à chaque changement de route
+    if (window.gtag) {
+      window.gtag("config", "G-5ZGJKEP00R", {
+        page_path: location.pathname + location.search,
+      });
+    }
+  }, [location]);
+
   return (
     <CookiesProvider>
       <Header />
-
       <main>
         <Routes>
-          {/* Home = React */}
           <Route path="/" element={<Home />} />
-
-          {/* Toutes les pages WordPress (par slug) */}
           <Route path="/:slug" element={<WpPage />} />
-
-          {/* 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
-
       <CookieModal />
     </CookiesProvider>
   );
