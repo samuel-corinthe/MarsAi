@@ -26,7 +26,8 @@ const Footer = () => {
     legal: {
       title: 'Légal',
       links: [
-        { name: 'CGV & CGU', path: '/cgv-cgu' },
+        { name: 'CGV', path: '/cgv' },
+        { name: 'CGU', path: '/cgu' },
         { name: 'Politique de confidentialité', path: '/politique-de-confidentialite' },
         { name: 'Mentions légales', path: '/mentions-legales' },
         { name: 'Contact', path: '/contact' },
@@ -210,27 +211,34 @@ const Footer = () => {
             </p>
 
             <div className="flex items-center space-x-6">
-              <a
-                href="/cgv-cgu"
+              <Link
+                to="/cgv"
                 className="hover:text-cyan-400 transition-colors duration-200"
                 style={{ fontFamily: "'Inter', sans-serif" }}
               >
-                CGV & CGU
-              </a>
-              <a
-                href="/politique-de-confidentialite"
+                CGV
+              </Link>
+              <Link
+                to="/cgu"
+                className="hover:text-cyan-400 transition-colors duration-200"
+                style={{ fontFamily: "'Inter', sans-serif" }}
+              >
+                CGU
+              </Link>
+              <Link
+                to="/politique-de-confidentialite"
                 className="hover:text-cyan-400 transition-colors duration-200"
                 style={{ fontFamily: "'Inter', sans-serif" }}
               >
                 Confidentialité
-              </a>
-              <a
-                href="/mentions-legales"
+              </Link>
+              <Link
+                to="/mentions-legales"
                 className="hover:text-cyan-400 transition-colors duration-200"
                 style={{ fontFamily: "'Inter', sans-serif" }}
               >
                 Mentions légales
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -242,4 +250,4 @@ const Footer = () => {
   );
 };
 
-export default Footer; 
+export default Footer;

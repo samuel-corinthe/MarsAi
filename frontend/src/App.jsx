@@ -13,6 +13,8 @@ export default function App() {
       <Routes>
         {/* Home = React */}
         <Route path="/" element={<Home />} />
+        <Route path="/cgv" element={<CGV />} />
+        <Route path="/cgu" element={<CGU />} />
         {/* Toutes les pages WordPress (par slug) */}
         <Route path="/:slug" element={<WpPage />} />
         {/* 404 */}
