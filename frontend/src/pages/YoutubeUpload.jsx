@@ -1,20 +1,59 @@
 import { useState } from 'react';
 import axios from 'axios';
+import { getVideoMetadata, validateVideoFrontend } from '../utils/videoValidation';
 
 export default function YoutubeUpload() {
     const [file, setFile] = useState(null);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
+    const [email, setEmail] = useState('');
     const [uploading, setUploading] = useState(false);
     const [progress, setProgress] = useState(0);
     const [status, setStatus] = useState({ type: '', message: '' });
+    const [isValidating, setIsValidating] = useState(false);
 
+    const handleFileChange = async (e) => {
+        const selectedFile = e.target.files[0];
+        if (!selectedFile) return;
+
+        try {
+            setIsValidating(true);
+            setStatus({ type: '', message: '' });
+
+
+            const metadata = await getVideoMetadata(selectedFile);
+
+
+            const validation = validateVideoFrontend(metadata);
+
+            if (!validation.isValid) {
+                setFile(null);
+                setStatus({
+                    type: 'error',
+                    message: `Vidéo non conforme : ${validation.errors.join(' ')}`
+                });
+                return;
+            }
+
+
+            setFile(selectedFile);
+            setStatus({ type: 'success', message: "Vidéo validée ! Prête pour l'envoi." });
+
+        } catch (err) {
+            console.error(err);
+            setFile(null);
+            setStatus({ type: 'error', message: typeof err === 'string' ? err : "Erreur lors de l'analyse du fichier." });
+        } finally {
+            setIsValidating(false);
+        }
+    };
     const handleUpload = async (e) => {
         e.preventDefault();
         if (!file) return setStatus({ type: 'error', message: "Veuillez choisir une vidéo !" });
 
         const formData = new FormData();
         formData.append('video', file);
+        formData.append('email', email);
         formData.append('title', title);
         formData.append('description', description);
 
@@ -31,6 +70,7 @@ export default function YoutubeUpload() {
 
             setStatus({ type: 'success', message: `Bravo ! Vidéo mise en ligne avec succès (ID: ${res.data.videoId})` });
             setFile(null);
+            setEmail('');
             setTitle('');
             setDescription('');
         } catch (err) {
@@ -54,16 +94,30 @@ export default function YoutubeUpload() {
                 </div>
 
                 <form onSubmit={handleUpload} className="p-8 space-y-6">
-                    <div className="space-y-2">
-                        <label className="block text-sm font-semibold text-slate-700">Titre de votre film</label>
-                        <input
-                            type="text"
-                            placeholder="Ex: Ma vie sur Mars"
-                            className="w-full border border-slate-200 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            required
-                        />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <label className="block text-sm font-semibold text-slate-700">Votre Email</label>
+                            <input
+                                type="email"
+                                placeholder="votre@email.com"
+                                className="w-full border border-slate-200 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="block text-sm font-semibold text-slate-700">Titre de votre film</label>
+                            <input
+                                type="text"
+                                placeholder="Ex: Ma vie sur Mars"
+                                className="w-full border border-slate-200 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                required
+                            />
+                        </div>
                     </div>
 
                     <div className="space-y-2">
@@ -83,7 +137,7 @@ export default function YoutubeUpload() {
                                 type="file"
                                 accept="video/mp4"
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                onChange={(e) => setFile(e.target.files[0])}
+                                onChange={handleFileChange}
                             />
                             <div className="space-y-2">
                                 <p className="text-slate-600">
@@ -115,10 +169,10 @@ export default function YoutubeUpload() {
 
                     <button
                         type="submit"
-                        disabled={uploading}
+                        disabled={uploading || isValidating || !file}
                         className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-slate-800 transition-all disabled:bg-slate-300 disabled:cursor-not-allowed shadow-lg active:scale-95"
                     >
-                        {uploading ? 'Traitement en cours...' : 'Soumettre ma participation'}
+                        {isValidating ? 'Analyse de la vidéo...' : uploading ? 'Traitement en cours...' : 'Soumettre ma participation'}
                     </button>
                 </form>
             </div>

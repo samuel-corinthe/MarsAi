@@ -19,17 +19,26 @@ export function validateVideoData(data) {
     const errors = [];
     const warnings = [];
 
-    if (data.duration < VIDEO_CONSTRAINTS.DURATION.MIN) {
+    if (!data) {
+        return {
+            isValid: false,
+            errors: [{ field: 'all', message: 'Aucune donnée vidéo à valider' }],
+            warnings: [],
+            metadata: {}
+        };
+    }
+
+    if (!data.duration || data.duration < VIDEO_CONSTRAINTS.DURATION.MIN) {
         errors.push({
             field: 'duration',
-            message: `La vidéo est trop courte : ${data.duration.toFixed(1)}s (min ${VIDEO_CONSTRAINTS.DURATION.MIN}s)`,
+            message: `La vidéo est trop courte : ${(data.duration || 0).toFixed(1)}s (min ${VIDEO_CONSTRAINTS.DURATION.MIN}s)`,
             value: data.duration,
             required: VIDEO_CONSTRAINTS.DURATION.MIN
         });
     } else if (data.duration > VIDEO_CONSTRAINTS.DURATION.MAX) {
         errors.push({
             field: 'duration',
-            message: `La vidéo est trop longue : ${data.duration.toFixed(1)}s (max ${VIDEO_CONSTRAINTS.DURATION.MAX}s)`,
+            message: `La vidéo est trop longue : ${(data.duration || 0).toFixed(1)}s (max ${VIDEO_CONSTRAINTS.DURATION.MAX}s)`,
             value: data.duration,
             required: VIDEO_CONSTRAINTS.DURATION.MAX
         });
@@ -37,13 +46,13 @@ export function validateVideoData(data) {
 
     const expectedRatio = VIDEO_CONSTRAINTS.ASPECT_RATIO.STANDARD;
     const tolerance = VIDEO_CONSTRAINTS.ASPECT_RATIO.TOLERANCE;
-    if (Math.abs(data.aspectRatio - expectedRatio) > tolerance) {
+    if (!data.aspectRatio || Math.abs(data.aspectRatio - expectedRatio) > tolerance) {
         errors.push({
             field: 'aspectRatio',
-            message: `Le ratio de la vidéo est incorrect : ${data.aspectRatio.toFixed(2)} (attendu 16:9)`,
-            value: data.aspectRatio.toFixed(2),
+            message: `Le ratio de la vidéo est incorrect : ${(data.aspectRatio || 0).toFixed(2)} (attendu 16:9)`,
+            value: data.aspectRatio ? data.aspectRatio.toFixed(2) : '0',
             required: expectedRatio.toFixed(2),
-            dimensions: `${data.width}x${data.height}`
+            dimensions: `${data.width || 0}x${data.height || 0}`
         });
     }
 
@@ -56,7 +65,7 @@ export function validateVideoData(data) {
         });
     }
 
-    if (!VIDEO_CONSTRAINTS.FILE.ALLOWED_CODECS.includes(data.codec)) {
+    if (data.codec && !VIDEO_CONSTRAINTS.FILE.ALLOWED_CODECS.includes(data.codec)) {
         warnings.push({
             field: 'codec',
             message: `Codec ${data.codec} non optimal (recommandé : ${VIDEO_CONSTRAINTS.FILE.ALLOWED_CODECS.join(', ')})`,
@@ -68,12 +77,12 @@ export function validateVideoData(data) {
         errors,
         warnings,
         metadata: {
-            duration: `${data.duration.toFixed(1)}s`,
-            dimensions: `${data.width}x${data.height}`,
-            aspectRatio: data.aspectRatio.toFixed(2),
-            codec: data.codec,
-            fileSize: `${(data.fileSize / (1024 * 1024)).toFixed(2)}MB`,
-            hasAudio: data.hasAudio
+            duration: `${(data.duration || 0).toFixed(1)}s`,
+            dimensions: `${data.width || 0}x${data.height || 0}`,
+            aspectRatio: (data.aspectRatio || 0).toFixed(2),
+            codec: data.codec || 'inconnu',
+            fileSize: `${((data.fileSize || 0) / (1024 * 1024)).toFixed(2)}MB`,
+            hasAudio: data.hasAudio || false
         }
     };
 }

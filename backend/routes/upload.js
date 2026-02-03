@@ -5,38 +5,53 @@ import { google } from 'googleapis';
 import fs from 'fs';
 import { analyzeVideo } from '../utils/VideoAnalyser.js';
 import { validateVideoData, VIDEO_CONSTRAINTS } from '../utils/VideoValidator.js';
+import validator from 'validator';
+
 const router = express.Router();
+
 const upload = multer({
     dest: 'uploads/',
     limits: {
-        fileSize: VIDEO_CONSTRAINTS.FILE.MAX_SIZE
+        fileSize: 300 * 1024 * 1024 
     },
     fileFilter: (req, file, cb) => {
+        console.log(' [MULTER] Filtrage fichier:', file.mimetype);
         const allowedMime = ['video/mp4'];
-
         if (!allowedMime.includes(file.mimetype)) {
             return cb(new Error(`Type non autorisé : ${file.mimetype}`));
         }
         cb(null, true);
     }
 });
-router.post('/youtube', (req, res) => {
-    console.log(' Requête reçue sur /youtube');
-    upload.single('video')(req, res, async (err) => {
-        if (err) {
-            console.error(' Erreur Multer:', err);
-            if (err instanceof multer.MulterError) {
-                if (err.code === 'LIMIT_FILE_SIZE') {
-                    return res.status(400).json({ error: 'Le fichier est trop volumineux : max 300Mo' });
-                }
-                return res.status(400).json({ error: `Erreur d'upload : ${err.message}` });
-            }
-            return res.status(400).json({ error: err.message });
-        }
+
+const validateSubmission = (req, res, next) => {
+    console.log(' [MW] validateSubmission - Body:', req.body);
+    let email = req.body?.email;
+
+    if (!email) {
+        return res.status(400).json({ error: 'Email requis' });
+    }
+
+    email = email.toLowerCase().trim();
+    req.body.email = email;
+
+    if (!validator.isEmail(email)) {
+        return res.status(400).json({ error: 'Format email invalide' });
+    }
+
+    next();
+};
+
+router.post('/youtube',
+    upload.single('video'),
+    validateSubmission,
+    async (req, res) => {
+        console.log('--- Nouvelle Requête /youtube ---');
+        console.log('Body:', req.body);
+        console.log('File:', req.file ? req.file.path : 'Aucun fichier');
 
         const { title, description } = req.body;
         const videoFile = req.file;
-        console.log(` Données reçues - Titre: ${title}`);
 
         if (!videoFile) {
             return res.status(400).json({ error: 'Aucun fichier vidéo reçu.' });
@@ -50,8 +65,8 @@ router.post('/youtube', (req, res) => {
             const validation = validateVideoData(metadata);
 
             if (!validation.isValid) {
+                console.log(' Vidéo non conforme:', validation.errors);
                 if (fs.existsSync(videoFile.path)) fs.unlinkSync(videoFile.path);
-
 
                 const refusalReasons = validation.errors.map(e => e.message).join(' ; ');
 
@@ -60,11 +75,6 @@ router.post('/youtube', (req, res) => {
                     validationErrors: validation.errors,
                     validationWarnings: validation.warnings,
                     metadata: validation.metadata,
-                    requirements: {
-                        duration: `${VIDEO_CONSTRAINTS.DURATION.MIN}-${VIDEO_CONSTRAINTS.DURATION.MAX}s`,
-                        aspectRatio: '16:9',
-                        maxFileSize: '300MB'
-                    }
                 });
             }
 
@@ -87,21 +97,25 @@ router.post('/youtube', (req, res) => {
                 },
             });
 
+            console.log(' Upload réussi ! ID:', response.data.id);
             return res.status(200).json({
                 message: 'Upload réussi !',
                 videoId: response.data.id,
                 videoUrl: `https://youtube.com/watch?v=${response.data.id}`,
-                metadata: validation.metadata
             });
 
         } catch (error) {
-            console.error(' Erreur:', error.message);
-            return res.status(500).json({ error: 'Erreur lors du traitement' });
+            console.error(' [CRASH /youtube]:', error);
+            if (!res.headersSent) {
+                return res.status(500).json({ error: `Erreur interne: ${error.message}` });
+            }
         } finally {
-            if (videoFile && fs.existsSync(videoFile.path)) {
-                fs.unlinkSync(videoFile.path);
+            if (req.file && fs.existsSync(req.file.path)) {
+                console.log(' Nettoyage:', req.file.path);
+                fs.unlinkSync(req.file.path);
             }
         }
-    });
-});
+    }
+);
+
 export default router;

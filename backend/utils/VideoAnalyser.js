@@ -114,7 +114,7 @@ export function analyzeVideo(filePath, timeout = 10_000) {
       clearTimeout(timeoutId);
 
       if (error.code === 'ENOENT') {
-        reject(new Error('ffprobe introuvable. FFmpeg n’est pas installé.'));
+        reject(new Error('ffprobe introuvable. FFmpeg n\'est pas installé.'));
       } else {
         reject(error);
       }

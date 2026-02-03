@@ -7,6 +7,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 
+app.set('trust proxy', 1);
+
+
 app.use(cors({
     origin: true,
     credentials: true,
@@ -27,8 +30,20 @@ app.use('/', (req, res) => {
 
 
 app.use((err, req, res, next) => {
-    console.error('!!! ERREUR SERVEUR !!!', err.stack);
-    res.status(500).json({ error: 'Erreur interne du serveur' });
+    console.error('!!! ERREUR SERVEUR !!!', err);
+
+    if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ error: 'Le fichier est trop volumineux : max 300Mo' });
+        }
+        return res.status(400).json({ error: `Erreur d'upload : ${err.message}` });
+    }
+
+    if (err.message && err.message.startsWith('Type non autorisé')) {
+        return res.status(400).json({ error: err.message });
+    }
+
+    res.status(500).json({ error: 'Erreur interne du serveur', details: err.message });
 });
 
 app.listen(PORT, () => {
