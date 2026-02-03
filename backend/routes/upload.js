@@ -6,13 +6,42 @@ import fs from 'fs';
 import { analyzeVideo } from '../utils/VideoAnalyser.js';
 import { validateVideoData, VIDEO_CONSTRAINTS } from '../utils/VideoValidator.js';
 import validator from 'validator';
+import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
+
+const ipLimiter = rateLimit({
+    windowMs: 24 * 60 * 60 * 1000,
+    max: 4,
+    validate: false,
+    handler: (req, res, next, options) => {
+        console.log(' [LIMITER] IP Limit HIT for:', req.ip);
+        res.status(options.statusCode).json(options.message);
+    },
+    message: { error: 'Trop de soumissions depuis cette connexion. Réessayez demain.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+
+const emailLimiter = rateLimit({
+    windowMs: 24 * 60 * 60 * 1000,
+    max: 3,
+    validate: false,
+    keyGenerator: (req) => {
+        const key = req.body?.email || req.ip || 'unknown';
+        console.log(` [DEBUG LIMITER] Key generated: ${key}`);
+        return key;
+    },
+    message: { error: 'Cet email a déjà soumis 3 vidéos aujourd\'hui. Limite atteinte.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
 const upload = multer({
     dest: 'uploads/',
     limits: {
-        fileSize: 300 * 1024 * 1024 
+        fileSize: 300 * 1024 * 1024
     },
     fileFilter: (req, file, cb) => {
         console.log(' [MULTER] Filtrage fichier:', file.mimetype);
@@ -34,6 +63,7 @@ const validateSubmission = (req, res, next) => {
 
     email = email.toLowerCase().trim();
     req.body.email = email;
+    console.log(` [DEBUG MW] Email cleaned: ${email}`);
 
     if (!validator.isEmail(email)) {
         return res.status(400).json({ error: 'Format email invalide' });
@@ -45,6 +75,8 @@ const validateSubmission = (req, res, next) => {
 router.post('/youtube',
     upload.single('video'),
     validateSubmission,
+    ipLimiter,
+    emailLimiter,
     async (req, res) => {
         console.log('--- Nouvelle Requête /youtube ---');
         console.log('Body:', req.body);
