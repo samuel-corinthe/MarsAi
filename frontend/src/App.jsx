@@ -7,21 +7,20 @@ import NotFound from "./pages/NotFound";
 
 export default function App() {
   return (
-    <>
-      <Navbar />   
-      <Routes>
-        {/* Home = React */}
-        <Route path="/" element={<Home />} />
+    <div className="min-h-screen flex flex-col">
+      <Navbar />
+      <div className="flex-1">
+        <Routes>
+          {/* Home = React */}
+          <Route path="/" element={<Home />} />
 
-        <Route path="/cgv" element={<CGV />} />
-        <Route path="/cgu" element={<CGU />} />
-
-        {/* Toutes les pages WordPress (par slug) */}
-        <Route path="/:slug" element={<WpPage />} />
-        {/* 404 */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+          {/* Toutes les pages WordPress (par slug) */}
+          <Route path="/:slug" element={<WpPage />} />
+          {/* 404 */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </div>
       <Footer />
-    </>
+    </div>
   );
 }
