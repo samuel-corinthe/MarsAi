@@ -7,13 +7,18 @@ const http = require("http");
 const { execFile } = require("child_process");
 const ffprobePath = require("ffprobe-static").path;
 
-// Scopes basiques: upload + lecture
+// Scopes: upload + gestion playlists
 const SCOPES = [
-  "https://www.googleapis.com/auth/youtube.upload",
-  "https://www.googleapis.com/auth/youtube.readonly",
+  "https://www.googleapis.com/auth/youtube",
 ];
 const TOKEN_PATH = "token-node.json";
 const CREDENTIALS_PATH = "client_secret.json";
+
+function hasScopes(tokenScope, requiredScopes) {
+  if (!tokenScope) return false;
+  const scopes = Array.isArray(tokenScope) ? tokenScope : String(tokenScope).split(/\s+/);
+  return requiredScopes.every((scope) => scopes.includes(scope));
+}
 
 // Gere le login Google et garde le token pour eviter de recliquer a chaque fois
 async function authorize() {
@@ -30,17 +35,30 @@ async function authorize() {
   const oauth2 = new google.auth.OAuth2(cfg.client_id, cfg.client_secret, redirectUri);
 
   if (fs.existsSync(TOKEN_PATH)) {
-    oauth2.setCredentials(JSON.parse(fs.readFileSync(TOKEN_PATH, "utf8")));
-    return oauth2;
+    const tokens = JSON.parse(fs.readFileSync(TOKEN_PATH, "utf8"));
+    if (hasScopes(tokens.scope, SCOPES)) {
+      oauth2.setCredentials(tokens);
+      return oauth2;
+    }
+    console.warn("Token missing required scopes, re-auth needed.");
   }
 
   const authUrl = oauth2.generateAuthUrl({
     access_type: "offline",
     scope: SCOPES,
     prompt: "consent",
+    response_type: "code",
+    include_granted_scopes: true,
+    redirect_uri: redirectUri,
   });
 
-  console.log("Ouvre ce lien pour autoriser :", authUrl);
+  console.log("Ouvre ce lien pour autoriser (copie/colle si besoin) :");
+  console.log(authUrl);
+  try {
+    fs.writeFileSync("oauth-url.txt", authUrl);
+  } catch (_) {
+    // ignore
+  }
   const code = await waitForAuthCode(authUrl, redirectUri);
   const { tokens } = await oauth2.getToken(code.trim());
   oauth2.setCredentials(tokens);

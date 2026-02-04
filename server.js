@@ -18,6 +18,7 @@ const TARGET_RATIO = 16 / 9;
 const RATIO_TOL = 0.02;
 const TOKEN_PATH = path.resolve("token-node.json");
 const CREDENTIALS_PATH = path.resolve("client_secret.json");
+const DEFAULT_PLAYLIST_TITLE = "MarsAi";
 
 // Multer in global middleware (parse any files, no mimetype filter)
 const upload = multer({
@@ -120,6 +121,45 @@ async function getYoutubeStatus(oauth2, videoId) {
   };
 }
 
+async function resolvePlaylistId(oauth2, { playlistId, playlistTitle }) {
+  if (playlistId) return playlistId;
+  if (!playlistTitle) return null;
+  const youtube = google.youtube({ version: "v3", auth: oauth2 });
+  let pageToken = undefined;
+  const target = playlistTitle.trim().toLowerCase();
+  do {
+    const res = await youtube.playlists.list({
+      part: "snippet",
+      mine: true,
+      maxResults: 50,
+      pageToken,
+    });
+    const items = res.data.items || [];
+    for (const item of items) {
+      const title = item?.snippet?.title?.trim().toLowerCase();
+      if (title === target) return item.id;
+    }
+    pageToken = res.data.nextPageToken;
+  } while (pageToken);
+  return null;
+}
+
+async function addToPlaylist(oauth2, videoId, playlistId) {
+  const youtube = google.youtube({ version: "v3", auth: oauth2 });
+  await youtube.playlistItems.insert({
+    part: "snippet",
+    requestBody: {
+      snippet: {
+        playlistId,
+        resourceId: {
+          kind: "youtube#video",
+          videoId,
+        },
+      },
+    },
+  });
+}
+
 const app = express();
 
 // CORS + CSP permissifs (dev)
@@ -190,9 +230,31 @@ async function handleUpload(req, res) {
 
     const oauth2 = loadOAuthClient();
     const youtubeId = await uploadToYoutube(oauth2, tmpPath, req.body || {});
+    let playlistResult = null;
+    try {
+      const playlistId = req.body?.playlist_id || process.env.YOUTUBE_PLAYLIST_ID || "";
+      const playlistTitle =
+        req.body?.playlist_title ||
+        process.env.YOUTUBE_PLAYLIST_TITLE ||
+        DEFAULT_PLAYLIST_TITLE;
+      const resolvedId = await resolvePlaylistId(oauth2, { playlistId, playlistTitle });
+      if (!resolvedId) {
+        playlistResult = {
+          added: false,
+          error: "PLAYLIST_NOT_FOUND",
+          title: playlistTitle,
+        };
+      } else {
+        await addToPlaylist(oauth2, youtubeId, resolvedId);
+        playlistResult = { added: true, id: resolvedId, title: playlistTitle };
+      }
+    } catch (err) {
+      playlistResult = { added: false, error: err.message };
+      console.error("Playlist add failed:", err.message);
+    }
 
     fs.unlink(tmpPath, () => {});
-    res.json({ ok: true, youtube_id: youtubeId });
+    res.json({ ok: true, youtube_id: youtubeId, playlist: playlistResult });
   } catch (err) {
     console.error(err);
     if (tmpPath) fs.unlink(tmpPath, () => {});
