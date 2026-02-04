@@ -50,16 +50,14 @@ export const validateVideoFrontend = (data) => {
         errors.push("Seul le format MP4 est autorisé.");
     }
 
-    if (data.duration < VIDEO_CONSTRAINTS.DURATION.MIN) {
-        errors.push(`La vidéo est trop courte (${data.duration.toFixed(1)}s). Minimum requis : ${VIDEO_CONSTRAINTS.DURATION.MIN}s.`);
-    } else if (data.duration > VIDEO_CONSTRAINTS.DURATION.MAX) {
-        errors.push(`La vidéo est trop longue (${data.duration.toFixed(1)}s). Maximum autorisé : ${VIDEO_CONSTRAINTS.DURATION.MAX}s.`);
+    if (data.duration < VIDEO_CONSTRAINTS.DURATION.MIN || data.duration > VIDEO_CONSTRAINTS.DURATION.MAX) {
+        errors.push(`La durée (${Math.round(data.duration)}s) doit être entre ${VIDEO_CONSTRAINTS.DURATION.MIN}s et ${VIDEO_CONSTRAINTS.DURATION.MAX}s.`);
     }
 
     const expectedRatio = VIDEO_CONSTRAINTS.ASPECT_RATIO.STANDARD;
     const tolerance = VIDEO_CONSTRAINTS.ASPECT_RATIO.TOLERANCE;
     if (Math.abs(data.aspectRatio - expectedRatio) > tolerance) {
-        errors.push("Le format de la vidéo doit être 16:9 (horizontal).");
+        errors.push("Le format de la vidéo doit être 16:9 .");
     }
 
     return {

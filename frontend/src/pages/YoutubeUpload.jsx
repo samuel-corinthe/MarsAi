@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import axios from 'axios';
-import { getVideoMetadata, validateVideoFrontend } from '../utils/videoValidation';
+import { getVideoMetadata, validateVideoFrontend, VIDEO_CONSTRAINTS } from '../utils/videoValidation';
+import { validateForm, FORM_CONSTRAINTS, exceedsMaxLength } from '../utils/formvalidation';
 
 export default function YoutubeUpload() {
     const [file, setFile] = useState(null);
@@ -21,6 +22,25 @@ export default function YoutubeUpload() {
     const handleFileChange = async (e) => {
         const selectedFile = e.target.files[0];
         if (!selectedFile) return;
+
+        // 1. Garde-fou immédiat : Type de fichier
+        if (selectedFile.type !== 'video/mp4') {
+            const error = "Seul le format MP4 est accepté.";
+            setStatus({ type: 'error', message: error });
+            setErrors(prev => ({ ...prev, file: error }));
+            setFile(null);
+            return;
+        }
+
+        // 2. Garde-fou immédiat : Taille du fichier (300Mo)
+        const maxSize = VIDEO_CONSTRAINTS.FILE.MAX_SIZE;
+        if (selectedFile.size > maxSize) {
+            const error = `Le fichier est trop lourd (max ${maxSize / (1024 * 1024)}Mo).`;
+            setStatus({ type: 'error', message: error });
+            setErrors(prev => ({ ...prev, file: error }));
+            setFile(null);
+            return;
+        }
 
         try {
             setIsValidating(true);
@@ -44,7 +64,7 @@ export default function YoutubeUpload() {
             setFile(selectedFile);
             setStatus({ type: 'success', message: "Vidéo validée ! Prête pour l'envoi." });
 
-            
+
             setTimeout(() => {
                 statusRef.current?.focus();
             }, 100);
@@ -62,27 +82,36 @@ export default function YoutubeUpload() {
 
     const handleUpload = async (e) => {
         e.preventDefault();
-        
-        const newErrors = {};
-        if (!email) newErrors.email = "L'email est requis";
-        if (!firstName) newErrors.firstName = "Le prénom est requis";
-        if (!lastName) newErrors.lastName = "Le nom est requis";
-        if (!title) newErrors.title = "Le titre est requis";
-        if (!file) newErrors.file = "Veuillez sélectionner une vidéo";
 
-        if (Object.keys(newErrors).length > 0) {
-            setErrors(newErrors);
-            setStatus({ type: 'error', message: 'Veuillez remplir tous les champs obligatoires' });
+        // Validation complète du formulaire avec sanitization
+        const validation = validateForm({
+            email,
+            firstName,
+            lastName,
+            title,
+            description
+        });
+
+        if (!validation.isValid) {
+            setErrors(validation.errors);
+            setStatus({ type: 'error', message: 'Veuillez corriger les erreurs dans le formulaire' });
             return;
         }
 
+        if (!file) {
+            setErrors({ file: "Veuillez sélectionner une vidéo" });
+            setStatus({ type: 'error', message: 'Veuillez sélectionner une vidéo' });
+            return;
+        }
+
+        
         const formData = new FormData();
         formData.append('video', file);
-        formData.append('email', email);
-        formData.append('firstName', firstName);
-        formData.append('lastName', lastName);
-        formData.append('title', title);
-        formData.append('description', description);
+        formData.append('email', validation.cleanedData.email);
+        formData.append('firstName', validation.cleanedData.firstName);
+        formData.append('lastName', validation.cleanedData.lastName);
+        formData.append('title', validation.cleanedData.title);
+        formData.append('description', validation.cleanedData.description);
 
         try {
             setUploading(true);
@@ -95,11 +124,11 @@ export default function YoutubeUpload() {
                 }
             });
 
-            setStatus({ 
-                type: 'success', 
-                message: `Votre Vidéo a été  mise en ligne avec succès (ID: ${res.data.videoId})` 
+            setStatus({
+                type: 'success',
+                message: `Votre Vidéo a été  mise en ligne avec succès (ID: ${res.data.videoId})`
             });
-            
+
             setFile(null);
             setEmail('');
             setFirstName('');
@@ -107,7 +136,7 @@ export default function YoutubeUpload() {
             setTitle('');
             setDescription('');
             setErrors({});
-            
+
             setTimeout(() => {
                 statusRef.current?.focus();
             }, 100);
@@ -139,23 +168,30 @@ export default function YoutubeUpload() {
                 <form onSubmit={handleUpload} className="p-8 space-y-6" noValidate>
                     {/* Email */}
                     <div className="space-y-2">
-                        <label 
-                            htmlFor="email-input" 
-                            className="block text-sm font-semibold text-slate-700"
-                        >
-                            Votre Email <abbr title="requis" className="text-red-600 no-underline">*</abbr>
-                        </label>
+                        <div className="flex justify-between items-center">
+                            <label
+                                htmlFor="email-input"
+                                className="block text-sm font-semibold text-slate-700"
+                            >
+                                Votre Email <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                            </label>
+                            <span className={`text-xs ${email.length > FORM_CONSTRAINTS.EMAIL.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                                {email.length}/{FORM_CONSTRAINTS.EMAIL.MAX_LENGTH}
+                            </span>
+                        </div>
                         <input
                             id="email-input"
                             type="email"
                             placeholder="votre@email.com"
-                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${
-                                errors.email ? 'border-red-500 bg-red-50' : 'border-slate-200'
-                            }`}
+                            maxLength={FORM_CONSTRAINTS.EMAIL.MAX_LENGTH}
+                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.email ? 'border-red-500 bg-red-50' : 'border-slate-200'
+                                }`}
                             value={email}
                             onChange={(e) => {
-                                setEmail(e.target.value);
-                                clearError('email');
+                                if (!exceedsMaxLength('EMAIL', e.target.value)) {
+                                    setEmail(e.target.value);
+                                    clearError('email');
+                                }
                             }}
                             required
                             aria-required="true"
@@ -175,23 +211,30 @@ export default function YoutubeUpload() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Prénom */}
                         <div className="space-y-2">
-                            <label 
-                                htmlFor="firstname-input" 
-                                className="block text-sm font-semibold text-slate-700"
-                            >
-                                Votre Prénom <abbr title="requis" className="text-red-600 no-underline">*</abbr>
-                            </label>
+                            <div className="flex justify-between items-center">
+                                <label
+                                    htmlFor="firstname-input"
+                                    className="block text-sm font-semibold text-slate-700"
+                                >
+                                    Votre Prénom <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                                </label>
+                                <span className={`text-xs ${firstName.length > FORM_CONSTRAINTS.FIRST_NAME.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                                    {firstName.length}/{FORM_CONSTRAINTS.FIRST_NAME.MAX_LENGTH}
+                                </span>
+                            </div>
                             <input
                                 id="firstname-input"
                                 type="text"
                                 placeholder="Votre prénom"
-                                className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${
-                                    errors.firstName ? 'border-red-500 bg-red-50' : 'border-slate-200'
-                                }`}
+                                maxLength={FORM_CONSTRAINTS.FIRST_NAME.MAX_LENGTH}
+                                className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.firstName ? 'border-red-500 bg-red-50' : 'border-slate-200'
+                                    }`}
                                 value={firstName}
                                 onChange={(e) => {
-                                    setFirstName(e.target.value);
-                                    clearError('firstName');
+                                    if (!exceedsMaxLength('FIRST_NAME', e.target.value)) {
+                                        setFirstName(e.target.value);
+                                        clearError('firstName');
+                                    }
                                 }}
                                 required
                                 aria-required="true"
@@ -207,23 +250,30 @@ export default function YoutubeUpload() {
 
                         {/* Nom */}
                         <div className="space-y-2">
-                            <label 
-                                htmlFor="lastname-input" 
-                                className="block text-sm font-semibold text-slate-700"
-                            >
-                                Votre Nom <abbr title="requis" className="text-red-600 no-underline">*</abbr>
-                            </label>
+                            <div className="flex justify-between items-center">
+                                <label
+                                    htmlFor="lastname-input"
+                                    className="block text-sm font-semibold text-slate-700"
+                                >
+                                    Votre Nom <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                                </label>
+                                <span className={`text-xs ${lastName.length > FORM_CONSTRAINTS.LAST_NAME.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                                    {lastName.length}/{FORM_CONSTRAINTS.LAST_NAME.MAX_LENGTH}
+                                </span>
+                            </div>
                             <input
                                 id="lastname-input"
                                 type="text"
                                 placeholder="Votre nom"
-                                className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${
-                                    errors.lastName ? 'border-red-500 bg-red-50' : 'border-slate-200'
-                                }`}
+                                maxLength={FORM_CONSTRAINTS.LAST_NAME.MAX_LENGTH}
+                                className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.lastName ? 'border-red-500 bg-red-50' : 'border-slate-200'
+                                    }`}
                                 value={lastName}
                                 onChange={(e) => {
-                                    setLastName(e.target.value);
-                                    clearError('lastName');
+                                    if (!exceedsMaxLength('LAST_NAME', e.target.value)) {
+                                        setLastName(e.target.value);
+                                        clearError('lastName');
+                                    }
                                 }}
                                 required
                                 aria-required="true"
@@ -240,23 +290,30 @@ export default function YoutubeUpload() {
 
                     {/* Titre */}
                     <div className="space-y-2">
-                        <label 
-                            htmlFor="title-input" 
-                            className="block text-sm font-semibold text-slate-700"
-                        >
-                            Titre de votre film <abbr title="requis" className="text-red-600 no-underline">*</abbr>
-                        </label>
+                        <div className="flex justify-between items-center">
+                            <label
+                                htmlFor="title-input"
+                                className="block text-sm font-semibold text-slate-700"
+                            >
+                                Titre de votre film <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                            </label>
+                            <span className={`text-xs ${title.length > FORM_CONSTRAINTS.TITLE.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                                {title.length}/{FORM_CONSTRAINTS.TITLE.MAX_LENGTH}
+                            </span>
+                        </div>
                         <input
                             id="title-input"
                             type="text"
                             placeholder="Ex: Ma vie sur Mars"
-                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${
-                                errors.title ? 'border-red-500 bg-red-50' : 'border-slate-200'
-                            }`}
+                            maxLength={FORM_CONSTRAINTS.TITLE.MAX_LENGTH}
+                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.title ? 'border-red-500 bg-red-50' : 'border-slate-200'
+                                }`}
                             value={title}
                             onChange={(e) => {
-                                setTitle(e.target.value);
-                                clearError('title');
+                                if (!exceedsMaxLength('TITLE', e.target.value)) {
+                                    setTitle(e.target.value);
+                                    clearError('title');
+                                }
                             }}
                             required
                             aria-required="true"
@@ -275,20 +332,37 @@ export default function YoutubeUpload() {
 
                     {/* Description */}
                     <div className="space-y-2">
-                        <label 
-                            htmlFor="description-input" 
-                            className="block text-sm font-semibold text-slate-700"
-                        >
-                            Description <span className="text-slate-500 font-normal">(optionnel)</span>
-                        </label>
+                        <div className="flex justify-between items-center">
+                            <label
+                                htmlFor="description-input"
+                                className="block text-sm font-semibold text-slate-700"
+                            >
+                                Description <span className="text-slate-500 font-normal">(optionnel)</span>
+                            </label>
+                            <span className={`text-xs ${description.length > FORM_CONSTRAINTS.DESCRIPTION.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                                {description.length}/{FORM_CONSTRAINTS.DESCRIPTION.MAX_LENGTH}
+                            </span>
+                        </div>
                         <textarea
                             id="description-input"
                             placeholder="Expliquez brièvement votre projet..."
-                            className="w-full border border-slate-200 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all h-32 resize-y"
+                            maxLength={FORM_CONSTRAINTS.DESCRIPTION.MAX_LENGTH}
+                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all h-32 resize-y ${errors.description ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
                             value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            aria-describedby="description-hint"
+                            onChange={(e) => {
+                                if (!exceedsMaxLength('DESCRIPTION', e.target.value)) {
+                                    setDescription(e.target.value);
+                                    clearError('description');
+                                }
+                            }}
+                            aria-describedby={errors.description ? "description-error" : "description-hint"}
+                            aria-invalid={!!errors.description}
                         />
+                        {errors.description && (
+                            <p id="description-error" className="text-red-600 text-sm mt-1" role="alert">
+                                {errors.description}
+                            </p>
+                        )}
                         <span id="description-hint" className="text-xs text-slate-500 block">
                             Cette description accompagnera votre vidéo sur YouTube
                         </span>
@@ -299,9 +373,8 @@ export default function YoutubeUpload() {
                         <label className="block text-sm font-semibold text-slate-700">
                             Fichier vidéo (MP4 uniquement) <abbr title="requis" className="text-red-600 no-underline">*</abbr>
                         </label>
-                        <div className={`border-2 border-dashed rounded-lg p-8 transition-colors ${
-                            errors.file ? 'border-red-500 bg-red-50' : 'border-slate-200 hover:border-blue-400'
-                        }`}>
+                        <div className={`border-2 border-dashed rounded-lg p-8 transition-colors ${errors.file ? 'border-red-500 bg-red-50' : 'border-slate-200 hover:border-blue-400'
+                            }`}>
                             <div className="flex flex-col items-center gap-4">
                                 <button
                                     type="button"
@@ -345,7 +418,7 @@ export default function YoutubeUpload() {
                     {/* Barre de progression */}
                     {uploading && (
                         <div className="space-y-2" role="region" aria-label="Progression de l'envoi">
-                            <div 
+                            <div
                                 role="progressbar"
                                 aria-valuenow={progress}
                                 aria-valuemin="0"
@@ -366,17 +439,16 @@ export default function YoutubeUpload() {
 
                     {/* Messages de statut */}
                     {status.message && (
-                        <div 
+                        <div
                             ref={statusRef}
                             role="alert"
                             aria-live="polite"
                             aria-atomic="true"
                             tabIndex="-1"
-                            className={`p-4 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                                status.type === 'success' 
-                                    ? 'bg-green-50 text-green-700 border border-green-200 focus:ring-green-500' 
-                                    : 'bg-red-50 text-red-700 border border-red-200 focus:ring-red-500'
-                            }`}
+                            className={`p-4 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 ${status.type === 'success'
+                                ? 'bg-green-50 text-green-700 border border-green-200 focus:ring-green-500'
+                                : 'bg-red-50 text-red-700 border border-red-200 focus:ring-red-500'
+                                }`}
                         >
                             {status.message}
                         </div>
@@ -390,17 +462,17 @@ export default function YoutubeUpload() {
                         aria-disabled={uploading || isValidating || !file}
                         className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-slate-800 transition-all disabled:bg-slate-300 disabled:cursor-not-allowed shadow-lg active:scale-95 focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
                     >
-                        {isValidating ? 'Analyse de la vidéo...' : 
-                         uploading ? `Traitement en cours... ${progress}%` : 
-                         'Soumettre ma participation'}
+                        {isValidating ? 'Analyse de la vidéo...' :
+                            uploading ? `Traitement en cours... ${progress}%` :
+                                'Soumettre ma participation'}
                     </button>
-                    
+
                     {/* Aide contextuelle pour le bouton (masquée visuellement) */}
                     {(!file || uploading || isValidating) && (
                         <p className="sr-only" aria-live="polite">
                             {!file ? 'Veuillez d\'abord sélectionner une vidéo pour activer le bouton de soumission' :
-                             isValidating ? 'Validation de la vidéo en cours, veuillez patienter' :
-                             'Envoi de la vidéo en cours, veuillez patienter'}
+                                isValidating ? 'Validation de la vidéo en cours, veuillez patienter' :
+                                    'Envoi de la vidéo en cours, veuillez patienter'}
                         </p>
                     )}
                 </form>

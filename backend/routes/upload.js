@@ -5,7 +5,7 @@ import { google } from 'googleapis';
 import fs from 'fs';
 import { analyzeVideo } from '../utils/VideoAnalyser.js';
 import { validateVideoData, VIDEO_CONSTRAINTS } from '../utils/VideoValidator.js';
-import validator from 'validator';
+import { validateFormData } from '../utils/FormValidator.js';
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
@@ -53,28 +53,9 @@ const upload = multer({
     }
 });
 
-const validateSubmission = (req, res, next) => {
-    console.log(' [MW] validateSubmission - Body:', req.body);
-    let email = req.body?.email;
-
-    if (!email) {
-        return res.status(400).json({ error: 'Email requis' });
-    }
-
-    email = email.toLowerCase().trim();
-    req.body.email = email;
-    console.log(` [DEBUG MW] Email cleaned: ${email}`);
-
-    if (!validator.isEmail(email)) {
-        return res.status(400).json({ error: 'Format email invalide' });
-    }
-
-    next();
-};
-
 router.post('/youtube',
     upload.single('video'),
-    validateSubmission,
+    validateFormData,
     ipLimiter,
     emailLimiter,
     async (req, res) => {
