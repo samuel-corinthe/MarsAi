@@ -102,6 +102,24 @@ async function uploadToYoutube(oauth2, filePath, body) {
   return res.data.id;
 }
 
+async function getYoutubeStatus(oauth2, videoId) {
+  const youtube = google.youtube({ version: "v3", auth: oauth2 });
+  const res = await youtube.videos.list({
+    part: "status,processingDetails",
+    id: videoId,
+  });
+  const item = res.data.items && res.data.items[0];
+  if (!item) return null;
+  return {
+    id: item.id,
+    uploadStatus: item.status?.uploadStatus || null,
+    privacyStatus: item.status?.privacyStatus || null,
+    rejectionReason: item.status?.rejectionReason || null,
+    processingStatus: item.processingDetails?.processingStatus || null,
+    processingFailureReason: item.processingDetails?.processingFailureReason || null,
+  };
+}
+
 const app = express();
 
 // CORS + CSP permissifs (dev)
@@ -128,6 +146,17 @@ app.use(upload.any());
 app.get("/api", (_req, res) => res.json({ ok: true }));
 app.get("/api/Upload", (_req, res) => res.json({ ok: true }));
 app.get("/favicon.ico", (_req, res) => res.status(204).end());
+app.get("/api/youtube/status/:id", async (req, res) => {
+  try {
+    const oauth2 = loadOAuthClient();
+    const status = await getYoutubeStatus(oauth2, req.params.id);
+    if (!status) return res.status(404).json({ error: "Video not found" });
+    res.json({ ok: true, status });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Status failed", detail: err.message });
+  }
+});
 
 async function handleUpload(req, res) {
   const file =
