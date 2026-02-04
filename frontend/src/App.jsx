@@ -19,7 +19,7 @@ export default function App() {
         <Route path="/:slug" element={<WpPage />} />
 
         <Route path="/gallery" element={<Gallery />} />
-        <Route path="/movie" element={<MovieDetails />} />
+        <Route path="/movie/:id" element={<MovieDetails />} />
         {/* 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>
