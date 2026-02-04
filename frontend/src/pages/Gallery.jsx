@@ -1,66 +1,14 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // Import de useNavigate au cas où
+import { allMovies } from "../components/MoviesData"; // Utilisation de ton fichier centralisé
+
 const Gallery = () => {
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [playingVideos, setPlayingVideos] = useState({});
-  const videoRefs = useRef({});
   const searchRef = useRef(null);
 
   const filters = ["All", "Action", "Sci-Fi", "Adventure", "Fantasy", "Drama"];
-
-  // Simulation d'une base de données plus large pour voir la pagination
-  const allMovies = [
-    {
-      id: 1,
-      title: "ECHOES OF TOMORROW",
-      genre: "Sci-Fi",
-      img: "https://miro.medium.com/v2/resize:fit:1100/format:webp/1*0_vOI1a7qNAWkLgd_Gn7AA.jpeg",
-    },
-    {
-      id: 2,
-      title: "NEON NIGHTS",
-      genre: "Action",
-      img: "https://plus.unsplash.com/premium_photo-1666700698920-d2d2bba589f8?q=80&w=1332&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-      id: 3,
-      title: "DESERT QUEST",
-      genre: "Adventure",
-      img: "https://plus.unsplash.com/premium_photo-1671611799147-68a4f9b3f0e1?q=80&w=1171&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    },
-    {
-      id: 4,
-      title: "MAGIC REALM",
-      genre: "Fantasy",
-      img: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=400",
-    },
-    {
-      id: 5,
-      title: "SILENT ECHO",
-      genre: "Drama",
-      img: "https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=400",
-    },
-    {
-      id: 6,
-      title: "CYBER ATTACK",
-      genre: "Sci-Fi",
-      img: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=400",
-    },
-    {
-      id: 7,
-      title: "FROZEN TIME",
-      genre: "Sci-Fi",
-      img: "https://images.unsplash.com/photo-1478720568477-152d9b164e26?q=80&w=400",
-    },
-    {
-      id: 8,
-      title: "THE LAST GATE",
-      genre: "Fantasy",
-      img: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?q=80&w=400",
-    },
-  ];
 
   // --- LOGIQUE FILTRAGE & AUTOCOMPLETION ---
   const suggestions = allMovies
@@ -68,13 +16,13 @@ const Gallery = () => {
       (m) =>
         m.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
         searchQuery.length > 0 &&
-        (activeFilter === "All" || m.genre === activeFilter),
+        (activeFilter === "All" || m.genre.includes(activeFilter)), // Supporte le format tableau des genres
     )
     .slice(0, 5);
 
   const filteredMovies = allMovies.filter((movie) => {
     const matchesFilter =
-      activeFilter === "All" || movie.genre === activeFilter;
+      activeFilter === "All" || movie.genre.includes(activeFilter);
     const matchesSearch = movie.title
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
@@ -99,7 +47,7 @@ const Gallery = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-blue-900/80 to-blue-950"></div>
         <div className="relative z-10 container mx-auto px-6 text-center">
           <h1 className="text-3xl md:text-5xl font-black text-white mb-10 mt-8 tracking-tighter uppercase">
-            Discover <span className="text-cyan-400">Cinematic Wonders</span>
+            Découvrez <span className="text-cyan-400">nos Merveilles</span>
           </h1>
         </div>
       </section>
@@ -133,7 +81,7 @@ const Gallery = () => {
                   </div>
                   <input
                     type="text"
-                    placeholder="Search movie title..."
+                    placeholder="Rechercher un film..."
                     value={searchQuery}
                     onFocus={() => setShowSuggestions(true)}
                     onChange={(e) => {
@@ -144,17 +92,15 @@ const Gallery = () => {
                   />
                 </div>
 
-                {/* Autocompletion Dropdown */}
+                {/* --- AUTOCOMPLETION REDIRIGEANT --- */}
                 {showSuggestions && suggestions.length > 0 && (
                   <div className="absolute z-[100] w-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
                     {suggestions.map((movie) => (
-                      <button
+                      <Link
                         key={movie.id}
-                        onClick={() => {
-                          setSearchQuery(movie.title);
-                          setShowSuggestions(false);
-                        }}
-                        className="w-full flex items-center gap-4 px-6 py-4 hover:bg-blue-50 transition-colors text-left"
+                        to={`/movie/${movie.id}`} // Redirection directe au clic
+                        onClick={() => setShowSuggestions(false)} // Ferme le menu
+                        className="w-full flex items-center gap-4 px-6 py-4 hover:bg-blue-50 transition-colors text-left border-b last:border-none border-slate-50"
                       >
                         <img
                           src={movie.img}
@@ -166,10 +112,12 @@ const Gallery = () => {
                             {movie.title}
                           </p>
                           <p className="text-[10px] text-cyan-600 font-black uppercase tracking-widest">
-                            {movie.genre}
+                            {Array.isArray(movie.genre)
+                              ? movie.genre[0]
+                              : movie.genre}
                           </p>
                         </div>
-                      </button>
+                      </Link>
                     ))}
                   </div>
                 )}
@@ -196,10 +144,7 @@ const Gallery = () => {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-10">
                 {filteredMovies.map((movie) => (
                   <Link to={`/movie/${movie.id}`} key={movie.id}>
-                    <div
-                      key={movie.id}
-                      className="group relative aspect-[2/3] rounded-[35px] overflow-hidden shadow-2xl bg-blue-950 border border-slate-100"
-                    >
+                    <div className="group relative aspect-[2/3] rounded-[35px] overflow-hidden shadow-2xl bg-blue-950 border border-slate-100">
                       <img
                         src={movie.img}
                         alt={movie.title}
@@ -225,26 +170,17 @@ const Gallery = () => {
               </div>
             ) : (
               <div className="py-20 text-center text-slate-300 font-black uppercase tracking-widest text-xl">
-                No results found
+                Aucun résultat trouvé
               </div>
             )}
 
-            {/* --- PAGINATION --- */}
+            {/* Pagination fictive */}
             <div className="flex justify-center items-center gap-2 mt-20">
-              <button className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-xl shadow-blue-500/30 font-black">
+              <button className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-xl font-black">
                 1
               </button>
-              {[2, 3].map((n) => (
-                <button
-                  key={n}
-                  className="w-12 h-12 rounded-2xl text-slate-400 hover:text-blue-600 hover:bg-slate-50 border-2 border-transparent hover:border-slate-100 flex items-center justify-center transition-all font-bold"
-                >
-                  {n}
-                </button>
-              ))}
-              <span className="text-slate-300 px-2">...</span>
-              <button className="w-12 h-12 rounded-2xl text-slate-400 hover:text-blue-600 flex items-center justify-center font-bold">
-                10
+              <button className="w-12 h-12 rounded-2xl text-slate-400 border-2 border-transparent font-bold">
+                2
               </button>
             </div>
           </div>
