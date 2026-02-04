@@ -253,9 +253,9 @@ export default function Upload() {
         </div>
         <div className="relative">
           <p className="text-sm font-semibold text-emerald-600 uppercase tracking-wide">Upload film</p>
-          <h1 className="h1 mt-2">DÃ©poser un film (YouTube direct)</h1>
+          <h1 className="h1 mt-2">Déposer un film (YouTube direct)</h1>
           <p className="text-slate-600 mt-2">
-            RÃ¨gles : mp4, â‰¤ 300 Mo, ratio 16:9, durÃ©e 40â€“120 s.
+            Règles : mp4, ≤ 300 Mo, ratio 16:9, durée 40–120 s.
           </p>
         </div>
 
@@ -331,7 +331,7 @@ export default function Upload() {
               />
             </label>
             <label className="form-field">
-              <span>Email contact *</span>
+              <span>Email de contact *</span>
               <input
                 type="email"
                 name="contactEmail"
@@ -358,7 +358,7 @@ export default function Upload() {
           </label>
 
           <label className="form-field">
-            <span>VidÃ©o (mp4, â‰¤300Mo, 16:9, 40-120s) *</span>
+            <span>Vidéo (mp4, ≤ 300 Mo, 16:9, 40–120 s) *</span>
             <div className="mt-2 flex flex-col gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-white/70 px-4 py-4 hover:border-emerald-400">
               <input
                 type="file"
