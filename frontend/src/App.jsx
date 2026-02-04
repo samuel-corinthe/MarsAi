@@ -1,6 +1,7 @@
-﻿import { Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import Newsletter from "./pages/Newsletter";
 import WpPage from "./pages/WpPage";
 import NotFound from "./pages/NotFound";
 
@@ -10,11 +11,9 @@ export default function App() {
       <Navbar />
       <div className="flex-1">
         <Routes>
-          {/* Home et toutes les pages WordPress (par slug) */}
           <Route path="/" element={<WpPage isHome={true} />} />
+          <Route path="/newsletter" element={<Newsletter />} />
           <Route path="/:slug" element={<WpPage />} />
-
-          {/* 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
