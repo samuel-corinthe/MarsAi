@@ -1,129 +1,15 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { getAdminDashboardData } from "../api";
 
-const selectionTarget = 50;
-
-const adminKpis = {
-  noted: 24,
-  remaining: 31,
-  selected: 42,
-  quota: 50,
-};
-
-const films = [
-  {
-    title: "L'Aube Quantique",
-    country: "France",
-    status: "en cours",
-    rating: 4.1,
-    notesCount: 48,
-    phase: "Sélection",
-    duration: "18 min",
-    tools: "Gen-vidéo + sound design IA",
-  },
-  {
-    title: "Neon Dust",
-    country: "États-Unis",
-    status: "sélectionné",
-    rating: 4.6,
-    notesCount: 61,
-    phase: "Finale",
-    duration: "22 min",
-    tools: "Rotoscopie IA",
-  },
-  {
-    title: "Ciel Inversé",
-    country: "Canada",
-    status: "refusé",
-    rating: 2.8,
-    notesCount: 30,
-    phase: "Pré-sélection",
-    duration: "15 min",
-    tools: "Upscale IA",
-  },
-  {
-    title: "Retina",
-    country: "Espagne",
-    status: "en cours",
-    rating: 3.9,
-    notesCount: 21,
-    phase: "Sélection",
-    duration: "19 min",
-    tools: "Storyboard IA",
-  },
-  {
-    title: "Low Orbit",
-    country: "Royaume-Uni",
-    status: "accepté",
-    rating: 4.4,
-    notesCount: 55,
-    phase: "Finale",
-    duration: "24 min",
-    tools: "Voice clone",
-  },
-];
-
-const statuses = ["tous", "en cours", "accepté", "sélectionné", "refusé"];
-const countries = ["tous", "France", "États-Unis", "Canada", "Espagne", "Royaume-Uni"];
-const phaseFilters = ["toutes", "Pré-sélection", "Sélection", "Finale"];
-const notes = ["toutes", "≥ 4", "3 - 4", "< 3"];
-const navItems = [
-  { label: "Vue admin", href: "admin-top" },
-  { label: "Profil", href: "profile" },
-  { label: "Liste films", href: "films" },
-  { label: "Widgets admin", href: "admin-widgets" },
-  { label: "Super admin", href: "super-top" },
-  { label: "Comptes", href: "accounts" },
-  { label: "Phases", href: "phases" },
-  { label: "Logs", href: "logs" },
-  { label: "Newsletter", href: "newsletter" },
-];
-
-const phaseTimeline = [
-  {
-    key: "depot",
-    label: "Dépôt",
-    start: "2026-01-10T00:00:00Z",
-    end: "2026-02-28T23:59:59Z",
-    quota: selectionTarget,
-    submitted: 128,
-    selected: 12,
-    description: "Collecte des films et vérification des droits.",
-  },
-  {
-    key: "selection",
-    label: "Sélection",
-    start: "2026-03-01T00:00:00Z",
-    end: "2026-03-14T23:59:59Z",
-    quota: selectionTarget,
-    submitted: 128,
-    selected: 42,
-    description: "Notation et choix des finalistes (objectif 50).",
-  },
-  {
-    key: "annonce",
-    label: "Annonce",
-    start: "2026-03-20T00:00:00Z",
-    end: "2026-03-21T23:59:59Z",
-    quota: selectionTarget,
-    submitted: 128,
-    selected: 50,
-    description: "Annonce publique et préparation presse.",
-  },
-];
-
-const mockCurrentUser = {
-  id: "admin-01",
-  name: "Idriss Benali",
-  email: "idriss@festival-ia.io",
-  phone: "+33 6 45 22 01 12",
-  role: "superadmin",
-  status: "actif",
-  timezone: "Europe/Paris",
-  region: "Europe",
-  language: "fr",
-};
-
+function toSlug(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+}
 function SparkLine({ data, stroke = "#f6c452" }) {
   const max = Math.max(...data);
   const min = Math.min(...data);
@@ -210,61 +96,155 @@ function FilmRow({ film }) {
       : film.status === "en cours"
         ? "bg-amber-400/15 text-amber-200"
         : "bg-rose-500/15 text-rose-200";
+  const ratingLabel = Number.isFinite(film.rating) ? film.rating.toFixed(1) : "-";
+  const filmSlug = film.slug ?? toSlug(film.title);
 
   return (
-    <div className="table-row grid grid-cols-12 items-center gap-3 text-sm">
-      <div className="col-span-4">
-        <div className="font-semibold">{film.title}</div>
-        <div className="text-xs text-slate-200">{film.tools}</div>
-      </div>
-      <div className="col-span-2 text-slate-200">{film.country}</div>
-      <div className="col-span-2">
-        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${badgeColor}`}>
-          {film.status}
-        </span>
-      </div>
-      <div className="col-span-2 font-semibold">{film.rating.toFixed(1)} ★</div>
-      <div className="col-span-2 flex gap-2">
-        <button className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10">
-          Voir
-        </button>
-        <button className="btn-primary px-3 py-1.5 rounded-lg">
-          Noter
-        </button>
+    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 md:px-5 md:py-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="font-semibold text-base text-white truncate">{film.title}</div>
+            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${badgeColor}`}>
+              {film.status}
+            </span>
+            <span className="text-xs text-slate-300/90">{film.phase}</span>
+          </div>
+          <div className="mt-1 text-xs text-slate-200/90">
+            <span>{film.country}</span> · <span>{film.duration}</span> ·{" "}
+            <span className="text-slate-300/90">{film.tools}</span>
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-3 md:justify-end">
+          <div className="text-sm text-slate-100">
+            <span className="font-semibold">{ratingLabel}</span> ★
+            <span className="text-xs text-slate-300/80"> ({film.notesCount})</span>
+          </div>
+          <div className="flex gap-2">
+            <Link
+              className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10"
+              to={`/films/${filmSlug}`}
+            >
+              Visionner
+            </Link>
+            <button className="btn-primary px-3 py-1.5 rounded-lg">
+              Noter
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
 export default function Dashboard() {
+  const [adminData, setAdminData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [filters, setFilters] = useState({
     status: "tous",
     country: "tous",
     phase: "toutes",
     note: "toutes",
   });
-  const [activeNav, setActiveNav] = useState(navItems[0].href);
-  const [currentUser, setCurrentUser] = useState(mockCurrentUser);
-  const [profileForm, setProfileForm] = useState(mockCurrentUser);
-  const [currentPhaseIndex, setCurrentPhaseIndex] = useState(() => {
-    const now = Date.now();
-    const idx = phaseTimeline.findIndex(
-      (phase) =>
-        now >= new Date(phase.start).getTime() &&
-        now <= new Date(phase.end).getTime()
-    );
-    return idx === -1 ? 0 : idx;
-  });
+  const [activeNav, setActiveNav] = useState("admin-top");
+  const [currentUser, setCurrentUser] = useState(null);
+  const [profileForm, setProfileForm] = useState(null);
+  const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
   const [nowTs, setNowTs] = useState(Date.now());
+
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+
+    (async () => {
+      setLoading(true);
+      setLoadError("");
+      try {
+        const data = await getAdminDashboardData({ signal: controller.signal });
+        if (cancelled) return;
+        setAdminData(data);
+        setActiveNav(data?.navItems?.[0]?.href ?? "admin-top");
+        setCurrentUser(data?.currentUser ?? null);
+        setProfileForm(data?.currentUser ?? null);
+        const now = Date.now();
+        const idx = data?.phaseTimeline?.findIndex(
+          (phase) =>
+            now >= new Date(phase.start).getTime() &&
+            now <= new Date(phase.end).getTime()
+        );
+        setCurrentPhaseIndex(idx === -1 ? 0 : idx);
+      } catch (err) {
+        if (!cancelled) {
+          setLoadError(err?.message ?? "Erreur de chargement.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, []);
 
   useEffect(() => {
     const id = setInterval(() => setNowTs(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
-  const now = useMemo(() => new Date(nowTs), [nowTs]);
-  const currentPhase = phaseTimeline[currentPhaseIndex];
-  const nextPhase = phaseTimeline[currentPhaseIndex + 1] ?? null;
+  if (loading) {
+    return <div className="app-container page">Chargement du dashboard admin...</div>;
+  }
+
+  if (loadError) {
+    return (
+      <div className="app-container page">
+        Erreur de chargement: {loadError}
+      </div>
+    );
+  }
+
+  if (!adminData) {
+    return <div className="app-container page">Aucune donnée admin disponible.</div>;
+  }
+
+  const {
+    selectionTarget = 0,
+    adminKpis = { noted: 0, remaining: 0, selected: 0, quota: 0 },
+    films = [],
+    statuses = [],
+    countries = [],
+    phaseFilters = [],
+    notes = [],
+    navItems = [],
+    phaseTimeline = [],
+    logs = [],
+    adminsCount = 0,
+  } = adminData;
+
+  const quotaTarget = selectionTarget || adminKpis.quota || 0;
+
+  if (!phaseTimeline?.length) {
+    return <div className="app-container page">Aucune phase configurée.</div>;
+  }
+
+  const effectiveUser = currentUser ?? adminData.currentUser;
+  const effectiveProfile = profileForm ?? adminData.currentUser;
+  const profilePreview = profileForm ?? effectiveUser;
+
+  if (!effectiveUser || !effectiveProfile) {
+    return <div className="app-container page">Chargement du profil admin...</div>;
+  }
+
+  const now = new Date(nowTs);
+  const safePhaseIndex = Math.min(
+    Math.max(currentPhaseIndex, 0),
+    phaseTimeline.length - 1
+  );
+  const currentPhase = phaseTimeline[safePhaseIndex];
+  const nextPhase = phaseTimeline[safePhaseIndex + 1] ?? null;
   const phaseDuration = new Date(currentPhase.end) - new Date(currentPhase.start);
   const elapsed = Math.max(0, now - new Date(currentPhase.start));
   const phaseProgress = Math.min(100, (elapsed / (phaseDuration || 1)) * 100);
@@ -272,7 +252,7 @@ export default function Dashboard() {
   const remainingDays = Math.floor(remainingMs / 86400000);
   const remainingHours = Math.floor((remainingMs % 86400000) / 3600000);
   const remainingMinutes = Math.floor((remainingMs % 3600000) / 60000);
-  const isSuperAdmin = currentUser.role === "superadmin";
+  const isSuperAdmin = effectiveUser.role === "superadmin";
 
   const handleNav = (href) => {
     setActiveNav(href);
@@ -282,37 +262,54 @@ export default function Dashboard() {
     }
   };
 
-  const filteredFilms = useMemo(() => {
-    return films.filter((film) => {
-      if (filters.status !== "tous" && film.status !== filters.status) return false;
-      if (filters.country !== "tous" && film.country !== filters.country) return false;
-      if (filters.phase !== "toutes" && film.phase !== filters.phase) return false;
-      if (filters.note === "≥ 4" && film.rating < 4) return false;
-      if (filters.note === "3 - 4" && (film.rating < 3 || film.rating >= 4)) return false;
-      if (filters.note === "< 3" && film.rating >= 3) return false;
-      return true;
-    });
-  }, [filters]);
+  const filteredFilms = films.filter((film) => {
+    if (filters.status !== "tous" && film.status !== filters.status) return false;
+    if (filters.country !== "tous" && film.country !== filters.country) return false;
+    if (filters.phase !== "toutes" && film.phase !== filters.phase) return false;
+    if (filters.note === "≥ 4" && film.rating < 4) return false;
+    if (filters.note === "3 - 4" && (film.rating < 3 || film.rating >= 4)) return false;
+    if (filters.note === "< 3" && film.rating >= 3) return false;
+    return true;
+  });
 
-  const selectionRatio = (adminKpis.selected / adminKpis.quota) * 100;
-  const selectionProgress = Math.min(100, (currentPhase.selected / selectionTarget) * 100);
+  const selectionRatio = adminKpis.quota ? (adminKpis.selected / adminKpis.quota) * 100 : 0;
+  const selectionProgress = quotaTarget ? Math.min(100, (currentPhase.selected / quotaTarget) * 100) : 0;
 
   const superStats = {
     films: currentPhase.submitted,
-    admins: 14,
+    admins: adminsCount ?? 0,
     phasesProgress: Math.round(phaseProgress),
     countdown: `${remainingDays} j ${String(remainingHours).padStart(2, "0")} h ${String(remainingMinutes).padStart(2, "0")} min restantes`,
   };
 
-  const logs = [
-    "Admin Léa a accepté « Neon Dust »",
-    "Super admin Idriss a modifié les dates de sélection",
-    "Admin Chloé a noté « Retina » 4/5",
-    "Super admin Idriss a exporté la newsletter (1423 emails)",
-  ];
-
   const handleProfileSave = () => {
+    if (!profileForm) return;
     setCurrentUser(profileForm);
+    setAdminData((prev) => (prev ? { ...prev, currentUser: profileForm } : prev));
+  };
+  const handleAddSelection = () => {
+    setAdminData((prev) => {
+      if (!prev) return prev;
+      const quota = prev.adminKpis?.quota ?? 0;
+      const nextSelected = Math.min((prev.adminKpis?.selected ?? 0) + 1, quota);
+      const nextAdminKpis = {
+        ...prev.adminKpis,
+        selected: nextSelected,
+        remaining: Math.max(0, (prev.adminKpis?.remaining ?? 0) - 1),
+        noted: (prev.adminKpis?.noted ?? 0) + 1,
+      };
+      const nextPhaseTimeline = (prev.phaseTimeline ?? []).map((phase, idx) => {
+        if (idx !== safePhaseIndex) return phase;
+        const phaseQuota = phase.quota ?? quota;
+        const nextPhaseSelected = Math.min((phase.selected ?? 0) + 1, phaseQuota);
+        return { ...phase, selected: nextPhaseSelected };
+      });
+      return {
+        ...prev,
+        adminKpis: nextAdminKpis,
+        phaseTimeline: nextPhaseTimeline,
+      };
+    });
   };
 
   const handleNextPhase = () => {
@@ -351,7 +348,7 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Pill tone="cyan">Quota {selectionTarget}</Pill>
+            <Pill tone="cyan">Quota {quotaTarget}</Pill>
             <Pill tone="amber">Phase : {currentPhase.label}</Pill>
             <Pill>Traçabilité active</Pill>
           </div>
@@ -363,19 +360,19 @@ export default function Dashboard() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="pill pill-cyan">Profil admin</div>
-                <h2 className="text-xl font-semibold mt-2 text-white">{currentUser.name}</h2>
+                <h2 className="text-xl font-semibold mt-2 text-white">{profilePreview.name}</h2>
                 <p className="text-sm text-slate-100/80">
-                  Rôle actuel : {currentUser.role === "superadmin" ? "Super admin" : "Admin"} — statut {currentUser.status}.
+                  Rôle actuel : {profilePreview.role === "superadmin" ? "Super admin" : "Admin"} — statut {profilePreview.status}.
                 </p>
               </div>
               <span
                 className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                  currentUser.status === "actif"
+                  profilePreview.status === "actif"
                     ? "bg-emerald-500/25 text-emerald-100"
                     : "bg-amber-500/25 text-amber-100"
                 }`}
               >
-                {currentUser.status === "actif" ? "Actif" : "Suspendu"}
+                {profilePreview.status === "actif" ? "Actif" : "Suspendu"}
               </span>
             </div>
 
@@ -384,40 +381,65 @@ export default function Dashboard() {
                 Nom complet
                 <input
                   className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-300"
-                  value={profileForm.name}
-                  onChange={(e) => setProfileForm((f) => ({ ...f, name: e.target.value }))}
+                  value={effectiveProfile.name}
+                  onChange={(e) =>
+                    setProfileForm((f) => ({
+                      ...(f ?? effectiveProfile),
+                      name: e.target.value,
+                    }))
+                  }
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-slate-100/90">
                 Email
                 <input
                   className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-300"
-                  value={profileForm.email}
-                  onChange={(e) => setProfileForm((f) => ({ ...f, email: e.target.value }))}
+                  value={effectiveProfile.email}
+                  onChange={(e) =>
+                    setProfileForm((f) => ({
+                      ...(f ?? effectiveProfile),
+                      email: e.target.value,
+                    }))
+                  }
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-slate-100/90">
                 Téléphone
                 <input
                   className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-300"
-                  value={profileForm.phone}
-                  onChange={(e) => setProfileForm((f) => ({ ...f, phone: e.target.value }))}
+                  value={effectiveProfile.phone}
+                  onChange={(e) =>
+                    setProfileForm((f) => ({
+                      ...(f ?? effectiveProfile),
+                      phone: e.target.value,
+                    }))
+                  }
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-slate-100/90">
                 Fuseau horaire
                 <input
                   className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-300"
-                  value={profileForm.timezone}
-                  onChange={(e) => setProfileForm((f) => ({ ...f, timezone: e.target.value }))}
+                  value={effectiveProfile.timezone}
+                  onChange={(e) =>
+                    setProfileForm((f) => ({
+                      ...(f ?? effectiveProfile),
+                      timezone: e.target.value,
+                    }))
+                  }
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-slate-100/90">
                 Rôle
                 <select
                   className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white focus:outline-none focus:border-cyan-300"
-                  value={profileForm.role}
-                  onChange={(e) => setProfileForm((f) => ({ ...f, role: e.target.value }))}
+                  value={effectiveProfile.role}
+                  onChange={(e) =>
+                    setProfileForm((f) => ({
+                      ...(f ?? effectiveProfile),
+                      role: e.target.value,
+                    }))
+                  }
                 >
                   <option value="admin">Admin</option>
                   <option value="superadmin">Super admin</option>
@@ -427,8 +449,13 @@ export default function Dashboard() {
                 Région
                 <input
                   className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-300"
-                  value={profileForm.region}
-                  onChange={(e) => setProfileForm((f) => ({ ...f, region: e.target.value }))}
+                  value={effectiveProfile.region}
+                  onChange={(e) =>
+                    setProfileForm((f) => ({
+                      ...(f ?? effectiveProfile),
+                      region: e.target.value,
+                    }))
+                  }
                 />
               </label>
             </div>
@@ -437,12 +464,12 @@ export default function Dashboard() {
               <button className="btn-primary px-4 py-2 rounded-lg" onClick={handleProfileSave}>
                 Enregistrer
               </button>
-              <button
-                className="btn-ghost px-4 py-2 rounded-lg border border-white/10"
-                onClick={() => setProfileForm(currentUser)}
-              >
-                Réinitialiser
-              </button>
+                <button
+                  className="btn-ghost px-4 py-2 rounded-lg border border-white/10"
+                  onClick={() => setProfileForm(effectiveUser)}
+                >
+                  Réinitialiser
+                </button>
               {isSuperAdmin && <span className="pill pill-amber">Super admin : peut changer de phase</span>}
             </div>
           </div>
@@ -466,7 +493,7 @@ export default function Dashboard() {
               <div className="bar-fill" style={{ width: `${phaseProgress}%` }} />
             </div>
             <div className="text-xs text-slate-100/85">
-              Sélection : {currentPhase.selected}/{selectionTarget} visés · Films déposés : {currentPhase.submitted}
+              Sélection : {currentPhase.selected}/{quotaTarget} visés · Films déposés : {currentPhase.submitted}
             </div>
             <div className="bar-track h-2">
               <div
@@ -512,6 +539,7 @@ export default function Dashboard() {
               <button
                 className="btn-primary rounded-full px-4 py-2"
                 disabled={adminKpis.selected >= adminKpis.quota}
+                onClick={handleAddSelection}
                 style={{
                   opacity: adminKpis.selected >= adminKpis.quota ? 0.6 : 1,
                   cursor: adminKpis.selected >= adminKpis.quota ? "not-allowed" : "pointer",
@@ -543,7 +571,7 @@ export default function Dashboard() {
                   <div className="bar-fill" style={{ width: `${selectionRatio}%` }} />
                 </div>
                 <div className="kpi-trend text-pink-200 mt-1">
-                  Quota cible {selectionTarget}
+                  Quota cible {quotaTarget}
                 </div>
               </div>
             </div>
@@ -591,23 +619,18 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {/* Film table */}
-            <div className="list-card">
-              <div className="grid grid-cols-12 gap-3 table-header pb-2">
-                <div className="col-span-4">Film</div>
-                <div className="col-span-2">Pays</div>
-                <div className="col-span-2">Statut</div>
-                <div className="col-span-2">Moy. notes</div>
-                <div className="col-span-2 text-right">Actions</div>
+            {/* Film list */}
+            <div className="list-card space-y-3" data-testid="films-list">
+              <div className="flex items-center justify-between text-xs text-slate-300/80">
+                <span>Films affichés : {filteredFilms.length}</span>
+                <span>Tri : par défaut</span>
               </div>
-              <div className="divide-y divide-white/5">
-                {filteredFilms.map((film) => (
-                  <FilmRow key={film.title} film={film} />
-                ))}
-                {filteredFilms.length === 0 && (
-                  <div className="py-6 text-sm text-slate-300">Aucun film ne correspond aux filtres.</div>
-                )}
-              </div>
+              {filteredFilms.map((film) => (
+                <FilmRow key={film.title} film={film} />
+              ))}
+              {filteredFilms.length === 0 && (
+                <div className="py-6 text-sm text-slate-300">Aucun film ne correspond aux filtres.</div>
+              )}
             </div>
           </div>
 
@@ -639,7 +662,7 @@ export default function Dashboard() {
               <ul className="space-y-2 text-sm text-slate-200">
                 <li>4 films en attente depuis 72h</li>
                 <li>2 films proches de la deadline (48h)</li>
-                <li>Quota {selectionTarget} : {adminKpis.selected}/{selectionTarget} utilisés</li>
+                <li>Quota {quotaTarget} : {adminKpis.selected}/{quotaTarget} utilisés</li>
               </ul>
               <div className="bar-track">
                 <div className="bar-fill" style={{ width: `${selectionRatio}%` }} />
@@ -749,7 +772,7 @@ export default function Dashboard() {
               <div className="bar-track">
                 <div className="bar-fill" style={{ width: `${superStats.phasesProgress}%` }} />
               </div>
-              <button className="btn-primary w-full mt-2 rounded-lg">Modifier les règles (quota {selectionTarget}, notation)</button>
+              <button className="btn-primary w-full mt-2 rounded-lg">Modifier les règles (quota {quotaTarget}, notation)</button>
             </div>
           </div>
 
@@ -828,3 +851,9 @@ export default function Dashboard() {
     </div>
   );
 }
+
+
+
+
+
+

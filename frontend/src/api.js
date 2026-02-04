@@ -7,3 +7,12 @@ export async function getPageBySlug(slug) {
   const data = await res.json();
   return data[0] || null;
 }
+
+export async function getAdminDashboardData({ signal } = {}) {
+  const res = await fetch("/mock/admin-dashboard.json", {
+    signal,
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Admin mock error ${res.status}`);
+  return res.json();
+}
