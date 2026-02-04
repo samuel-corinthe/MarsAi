@@ -19,9 +19,25 @@ export default function Home({ page }) {
 
     // --- 1. HERO ---
     const heroLead = doc.querySelector("p")?.textContent?.trim() || "";
-    const heroLinks = Array.from(doc.querySelectorAll("p:first-of-type a")).map(
+    const normalizeText = (value) =>
+      String(value || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    const linkOverrides = {
+      "participer au festival": "/upload",
+      "voir le programme": "/agenda",
+    };
+    const rawHeroLinks = Array.from(doc.querySelectorAll("p:first-of-type a")).map(
       (a) => ({ href: a.href || "", text: a.textContent?.trim() || "" })
     );
+    const heroLinks = rawHeroLinks.map((link) => {
+      const key = normalizeText(link.text);
+      const override = linkOverrides[key];
+      return override ? { ...link, href: override } : link;
+    });
 
     // --- 2. ABOUT ---
     const firstH2 = doc.querySelector("h2");
