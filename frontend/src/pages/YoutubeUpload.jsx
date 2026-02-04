@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import axios from 'axios';
 import { getVideoMetadata, validateVideoFrontend, VIDEO_CONSTRAINTS } from '../utils/videoValidation';
 import { validateForm, FORM_CONSTRAINTS, exceedsMaxLength } from '../utils/formvalidation';
+import 'altcha';
 
 export default function YoutubeUpload() {
     const [file, setFile] = useState(null);
@@ -15,6 +16,7 @@ export default function YoutubeUpload() {
     const [status, setStatus] = useState({ type: '', message: '' });
     const [isValidating, setIsValidating] = useState(false);
     const [errors, setErrors] = useState({});
+    const [altchaPayload, setAltchaPayload] = useState(null);
 
     const fileInputRef = useRef(null);
     const statusRef = useRef(null);
@@ -23,7 +25,7 @@ export default function YoutubeUpload() {
         const selectedFile = e.target.files[0];
         if (!selectedFile) return;
 
-        // 1. Garde-fou immédiat : Type de fichier
+        
         if (selectedFile.type !== 'video/mp4') {
             const error = "Seul le format MP4 est accepté.";
             setStatus({ type: 'error', message: error });
@@ -32,7 +34,7 @@ export default function YoutubeUpload() {
             return;
         }
 
-        // 2. Garde-fou immédiat : Taille du fichier (300Mo)
+       
         const maxSize = VIDEO_CONSTRAINTS.FILE.MAX_SIZE;
         if (selectedFile.size > maxSize) {
             const error = `Le fichier est trop lourd (max ${maxSize / (1024 * 1024)}Mo).`;
@@ -83,7 +85,7 @@ export default function YoutubeUpload() {
     const handleUpload = async (e) => {
         e.preventDefault();
 
-        // Validation complète du formulaire avec sanitization
+        
         const validation = validateForm({
             email,
             firstName,
@@ -104,7 +106,13 @@ export default function YoutubeUpload() {
             return;
         }
 
-        
+        if (!altchaPayload) {
+            setErrors({ altcha: "Veuillez compléter la vérification anti-robot" });
+            setStatus({ type: 'error', message: 'Veuillez compléter la vérification anti-robot' });
+            return;
+        }
+
+
         const formData = new FormData();
         formData.append('video', file);
         formData.append('email', validation.cleanedData.email);
@@ -112,6 +120,7 @@ export default function YoutubeUpload() {
         formData.append('lastName', validation.cleanedData.lastName);
         formData.append('title', validation.cleanedData.title);
         formData.append('description', validation.cleanedData.description);
+        formData.append('altcha', altchaPayload);
 
         try {
             setUploading(true);
@@ -135,6 +144,7 @@ export default function YoutubeUpload() {
             setLastName('');
             setTitle('');
             setDescription('');
+            setAltchaPayload(null);
             setErrors({});
 
             setTimeout(() => {
@@ -413,6 +423,44 @@ export default function YoutubeUpload() {
                                 {errors.file}
                             </p>
                         )}
+                    </div>
+
+                    {/* Vérification anti-robot Altcha */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-slate-700">
+                            Vérification anti-robot <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                        </label>
+                        <div className={`${errors.altcha ? 'border-2 border-red-500 rounded-lg p-2' : ''}`}>
+                            <altcha-widget
+                                challengeurl="http://localhost:3000/api/altcha/challenge"
+                                hidefooter="true"
+                                strings={JSON.stringify({
+                                    label: 'I am not a robot',
+                                    verifying: 'Verifying...',
+                                    verified: 'Verified',
+                                    error: 'Verification failed',
+                                    expired: 'Verification expired'
+                                })}
+                                ref={(el) => {
+                                    if (el) {
+                                        el.addEventListener('statechange', (ev) => {
+                                            if (ev.detail.state === 'verified' && ev.detail.payload) {
+                                                setAltchaPayload(ev.detail.payload);
+                                                setErrors(prev => ({ ...prev, altcha: '' }));
+                                            }
+                                        });
+                                    }
+                                }}
+                            />
+                        </div>
+                        {errors.altcha && (
+                            <p className="text-red-600 text-sm mt-1" role="alert">
+                                {errors.altcha}
+                            </p>
+                        )}
+                        <span className="text-xs text-slate-500 block">
+                            Cette vérification nous aide à protéger le concours contre les robots
+                        </span>
                     </div>
 
                     {/* Barre de progression */}

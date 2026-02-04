@@ -6,13 +6,14 @@ import fs from 'fs';
 import { analyzeVideo } from '../utils/VideoAnalyser.js';
 import { validateVideoData, VIDEO_CONSTRAINTS } from '../utils/VideoValidator.js';
 import { validateFormData } from '../utils/FormValidator.js';
+import { validateAltchaMiddleware } from '../utils/AltchaValidator.js';
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
 
 const ipLimiter = rateLimit({
     windowMs: 24 * 60 * 60 * 1000,
-    max: 4,
+    max: 10,
     validate: false,
     handler: (req, res, next, options) => {
         console.log(' [LIMITER] IP Limit HIT for:', req.ip);
@@ -55,6 +56,7 @@ const upload = multer({
 
 router.post('/youtube',
     upload.single('video'),
+    validateAltchaMiddleware,
     validateFormData,
     ipLimiter,
     emailLimiter,

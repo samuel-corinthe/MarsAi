@@ -48,7 +48,7 @@ export const sanitizeInput = (value) => {
 };
 
 
-export const containsEmoji = (str) => {s
+export const containsEmoji = (str) => {
   const emojiPattern = /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u;
   return emojiPattern.test(str);
 };

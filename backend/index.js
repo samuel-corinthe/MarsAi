@@ -2,6 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
 import uploadRoutes from './routes/upload.js';
+import altchaRoutes from './routes/altcha.js';
+
+console.log('[DEBUG] altchaRoutes:', typeof altchaRoutes, altchaRoutes);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,9 +25,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 
+console.log('[DEBUG] Enregistrement des routes...');
+app.use('/api/altcha', altchaRoutes);
+console.log('[DEBUG] Route /api/altcha enregistrée');
 app.use('/api/upload', uploadRoutes);
+console.log('[DEBUG] Route /api/upload enregistrée');
 
-app.use('/', (req, res) => {
+app.get('/', (req, res) => {
+    console.log('[DEBUG] Route racine appelée');
     res.send('Serveur MarsAI opérationnel ');
 });
 

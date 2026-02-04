@@ -16,6 +16,7 @@
   "dependencies": {
     "@tailwindcss/typography": "^0.5.19",
     "@unhead/react": "^2.1.2",
+    "altcha": "^2.3.0",
     "axios": "^1.13.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
