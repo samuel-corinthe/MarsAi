@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getPageBySlug } from "../api";
 import NotFound from "./NotFound"; 
+import Home from "./Home";
 
 export default function WpPage({ isHome = false }) {
   const { slug: routeSlug } = useParams();
@@ -35,6 +36,10 @@ export default function WpPage({ isHome = false }) {
   if (loading) return <div className="app-container page">Chargement…</div>;
 
   if (!page) return <NotFound />;
+
+  if (slug === "accueil") {
+    return <Home page={page} />;
+  }
 
   return (
     <main className="app-container page">
