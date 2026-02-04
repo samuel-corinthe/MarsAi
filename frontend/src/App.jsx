@@ -4,6 +4,8 @@ import Footer from "./components/Footer";
 import Newsletter from "./pages/Newsletter";
 import WpPage from "./pages/WpPage";
 import NotFound from "./pages/NotFound";
+import CGV from "./pages/CGV";
+import CGU from "./pages/CGU";
 
 export default function App() {
   return (
@@ -13,6 +15,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<WpPage isHome={true} />} />
           <Route path="/newsletter" element={<Newsletter />} />
+          <Route path="/cgv" element={<CGV />} />
+          <Route path="/cgu" element={<CGU />} />
           <Route path="/:slug" element={<WpPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
