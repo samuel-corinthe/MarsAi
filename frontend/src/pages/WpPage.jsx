@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getPageBySlug } from "../api";
-import NotFound from "./NotFound"; 
+import Home from "./Home";
+import JuryWpage from "./jury";
+import NotFound from "./NotFound";
 
 export default function WpPage({ isHome = false }) {
   const { slug: routeSlug } = useParams();
@@ -33,9 +35,18 @@ export default function WpPage({ isHome = false }) {
   }, [slug]);
 
   if (loading) return <div className="app-container page">Chargement…</div>;
-
   if (!page) return <NotFound />;
 
+  // Router vers les composants spécifiques selon le slug
+  if (slug === "accueil") {
+    return <Home page={page} />;
+  }
+
+  if (slug === "jury") {
+    return <JuryWpage page={page} />;
+  }
+
+  // Page générique WordPress
   return (
     <main className="app-container page">
       <div className="card card-pad">

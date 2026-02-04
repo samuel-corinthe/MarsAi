@@ -1,6 +1,5 @@
 import { Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
-import Home from "./pages/Home";
 import WpPage from "./pages/WpPage";
 import NotFound from "./pages/NotFound";
 
@@ -10,10 +9,8 @@ export default function App() {
       <Header />
 
       <Routes>
-        {/* Home = React */}
-        <Route path="/" element={<Home />} />
-
-        {/* Toutes les pages WordPress (par slug) */}
+        {/* Home et toutes les pages WordPress (par slug) */}
+        <Route path="/" element={<WpPage isHome={true} />} />
         <Route path="/:slug" element={<WpPage />} />
 
         {/* 404 */}
