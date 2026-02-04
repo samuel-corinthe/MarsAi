@@ -11,31 +11,34 @@ export default function WpPage({ isHome = false }) {
 
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-
     (async () => {
       setLoading(true);
+      setError(false);
       try {
         const data = await getPageBySlug(slug);
         if (!cancelled) {
-          setPage(data); // data peut être null
+          setPage(data); // peut être null si 404
           setLoading(false);
         }
       } catch {
         if (!cancelled) {
-          setPage(null);
+          setError(true); // erreur réseau/serveur
           setLoading(false);
         }
       }
     })();
-
-    return () => (cancelled = true);
+    return () => {
+      cancelled = true;
+    };
   }, [slug]);
 
   if (loading) return <div className="app-container page">Chargement…</div>;
-  if (!page) return <NotFound />;
+  if (error) return <div className="app-container page">Impossible de charger la page pour le moment.</div>;
+  if (!page) return <NotFound />; // on n'affiche 404 que si le slug n'existe pas
 
   // Router vers les composants spécifiques selon le slug
   if (slug === "accueil") {
