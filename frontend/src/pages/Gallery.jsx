@@ -6,9 +6,22 @@ const Gallery = () => {
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [carouselIndex, setCarouselIndex] = useState(0);
   const searchRef = useRef(null);
 
   const filters = ["All", "Action", "Sci-Fi", "Adventure", "Fantasy", "Drama"];
+  const pageSize = 20;
+  const topMovies = allMovies.slice(0, 5);
+  const carouselShift = "clamp(90px, 18vw, 240px)";
+  const carouselPositions = [
+    { offset: -2, scale: 0.72, opacity: 0.35, blur: 2, z: 1 },
+    { offset: -1, scale: 0.88, opacity: 0.65, blur: 1, z: 2 },
+    { offset: 0, scale: 1.05, opacity: 1, blur: 0, z: 3 },
+    { offset: 1, scale: 0.88, opacity: 0.65, blur: 1, z: 2 },
+    { offset: 2, scale: 0.72, opacity: 0.35, blur: 2, z: 1 },
+  ];
+  const activeCarouselPositions = carouselPositions.slice(0, topMovies.length);
 
   // --- LOGIQUE FILTRAGE & AUTOCOMPLETION ---
   const suggestions = allMovies
@@ -29,6 +42,27 @@ const Gallery = () => {
     return matchesFilter && matchesSearch;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filteredMovies.length / pageSize));
+  const paginatedMovies = filteredMovies.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeFilter, searchQuery]);
+
+  useEffect(() => {
+    if (topMovies.length <= 1) {
+      setCarouselIndex(0);
+      return;
+    }
+    const id = setInterval(() => {
+      setCarouselIndex((prev) => (prev + 1) % topMovies.length);
+    }, 2400);
+    return () => clearInterval(id);
+  }, [topMovies.length]);
+
   // Fermer suggestions au clic extérieur
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -43,12 +77,64 @@ const Gallery = () => {
   return (
     <div className="min-h-screen bg-blue-950 flex flex-col font-sans text-slate-800">
       {/* --- HERO SECTION --- */}
-      <section className="relative w-full pb-32 pt-10">
+      <section className="relative w-full pb-36 md:pb-40 pt-10">
         <div className="absolute inset-0 bg-gradient-to-b from-blue-900/80 to-blue-950"></div>
         <div className="relative z-10 container mx-auto px-6 text-center">
           <h1 className="text-3xl md:text-5xl font-black text-white mb-10 mt-8 tracking-tighter uppercase">
             Découvrez <span className="text-cyan-400">nos Merveilles</span>
           </h1>
+          {topMovies.length > 0 && (
+            <div className="mt-6 md:mt-10">
+              <p className="text-white/90 font-black uppercase tracking-widest text-xs md:text-sm mb-6">
+                Decouvrez les 5 meilleurs films
+              </p>
+              <div className="relative h-44 md:h-56 flex items-center justify-center">
+                {topMovies.map((movie, index) => {
+                  const positionIndex =
+                    (index - carouselIndex + topMovies.length) %
+                    topMovies.length;
+                  const pos = activeCarouselPositions[positionIndex];
+                  if (!pos) return null;
+                  return (
+                    <Link
+                      to={`/movie/${movie.id}`}
+                      key={movie.id}
+                      className="absolute left-1/2 top-1/2 w-52 sm:w-60 md:w-72 transition-all duration-700 ease-out"
+                      style={{
+                        transform: `translate(-50%, -50%) translateX(calc(${pos.offset} * ${carouselShift})) scale(${pos.scale})`,
+                        opacity: pos.opacity,
+                        filter: `blur(${pos.blur}px)`,
+                        zIndex: pos.z,
+                      }}
+                    >
+                      <div className="group relative aspect-[16/9] rounded-[28px] overflow-hidden shadow-2xl bg-blue-950/80 border border-white/10">
+                        <img
+                          src={movie.img}
+                          alt={movie.title}
+                          className="w-full h-full object-cover opacity-95 group-hover:opacity-40 transition-all duration-700 transform group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-950 shadow-xl">
+                            <svg
+                              className="w-6 h-6 ml-1"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
+                            </svg>
+                          </div>
+                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-blue-950/80 via-blue-950/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div className="absolute bottom-3 left-0 right-0 px-4 text-white text-sm md:text-base font-black uppercase tracking-tighter text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          {movie.title}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -105,7 +191,7 @@ const Gallery = () => {
                         <img
                           src={movie.img}
                           alt=""
-                          className="w-10 h-14 object-cover rounded-lg shadow-md"
+                          className="w-16 h-9 object-cover rounded-lg shadow-md"
                         />
                         <div>
                           <p className="font-black text-blue-950 text-sm uppercase tracking-tighter">
@@ -142,9 +228,9 @@ const Gallery = () => {
             {/* --- GRID DE FILMS --- */}
             {filteredMovies.length > 0 ? (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-10">
-                {filteredMovies.map((movie) => (
+                {paginatedMovies.map((movie) => (
                   <Link to={`/movie/${movie.id}`} key={movie.id}>
-                    <div className="group relative aspect-[2/3] rounded-[35px] overflow-hidden shadow-2xl bg-blue-950 border border-slate-100">
+                    <div className="group relative aspect-[16/9] rounded-[35px] overflow-hidden shadow-2xl bg-blue-950 border border-slate-100">
                       <img
                         src={movie.img}
                         alt={movie.title}
@@ -174,15 +260,28 @@ const Gallery = () => {
               </div>
             )}
 
-            {/* Pagination fictive */}
-            <div className="flex justify-center items-center gap-2 mt-20">
-              <button className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-xl font-black">
-                1
-              </button>
-              <button className="w-12 h-12 rounded-2xl text-slate-400 border-2 border-transparent font-bold">
-                2
-              </button>
-            </div>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-20 flex-wrap">
+                {Array.from({ length: totalPages }, (_, index) => {
+                  const page = index + 1;
+                  const isActive = page === currentPage;
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black transition-colors ${
+                        isActive
+                          ? "bg-blue-600 text-white shadow-xl"
+                          : "text-slate-400 border-2 border-transparent hover:text-blue-600 hover:border-blue-200"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -191,3 +290,8 @@ const Gallery = () => {
 };
 
 export default Gallery;
+
+
+
+
+
