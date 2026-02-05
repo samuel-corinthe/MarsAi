@@ -19,7 +19,7 @@ export default function App() {
           <Route path="/newsletter" element={<Newsletter />} />
           <Route path="/cgv" element={<CGV />} />
           <Route path="/cgu" element={<CGU />} />
-          <Route path="/gallery" element={<Gallery />} />
+          <Route path="/films" element={<Gallery />} />
           <Route path="/movie/:id" element={<MovieDetails />} />
           <Route path="/:slug" element={<WpPage />} />
           <Route path="*" element={<NotFound />} />

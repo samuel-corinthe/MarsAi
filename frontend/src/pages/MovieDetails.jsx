@@ -22,7 +22,7 @@ const MovieDetails = () => {
           Film non trouvé
         </h1>
         <Link
-          to="/gallery"
+          to="/films"
           className="bg-cyan-500 text-blue-950 px-8 py-3 rounded-full font-bold uppercase tracking-widest hover:bg-cyan-400 transition-all"
         >
           Retour à la galerie
@@ -45,7 +45,7 @@ const MovieDetails = () => {
     <div className="min-h-screen bg-blue-950 text-white font-sans relative">
       {/* BOUTON RETOUR */}
       <Link
-        to="/gallery"
+        to="/films"
         className="fixed top-25 left-6 z-50 bg-white/10 backdrop-blur-md p-4 rounded-full text-white hover:bg-cyan-500 transition-all shadow-xl border border-white/10"
       >
         <svg
