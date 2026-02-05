@@ -4,6 +4,7 @@ import { getPageBySlug } from "../api";
 import Home from "./Home";
 import JuryWpage from "./jury";
 import NotFound from "./NotFound";
+import LegalPage from "./LegalPage";
 
 export default function WpPage({ isHome = false }) {
   const { slug: routeSlug } = useParams();
@@ -83,6 +84,10 @@ export default function WpPage({ isHome = false }) {
 
   if (slug === "jury") {
     return <JuryWpage page={page} />;
+  }
+
+  if (slug === "cgv" || slug === "cgu") {
+    return <LegalPage page={page} variant={slug} />;
   }
 
   if (slug === "contact") {
@@ -206,3 +211,5 @@ export default function WpPage({ isHome = false }) {
     </main>
   );
 }
+
+

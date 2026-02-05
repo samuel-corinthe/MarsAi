@@ -42,10 +42,9 @@ const Navbar = () => {
 
   // Menu "Plus" (dropdown)
   const moreNav = [
-    { name: 'CGV & CGU', path: '/cgv-cgu', id: 'terms' },
-    { name: 'Confidentialité', path: '/politique-de-confidentialite', id: 'privacy' },
+    { name: 'CGV', path: '/cgv', id: 'terms' },
+    { name: 'CGU', path: '/cgu', id: 'terms' },
     { name: 'Mentions légales', path: '/mentions-legales', id: 'legal' },
-    { name: 'Page d\'exemple', path: '/page-d-exemple', id: 'example' },
     { name: 'Contact', path: '/contact', id: 'contact' },
   ];
 
@@ -148,17 +147,7 @@ const Navbar = () => {
 
             {/* Actions à droite */}
             <div className="hidden lg:flex items-center space-x-4">
-              {/* Bouton Connexion */}
-              <Link
-                to="/connexion"
-                className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors duration-200 flex items-center space-x-2"
-                style={{ fontFamily: "'Inter', sans-serif" }}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                <span>Connexion</span>
-              </Link>
+             
 
               {/* CTA Principal */}
               <Link

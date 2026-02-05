@@ -4,8 +4,6 @@ import Footer from "./components/Footer";
 import Newsletter from "./pages/Newsletter";
 import WpPage from "./pages/WpPage";
 import NotFound from "./pages/NotFound";
-import CGV from "./pages/CGV";
-import CGU from "./pages/CGU";
 import Gallery from "./pages/Gallery";
 import MovieDetails from "./pages/MovieDetails";
 
@@ -17,8 +15,6 @@ export default function App() {
         <Routes>
           <Route path="/" element={<WpPage isHome={true} />} />
           <Route path="/newsletter" element={<Newsletter />} />
-          <Route path="/cgv" element={<CGV />} />
-          <Route path="/cgu" element={<CGU />} />
           <Route path="/films" element={<Gallery />} />
           <Route path="/movie/:id" element={<MovieDetails />} />
           <Route path="/:slug" element={<WpPage />} />

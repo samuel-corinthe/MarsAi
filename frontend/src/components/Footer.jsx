@@ -11,6 +11,7 @@ const Footer = () => {
         { name: 'À propos', path: '/a-propos' },
         { name: 'Films en compétition', path: '/films' },
         { name: 'Agenda', path: '/agenda' },
+        { name: 'Newsletter', path: '/newsletter' },
         { name: 'Jury', path: '/jury' },
       ]
     },
@@ -19,7 +20,7 @@ const Footer = () => {
       links: [
         { name: 'Déposer un film', path: '/deposer-un-film' },
         { name: 'Appel à projet', path: '/appel-a-projet' },
-        { name: 'Billetterie', path: '/agenda' },
+        { name: 'Évènement', path: '/agenda' },
       ]
     },
     legal: {
@@ -169,76 +170,12 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Section Newsletter */}
-        <div className="border-t border-gray-900 py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="text-center md:text-left">
-              <h3
-                className="text-white font-bold text-lg mb-2"
-                style={{ fontFamily: "'Inter', sans-serif" }}
-              >
-                Restez informé·e
-              </h3>
-              <p className="text-gray-400 text-sm" style={{ fontFamily: "'Inter', sans-serif" }}>
-                Recevez les dernières actualités du festival
-              </p>
-            </div>
-
-            <form className="flex w-full md:w-auto max-w-md gap-2">
-              <input
-                type="email"
-                placeholder="Votre email"
-                className="flex-1 px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400 transition-all duration-200"
-                style={{ fontFamily: "'Inter', sans-serif" }}
-              />
-              <button
-                type="submit"
-                className="px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-cyan-500/50 transition-all duration-300 hover:scale-105 whitespace-nowrap"
-                style={{ fontFamily: "'Inter', sans-serif" }}
-              >
-                S'inscrire
-              </button>
-            </form>
-          </div>
-        </div>
-
         {/* Section Copyright */}
         <div className="border-t border-gray-900 py-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+          <div className="flex items-center justify-center text-sm text-gray-500">
             <p style={{ fontFamily: "'Inter', sans-serif" }}>
               © {currentYear} marsAI Festival. Tous droits réservés.
             </p>
-
-            <div className="flex items-center space-x-6">
-              <Link
-                to="/cgv"
-                className="hover:text-cyan-400 transition-colors duration-200"
-                style={{ fontFamily: "'Inter', sans-serif" }}
-              >
-                CGV
-              </Link>
-              <Link
-                to="/cgu"
-                className="hover:text-cyan-400 transition-colors duration-200"
-                style={{ fontFamily: "'Inter', sans-serif" }}
-              >
-                CGU
-              </Link>
-              <Link
-                to="/politique-de-confidentialite"
-                className="hover:text-cyan-400 transition-colors duration-200"
-                style={{ fontFamily: "'Inter', sans-serif" }}
-              >
-                Confidentialité
-              </Link>
-              <Link
-                to="/mentions-legales"
-                className="hover:text-cyan-400 transition-colors duration-200"
-                style={{ fontFamily: "'Inter', sans-serif" }}
-              >
-                Mentions légales
-              </Link>
-            </div>
           </div>
         </div>
       </div>
@@ -250,3 +187,6 @@ const Footer = () => {
 };
 
 export default Footer;
+
+
+
