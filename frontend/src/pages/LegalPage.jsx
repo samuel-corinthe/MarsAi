@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+﻿import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 
 const VARIANTS = {
@@ -155,7 +155,6 @@ export default function LegalPage({ page, variant = "cgv" }) {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Hero Section */}
       <div className="relative overflow-hidden bg-gradient-to-br from-black via-gray-900 to-black border-b border-gray-800">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30"></div>
 
@@ -165,7 +164,9 @@ export default function LegalPage({ page, variant = "cgv" }) {
               <div
                 className={`flex items-center space-x-3 px-5 py-2 border rounded-full backdrop-blur-sm ${config.badge}`}
               >
-                <div className={`w-2 h-2 rounded-full animate-pulse ${config.badgeDot}`}></div>
+                <div
+                  className={`w-2 h-2 rounded-full animate-pulse ${config.badgeDot}`}
+                ></div>
                 <span
                   className={`text-sm font-medium tracking-wider ${config.badgeText}`}
                   style={{ fontFamily: "'Space Mono', monospace" }}
@@ -192,13 +193,11 @@ export default function LegalPage({ page, variant = "cgv" }) {
           </div>
         </div>
 
-        {/* Decorative gradient orb */}
         <div
           className={`absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br ${config.orb} rounded-full blur-3xl`}
         ></div>
       </div>
 
-      {/* Content */}
       <div className="max-w-4xl mx-auto px-6 py-16">
         <div className="space-y-12">
           {sections.map((section, index) => {
@@ -242,7 +241,6 @@ export default function LegalPage({ page, variant = "cgv" }) {
           })}
         </div>
 
-        {/* Footer Navigation */}
         <div className="mt-16 pt-8 border-t border-gray-800">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <Link
@@ -250,8 +248,18 @@ export default function LegalPage({ page, variant = "cgv" }) {
               className={`flex items-center space-x-2 text-gray-400 transition-colors duration-300 ${config.linkHover}`}
               style={{ fontFamily: "'Inter', sans-serif" }}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
               </svg>
               <span>Retour à l'accueil</span>
             </Link>
@@ -267,7 +275,6 @@ export default function LegalPage({ page, variant = "cgv" }) {
         </div>
       </div>
 
-      {/* Styles */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 

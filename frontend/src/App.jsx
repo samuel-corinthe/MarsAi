@@ -1,4 +1,5 @@
-import { Routes, Route } from "react-router-dom";
+﻿import { useEffect } from "react";
+import { Routes, Route, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Newsletter from "./pages/Newsletter";
@@ -8,6 +9,16 @@ import Gallery from "./pages/Gallery";
 import MovieDetails from "./pages/MovieDetails";
 
 export default function App() {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (window.gtag) {
+      window.gtag("config", "G-5ZGJKEP00R", {
+        page_path: location.pathname + location.search,
+      });
+    }
+  }, [location]);
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
