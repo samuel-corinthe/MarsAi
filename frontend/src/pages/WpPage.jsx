@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getPageBySlug } from "../api";
 import Home from "./Home";
@@ -208,7 +208,7 @@ export default function WpPage({ isHome = false }) {
       const result = await response.json();
 
       if (response.ok) {
-        alert("Message envoy� avec succ�s !");
+        alert("Message envoyï¿½ avec succï¿½s !");
         e.target.reset();
       } else {
         alert("Erreur : " + result.message);
@@ -220,7 +220,7 @@ export default function WpPage({ isHome = false }) {
     }
   };
 
-  if (loading) return <div className="app-container page">Chargement�</div>;
+  if (loading) return <div className="app-container page">Chargementï¿½</div>;
   if (error) {
     return (
       <div className="app-container page">
@@ -696,7 +696,7 @@ export default function WpPage({ isHome = false }) {
                           className="mt-4 text-xs font-bold uppercase tracking-widest text-cyan-200 hover:text-white"
                           style={{ fontFamily: "'Space Mono', monospace" }}
                         >
-                          Lire l'article ->
+                          Lire l'article ➙
                         </button>
                       </div>
                     ))
@@ -729,3 +729,4 @@ export default function WpPage({ isHome = false }) {
     </main>
   );
 }
+
