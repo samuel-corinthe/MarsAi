@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getPageBySlug } from "../api";
 import NotFound from "./NotFound";
+import LegalPage from "./LegalPage";
 
 export default function WpPage({ isHome = false }) {
   const { slug: routeSlug } = useParams();
@@ -10,8 +11,8 @@ export default function WpPage({ isHome = false }) {
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [agendaItems, setAgendaItems] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(new Date(2026, 5, 8));
-  // NOUVEL ÉTAT : Pour l'affichage de l'article sur la même page
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [weekStart, setWeekStart] = useState(null);
   const [selectedArticle, setSelectedArticle] = useState(null);
 
   const getCategoryColor = (catId) => {
@@ -22,6 +23,51 @@ export default function WpPage({ isHome = false }) {
       default: "#2ed573",
     };
     return colors[catId] || colors.default;
+  };
+
+  const stripHtml = (html) =>
+    (html || "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const truncate = (text, max = 160) =>
+    text.length > max ? `${text.slice(0, max).trim()}...` : text;
+
+  const parseDate = (dateStr) => new Date(`${dateStr}T00:00:00`);
+
+  const getLocalDateString = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const addDays = (dateStr, delta) => {
+    const d = parseDate(dateStr);
+    d.setDate(d.getDate() + delta);
+    return getLocalDateString(d);
+  };
+
+  const getWeekStart = (dateStr) => {
+    const d = parseDate(dateStr);
+    const day = d.getDay();
+    const diff = (day + 6) % 7; // Monday as start of week
+    d.setDate(d.getDate() - diff);
+    return getLocalDateString(d);
+  };
+
+  const formatDateParts = (dateStr) => {
+    const d = parseDate(dateStr);
+    const monthShort = d
+      .toLocaleDateString("fr-FR", { month: "short" })
+      .replace(".", "");
+    const monthLong = d.toLocaleDateString("fr-FR", { month: "long" });
+    const weekday = d.toLocaleDateString("fr-FR", { weekday: "long" });
+    const weekdayShort = d
+      .toLocaleDateString("fr-FR", { weekday: "short" })
+      .replace(".", "");
+    return { day: d.getDate(), monthShort, monthLong, weekday, weekdayShort };
   };
 
   useEffect(() => {
@@ -36,25 +82,31 @@ export default function WpPage({ isHome = false }) {
           if (slug === "agenda") {
             try {
               const res = await fetch(
-                "/wp-json/wp/v2/posts?categories=14&_embed&per_page=100",
+                "/wp-json/wp/v2/posts?categories=14&_embed&per_page=100&order=asc&orderby=date",
               );
               const allPosts = await res.json();
               if (allPosts && Array.isArray(allPosts)) {
                 const formattedEvents = allPosts.map((post) => {
                   const categoriesData = post._embedded?.["wp:term"]?.[0] || [];
+                  const dateOnly = post.date.split("T")[0];
+                  const excerpt =
+                    post.excerpt?.rendered || post.content?.rendered || "";
+                  const featured =
+                    post._embedded?.["wp:featuredmedia"]?.[0]?.source_url ||
+                    null;
                   return {
                     id: post.id,
-                    date: post.date.split("T")[0],
+                    date: dateOnly,
                     titre: post.title.rendered,
-                    contenu: post.content.rendered, // ON RÉCUPÈRE LE CONTENU ICI
+                    contenu: post.content.rendered,
+                    resume: truncate(stripHtml(excerpt), 180),
+                    image: featured,
                     heure: new Date(post.date).toLocaleTimeString("fr-FR", {
                       hour: "2-digit",
                       minute: "2-digit",
                     }),
                     lieu: "Marseille",
-                    subCategories: categoriesData.filter(
-                      (cat) => cat.id !== 14,
-                    ),
+                    subCategories: categoriesData.filter((cat) => cat.id !== 14),
                   };
                 });
                 setAgendaItems(formattedEvents);
@@ -72,157 +124,439 @@ export default function WpPage({ isHome = false }) {
     })();
   }, [slug]);
 
-  const getLocalDateString = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
+  const dateOptions = useMemo(() => {
+    const unique = Array.from(new Set(agendaItems.map((item) => item.date)));
+    return unique.sort();
+  }, [agendaItems]);
+
+  const eventsByDate = useMemo(() => {
+    const map = new Map();
+    agendaItems.forEach((item) => {
+      map.set(item.date, (map.get(item.date) || 0) + 1);
+    });
+    return map;
+  }, [agendaItems]);
+
+  const weekDates = useMemo(() => {
+    if (!weekStart) return [];
+    return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  }, [weekStart]);
+
+  useEffect(() => {
+    if (!dateOptions.length) {
+      if (!selectedDate) {
+        const today = getLocalDateString(new Date());
+        setSelectedDate(today);
+        setWeekStart(getWeekStart(today));
+      }
+      return;
+    }
+    const defaultDate = dateOptions[0];
+    if (!selectedDate) {
+      setSelectedDate(defaultDate);
+      setWeekStart(getWeekStart(defaultDate));
+      return;
+    }
+    if (!weekStart) {
+      setWeekStart(getWeekStart(selectedDate));
+    }
+  }, [dateOptions, selectedDate, weekStart]);
+
+  const handleWeekChange = (delta) => {
+    if (!weekStart) return;
+    const nextStart = addDays(weekStart, delta * 7);
+    const nextWeekDates = Array.from({ length: 7 }, (_, i) =>
+      addDays(nextStart, i),
+    );
+    setWeekStart(nextStart);
+    if (!nextWeekDates.includes(selectedDate)) {
+      setSelectedDate(nextStart);
+    }
   };
 
-  const weekDays = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(2026, 5, 8);
-    d.setDate(d.getDate() + i);
-    return d;
-  });
-
-  const activeEvents = agendaItems.filter(
-    (item) => item.date === getLocalDateString(selectedDate),
-  );
+  const activeEvents = agendaItems.filter((item) => item.date === selectedDate);
 
   if (loading)
     return (
-      <div className="flex justify-center py-20 text-gray-400">Chargement…</div>
+      <div className="flex justify-center py-20 text-gray-400">Chargement...</div>
     );
   if (!page) return <NotFound />;
 
+  if (slug === "cgv" || slug === "cgu") {
+    return <LegalPage page={page} variant={slug} />;
+  }
+
+  if (slug === "mentions-legales") {
+    return <LegalPage page={page} variant="mentions" />;
+  }
+
+  const isAgenda = slug === "agenda";
+  const selectedParts = selectedDate ? formatDateParts(selectedDate) : null;
+
   return (
-    <main className="min-h-screen bg-[#fcfcfc] text-[#333] p-4 md:p-12">
-      <div className="max-w-6xl mx-auto">
-        {/* BOUTON RETOUR SI UN ARTICLE EST OUVERT */}
-        {selectedArticle && (
-          <button
-            onClick={() => setSelectedArticle(null)}
-            className="mb-6 text-[#007bff] font-bold flex items-center hover:translate-x-[-5px] transition-transform"
-          >
-            ← RETOUR À L'AGENDA
-          </button>
-        )}
-
-        <h1
-          className="text-3xl font-bold mb-10 text-[#1a1a1a]"
-          dangerouslySetInnerHTML={{
-            __html: selectedArticle
-              ? selectedArticle.titre
-              : page.title.rendered,
-          }}
-        />
-
-        {slug === "agenda" ? (
+    <main
+      className={
+        isAgenda
+          ? "min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white relative overflow-hidden"
+          : "min-h-screen bg-[#fcfcfc] text-[#333] p-4 md:p-12"
+      }
+    >
+      {isAgenda && (
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-32 -right-24 w-72 h-72 bg-cyan-500/10 blur-3xl rounded-full"></div>
+          <div className="absolute top-40 -left-24 w-72 h-72 bg-purple-500/10 blur-3xl rounded-full"></div>
+        </div>
+      )}
+      <div
+        className={
+          isAgenda
+            ? "relative max-w-6xl mx-auto px-4 pb-16"
+            : "max-w-6xl mx-auto"
+        }
+        style={isAgenda ? { fontFamily: "'Inter', sans-serif" } : undefined}
+      >
+        {isAgenda ? (
           <>
+            <div className="pt-10 pb-8 text-center">
+              <div className="w-16 h-16 mx-auto rounded-full border-4 border-cyan-400/70 flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+                <svg
+                  className="w-7 h-7"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.5}
+                    d="M12 8v5l3 3"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.5}
+                    d="M12 21a9 9 0 100-18 9 9 0 000 18z"
+                  />
+                </svg>
+              </div>
+              <h1
+                className="text-4xl md:text-5xl font-black mt-4 text-white"
+                style={{ fontFamily: "'Bebas Neue', sans-serif" }}
+                dangerouslySetInnerHTML={{ __html: page.title.rendered }}
+              />
+              <p
+                className="text-xs uppercase tracking-[0.4em] text-cyan-200 mt-2"
+                style={{ fontFamily: "'Space Mono', monospace" }}
+              >
+                Schedule
+              </p>
+            </div>
+
             {selectedArticle ? (
-              /* VUE ARTICLE (Headless) */
-              <div className="bg-white p-8 rounded-xl border border-[#eaeaea] shadow-sm">
-                <div className="flex gap-4 mb-6 text-sm text-gray-500 font-medium">
-                  <span>🕒 {selectedArticle.heure}</span>
-                  <span>📍 {selectedArticle.lieu}</span>
+              <div className="mt-6">
+                <button
+                  onClick={() => setSelectedArticle(null)}
+                  className="mb-6 text-white/90 font-bold flex items-center gap-2 hover:translate-x-[-4px] transition-transform"
+                  style={{ fontFamily: "'Space Mono', monospace" }}
+                >
+                  <span>&larr;</span>
+                  Retour a l'agenda
+                </button>
+
+                <div className="max-w-4xl mx-auto">
+                      <article className="bg-white/5 text-white p-5 sm:p-8 md:p-10 rounded-[36px] border border-cyan-400/20 shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur">
+                    {selectedArticle.image ? (
+                      <div className="relative aspect-[16/9] rounded-[28px] overflow-hidden mb-6">
+                        <img
+                          src={selectedArticle.image}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#062a7a]/80 via-[#0b5be9]/30 to-transparent" />
+                        <div className="absolute bottom-4 left-5 right-5">
+                          <h2
+                            className="text-2xl md:text-4xl font-black text-white leading-tight"
+                            style={{ fontFamily: "'Bebas Neue', sans-serif" }}
+                            dangerouslySetInnerHTML={{
+                              __html: selectedArticle.titre,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <h2
+                        className="text-2xl md:text-4xl font-black text-white mb-6 leading-tight"
+                        style={{ fontFamily: "'Bebas Neue', sans-serif" }}
+                        dangerouslySetInnerHTML={{ __html: selectedArticle.titre }}
+                      />
+                    )}
+
+                    <div
+                      className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-cyan-100/80 mb-6"
+                      style={{ fontFamily: "'Space Mono', monospace" }}
+                    >
+                      <span className="px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30">
+                        Heure: {selectedArticle.heure}
+                      </span>
+                      <span className="px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30">
+                        Lieu: {selectedArticle.lieu}
+                      </span>
+                      {selectedArticle.subCategories?.map((cat) => (
+                        <span
+                          key={cat.id}
+                          className="px-3 py-1 rounded-full border"
+                          style={{
+                            color: getCategoryColor(cat.id),
+                            borderColor: getCategoryColor(cat.id),
+                          }}
+                        >
+                          {cat.name}
+                        </span>
+                      ))}
+                    </div>
+
+                    <div
+                      className="agenda-article prose prose-invert prose-headings:font-black prose-headings:text-white prose-p:text-white/80 prose-a:text-cyan-200 prose-a:no-underline hover:prose-a:underline prose-strong:text-white max-w-none"
+                      dangerouslySetInnerHTML={{
+                        __html: selectedArticle.contenu,
+                      }}
+                    />
+                  </article>
                 </div>
-                <div
-                  className="prose prose-blue max-w-none"
-                  dangerouslySetInnerHTML={{ __html: selectedArticle.contenu }}
-                />
               </div>
             ) : (
-              /* VUE LISTE AGENDA */
-              <div className="flex flex-col lg:flex-row gap-10">
-                <div className="flex-1 bg-white p-6 rounded-[16px] border border-[#eaeaea] shadow-[0_4px_20px_rgba(0,0,0,0.05)] h-fit">
-                  <h3 className="text-lg font-bold mb-6">Juin 2026</h3>
-                  <div className="grid grid-cols-7 gap-2">
-                    {["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map(
-                      (day) => (
-                        <span
-                          key={day}
-                          className="text-[10px] font-semibold text-[#a0a0a0] uppercase text-center"
-                        >
-                          {day}
-                        </span>
-                      ),
-                    )}
-                    {weekDays.map((date, idx) => {
-                      const isSelected =
-                        getLocalDateString(selectedDate) ===
-                        getLocalDateString(date);
-                      const hasEv = agendaItems.some(
-                        (item) => item.date === getLocalDateString(date),
-                      );
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => setSelectedDate(date)}
-                          className={`relative aspect-square flex items-center justify-center rounded-full text-sm ${isSelected ? "bg-[#007bff] text-white font-bold" : "hover:bg-[#f5f5f5]"}`}
-                        >
-                          {date.getDate()}
-                          {hasEv && (
-                            <div
-                              className={`absolute bottom-2 w-1 h-1 rounded-full ${isSelected ? "bg-white" : "bg-[#ff4757]"}`}
-                            />
-                          )}
-                        </button>
-                      );
-                    })}
+              <>
+                <div className="mt-6 bg-white/5 border border-cyan-400/20 rounded-[32px] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.45)] max-w-5xl mx-auto">
+                  <div
+                    className="flex items-center justify-between px-1 pb-4 text-xs text-white/80"
+                    style={{ fontFamily: "'Space Mono', monospace" }}
+                  >
+                    <button
+                      onClick={() => handleWeekChange(-1)}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-400/30 hover:bg-cyan-500/20 transition"
+                      aria-label="Semaine precedente"
+                    >
+                      <svg
+                        className="w-3.5 h-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 19l-7-7 7-7"
+                        />
+                      </svg>
+                      <span className="hidden sm:inline">Semaine precedente</span>
+                    </button>
+                    {weekStart && weekDates.length ? (
+                      <div
+                        className="uppercase tracking-[0.3em] text-[10px] text-cyan-100/80"
+                        style={{ fontFamily: "'Space Mono', monospace" }}
+                      >
+                        {formatDateParts(weekStart).day}{" "}
+                        {formatDateParts(weekStart).monthShort} -{" "}
+                        {formatDateParts(weekDates[6]).day}{" "}
+                        {formatDateParts(weekDates[6]).monthShort}
+                      </div>
+                    ) : null}
+                    <button
+                      onClick={() => handleWeekChange(1)}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-400/30 hover:bg-cyan-500/20 transition"
+                      aria-label="Semaine suivante"
+                    >
+                      <span className="hidden sm:inline">Semaine suivante</span>
+                      <svg
+                        className="w-3.5 h-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </button>
                   </div>
-                </div>
-
-                <div className="w-full lg:w-[350px]">
-                  <h3 className="text-xl font-bold mb-6 capitalize">
-                    {selectedDate.toLocaleDateString("fr-FR", {
-                      weekday: "long",
-                      day: "numeric",
-                      month: "long",
-                    })}
-                  </h3>
-                  <div className="space-y-4">
-                    {activeEvents.length > 0 ? (
-                      activeEvents.map((ev) => (
-                        <div
-                          key={ev.id}
-                          className="bg-white border border-[#eee] p-5 rounded-[12px] border-l-[5px] border-l-[#007bff]"
-                        >
-                          <div className="flex flex-wrap gap-2 mb-3">
-                            {ev.subCategories.map((cat) => (
-                              <span
-                                key={cat.id}
-                                style={{ color: getCategoryColor(cat.id) }}
-                                className="text-[10px] font-bold uppercase"
-                              >
-                                {cat.name}
-                              </span>
-                            ))}
-                          </div>
-                          <h4
-                            className="text-base font-bold mb-2"
-                            dangerouslySetInnerHTML={{ __html: ev.titre }}
-                          />
-                          <p className="text-xs text-gray-500 mb-4">
-                            🕒 {ev.heure} | 📍 {ev.lieu}
-                          </p>
-
+                  <div className="grid grid-cols-7 gap-2 sm:gap-3 pb-2">
+                    {weekDates.length ? (
+                      weekDates.map((dateStr) => {
+                        const parts = formatDateParts(dateStr);
+                        const isSelected = dateStr === selectedDate;
+                        const eventCount = eventsByDate.get(dateStr) || 0;
+                        const hasEvents = eventCount > 0;
+                        return (
                           <button
-                            onClick={() => setSelectedArticle(ev)}
-                            className="text-xs font-bold text-[#007bff] hover:underline uppercase"
+                            key={dateStr}
+                            onClick={() => setSelectedDate(dateStr)}
+                            className={`h-24 sm:h-32 rounded-3xl flex flex-col items-center justify-center gap-1.5 border transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ${
+                              isSelected
+                                ? "bg-gradient-to-br from-cyan-400 to-blue-600 text-white border-cyan-200/60 shadow-lg"
+                                : "bg-white/5 text-white border-white/10 hover:bg-cyan-500/10"
+                            }`}
                           >
-                            Voir l'article →
+                            <span
+                              className="text-[9px] sm:text-[10px] uppercase tracking-widest text-white/70"
+                              style={{ fontFamily: "'Space Mono', monospace" }}
+                            >
+                              {parts.weekdayShort}
+                            </span>
+                            <span
+                              className="text-[10px] sm:text-[11px] uppercase tracking-widest"
+                              style={{ fontFamily: "'Space Mono', monospace" }}
+                            >
+                              {parts.monthShort}
+                            </span>
+                            <span
+                              className="text-xl sm:text-2xl font-black"
+                              style={{ fontFamily: "'Bebas Neue', sans-serif" }}
+                            >
+                              {parts.day}
+                            </span>
+                            {hasEvents ? (
+                              <span
+                                className={`text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  isSelected
+                                    ? "bg-white/20 text-white"
+                                    : "bg-cyan-500/20 text-cyan-100"
+                                }`}
+                              >
+                                {eventCount} event
+                              </span>
+                            ) : (
+                              <span className="text-[8px] sm:text-[9px] uppercase tracking-widest text-white/50">
+                                rien
+                              </span>
+                            )}
                           </button>
-                        </div>
-                      ))
+                        );
+                      })
                     ) : (
-                      <div className="p-8 text-center text-gray-400 bg-white rounded-xl border border-dashed border-gray-200">
-                        <p className="text-sm">Aucun événement ce jour.</p>
+                      <div className="text-white/70 text-sm py-6 px-4">
+                        Aucun evenement disponible.
                       </div>
                     )}
                   </div>
                 </div>
-              </div>
+
+                {selectedParts && (
+                  <div className="mt-10 flex justify-center">
+                    <div className="px-8 py-5 rounded-3xl bg-white/5 border border-cyan-400/20 text-center shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+                      <div
+                        className="text-5xl font-black"
+                        style={{ fontFamily: "'Bebas Neue', sans-serif" }}
+                      >
+                        {selectedParts.day}
+                      </div>
+                      <div
+                        className="text-xs uppercase tracking-[0.4em] text-white/70"
+                        style={{ fontFamily: "'Space Mono', monospace" }}
+                      >
+                        {selectedParts.weekday}
+                      </div>
+                      <div
+                        className="text-sm uppercase tracking-[0.3em] text-white/80 mt-1"
+                        style={{ fontFamily: "'Space Mono', monospace" }}
+                      >
+                        {selectedParts.monthLong}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3 justify-items-center">
+                  {activeEvents.length ? (
+                    activeEvents.map((ev) => (
+                      <div
+                        key={ev.id}
+                        className="group w-full max-w-[380px] bg-white/5 border border-cyan-400/20 rounded-3xl p-4 sm:p-5 shadow-lg backdrop-blur transition-transform hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(0,0,0,0.35)]"
+                      >
+                        <div className="relative h-32 sm:h-40 rounded-2xl overflow-hidden bg-white/10 mb-4">
+                          {ev.image ? (
+                            <img
+                              src={ev.image}
+                              alt=""
+                              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-white/60 text-xs uppercase tracking-widest">
+                              Event
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#051a4a]/80 via-black/10 to-transparent" />
+                          <span className="absolute bottom-3 left-4 text-xs uppercase tracking-widest text-white/90">
+                            Event
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {ev.subCategories.map((cat) => (
+                            <span
+                              key={cat.id}
+                              className="text-[10px] font-bold uppercase px-2 py-1 rounded-full border"
+                              style={{
+                                color: getCategoryColor(cat.id),
+                                borderColor: getCategoryColor(cat.id),
+                              }}
+                            >
+                              {cat.name}
+                            </span>
+                          ))}
+                        </div>
+
+                        <h3
+                          className="text-lg font-bold mb-2"
+                          style={{ fontFamily: "'Bebas Neue', sans-serif" }}
+                          dangerouslySetInnerHTML={{ __html: ev.titre }}
+                        />
+                        <p className="text-sm text-white/75 leading-relaxed">
+                          {ev.resume}
+                        </p>
+
+                        <div className="mt-4 flex flex-wrap gap-2 text-xs text-white/80">
+                          <span className="px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30">
+                            Heure: {ev.heure}
+                          </span>
+                          <span className="px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30">
+                            Lieu: {ev.lieu}
+                          </span>
+                        </div>
+
+                        <button
+                          onClick={() => setSelectedArticle(ev)}
+                          className="mt-4 text-xs font-bold uppercase tracking-widest text-cyan-200 hover:text-white"
+                          style={{ fontFamily: "'Space Mono', monospace" }}
+                        >
+                          Lire l'article ->
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="col-span-full bg-white/10 border border-dashed border-white/20 rounded-3xl p-8 text-center text-white/70">
+                      Aucun evenement ce jour.
+                    </div>
+                  )}
+                </div>
+
+              </>
             )}
+
+            <style>{`
+              @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+              .agenda-article h2,
+              .agenda-article h3,
+              .agenda-article h4 {
+                font-family: 'Bebas Neue', sans-serif;
+              }
+            `}</style>
           </>
         ) : (
           <div
@@ -234,3 +568,4 @@ export default function WpPage({ isHome = false }) {
     </main>
   );
 }
+
