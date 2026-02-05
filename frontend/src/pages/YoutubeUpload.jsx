@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { getVideoMetadata, validateVideoFrontend, VIDEO_CONSTRAINTS } from '../utils/videoValidation';
 import { validateForm, FORM_CONSTRAINTS, exceedsMaxLength } from '../utils/formvalidation';
@@ -11,15 +11,37 @@ export default function YoutubeUpload() {
     const [email, setEmail] = useState('');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
+    const [age, setAge] = useState('');
     const [uploading, setUploading] = useState(false);
     const [progress, setProgress] = useState(0);
     const [status, setStatus] = useState({ type: '', message: '' });
     const [isValidating, setIsValidating] = useState(false);
     const [errors, setErrors] = useState({});
     const [altchaPayload, setAltchaPayload] = useState(null);
+    const [honeypotFieldName, setHoneypotFieldName] = useState('');
+    const [honeypotToken, setHoneypotToken] = useState('');
+    const [honeypotValue, setHoneypotValue] = useState('');
+
 
     const fileInputRef = useRef(null);
     const statusRef = useRef(null);
+
+    // Charger le challenge honeypot au montage du composant
+    useEffect(() => {
+        const loadChallenge = async () => {
+            try {
+                const response = await axios.get('http://localhost:3000/api/altcha/challenge');
+                if (response.data.honeypot) {
+                    setHoneypotFieldName(response.data.honeypot.fieldName);
+                    setHoneypotToken(response.data.honeypot.token);
+                }
+            } catch (error) {
+                console.error('[HONEYPOT] Erreur chargement challenge:', error);
+            }
+        };
+
+        loadChallenge();
+    }, []);
 
     const handleFileChange = async (e) => {
         const selectedFile = e.target.files[0];
@@ -85,11 +107,12 @@ export default function YoutubeUpload() {
     const handleUpload = async (e) => {
         e.preventDefault();
 
-        
+
         const validation = validateForm({
             email,
             firstName,
             lastName,
+            age,
             title,
             description
         });
@@ -118,9 +141,15 @@ export default function YoutubeUpload() {
         formData.append('email', validation.cleanedData.email);
         formData.append('firstName', validation.cleanedData.firstName);
         formData.append('lastName', validation.cleanedData.lastName);
+        formData.append('age', validation.cleanedData.age);
         formData.append('title', validation.cleanedData.title);
         formData.append('description', validation.cleanedData.description);
         formData.append('altcha', altchaPayload);
+        formData.append('honeypotToken', honeypotToken);
+        // Ajouter le champ honeypot dynamique (doit être vide)
+        if (honeypotFieldName) {
+            formData.append(honeypotFieldName, honeypotValue);
+        }
 
         try {
             setUploading(true);
@@ -135,13 +164,14 @@ export default function YoutubeUpload() {
 
             setStatus({
                 type: 'success',
-                message: `Votre Vidéo a été  mise en ligne avec succès (ID: ${res.data.videoId})`
+                message: 'Votre vidéo a été mise en ligne avec succès !'
             });
 
             setFile(null);
             setEmail('');
             setFirstName('');
             setLastName('');
+            setAge('');
             setTitle('');
             setDescription('');
             setAltchaPayload(null);
@@ -298,6 +328,43 @@ export default function YoutubeUpload() {
                         </div>
                     </div>
 
+                    {/* Âge */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <label
+                                htmlFor="age-input"
+                                className="block text-sm font-semibold text-slate-700"
+                            >
+                                Votre Âge <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                            </label>
+                        </div>
+                        <input
+                            id="age-input"
+                            type="number"
+                            placeholder="Votre âge"
+                            min="18"
+                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.age ? 'border-red-500 bg-red-50' : 'border-slate-200'
+                                }`}
+                            value={age}
+                            onChange={(e) => {
+                                setAge(e.target.value);
+                                clearError('age');
+                            }}
+                            required
+                            aria-required="true"
+                            aria-invalid={!!errors.age}
+                            aria-describedby={errors.age ? "age-error" : "age-hint"}
+                        />
+                        {errors.age && (
+                            <p id="age-error" className="text-red-600 text-sm mt-1" role="alert">
+                                {errors.age}
+                            </p>
+                        )}
+                        <span id="age-hint" className="text-xs text-slate-500 block">
+                            Vous devez avoir au moins 18 ans pour participer
+                        </span>
+                    </div>
+
                     {/* Titre */}
                     <div className="space-y-2">
                         <div className="flex justify-between items-center">
@@ -377,6 +444,34 @@ export default function YoutubeUpload() {
                             Cette description accompagnera votre vidéo sur YouTube
                         </span>
                     </div>
+                    {/* HONEYPOT - Champ piège dynamique invisible */}
+                    {honeypotFieldName && (
+                        <div
+                            style={{
+                                position: 'absolute',
+                                left: '-9999px',
+                                width: '1px',
+                                height: '1px',
+                                overflow: 'hidden'
+                            }}
+                            aria-hidden="true"
+                        >
+                            <label htmlFor={honeypotFieldName}>
+                                Website (ne pas remplir si vous êtes humain)
+                            </label>
+                            <input
+                                id={honeypotFieldName}
+                                type="text"
+                                name={honeypotFieldName}
+                                tabIndex="-1"
+                                autoComplete="off"
+                                value={honeypotValue}
+                                onChange={(e) => setHoneypotValue(e.target.value)}
+                            />
+                        </div>
+                    )}
+
+                    
 
                     {/* Fichier vidéo */}
                     <div className="space-y-2">

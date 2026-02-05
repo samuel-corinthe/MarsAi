@@ -18,7 +18,7 @@ export async function  verifyVideoMagicBytes(filePath) {
         code: 'UNKNOWN_TYPE'
       };
     }
-    const config = ACCEPTED_VIDEO_CONFIG[fileType.mime];
+    const config = ACCEPTED_FILE_TYPES[fileType.mime];
 
     if (config){
       return {

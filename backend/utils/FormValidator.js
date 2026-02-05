@@ -4,12 +4,12 @@ import validator from 'validator';
 
 export const FORM_CONSTRAINTS = {
   EMAIL: {
-    MAX_LENGTH: 254, 
+    MAX_LENGTH: 254,
     PATTERN: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   },
 
   FIRST_NAME: {
-    MIN_LENGTH: 1, 
+    MIN_LENGTH: 1,
     PATTERN: /^[\p{L}\p{M}\-' ]+$/u
   },
 
@@ -17,6 +17,11 @@ export const FORM_CONSTRAINTS = {
     MIN_LENGTH: 1,
     MAX_LENGTH: 50,
     PATTERN: /^[\p{L}\p{M}\-' ]+$/u
+  },
+
+  AGE: {
+    MIN_VALUE: 18,
+    PATTERN: /^\d+$/
   },
 
   TITLE: {
@@ -155,6 +160,28 @@ export const validateFormData = (req, res, next) => {
   req.body.lastName = lastNameValidation.cleaned;
 
  
+  if (!req.body?.age) {
+    console.log(' [VALIDATION] Âge manquant');
+    return res.status(400).json({ error: 'Âge requis' });
+  }
+
+  const ageValue = req.body.age.trim();
+  if (!FORM_CONSTRAINTS.AGE.PATTERN.test(ageValue)) {
+    console.log(' [VALIDATION] Format âge invalide:', ageValue);
+    return res.status(400).json({ error: 'L\'âge doit être un nombre valide' });
+  }
+
+  const age = parseInt(ageValue, 10);
+  if (age < FORM_CONSTRAINTS.AGE.MIN_VALUE) {
+    console.log(` [VALIDATION] Âge trop jeune: ${age} ans`);
+    return res.status(400).json({
+      error: `Vous devez avoir au moins ${FORM_CONSTRAINTS.AGE.MIN_VALUE} ans pour participer`
+    });
+  }
+
+  req.body.age = ageValue;
+
+
   if (!req.body?.title) {
     console.log(' [VALIDATION] Titre manquant');
     return res.status(400).json({ error: 'Titre requis' });

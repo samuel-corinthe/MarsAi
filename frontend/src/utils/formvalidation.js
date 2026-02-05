@@ -2,34 +2,40 @@
 
 export const FORM_CONSTRAINTS = {
   EMAIL: {
-    MAX_LENGTH: 254, 
+    MAX_LENGTH: 254,
     PATTERN: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     ERROR_MSG: "Veuillez entrer un email valide (ex: nom@domaine.fr)"
   },
 
   FIRST_NAME: {
-    MIN_LENGTH: 1, 
+    MIN_LENGTH: 1,
     MAX_LENGTH: 50,
     PATTERN: /^[\p{L}\p{M}\-' ]+$/u,
     ERROR_MSG: "Le prénom doit contenir entre 1 et 50 caractères (lettres, tirets, apostrophes uniquement)"
   },
 
   LAST_NAME: {
-    MIN_LENGTH: 1, 
+    MIN_LENGTH: 1,
     MAX_LENGTH: 50,
     PATTERN: /^[\p{L}\p{M}\-' ]+$/u,
     ERROR_MSG: "Le nom doit contenir entre 1 et 50 caractères (lettres, tirets, apostrophes uniquement)"
   },
 
+  AGE: {
+    MIN_VALUE: 18,
+    PATTERN: /^\d+$/,
+    ERROR_MSG: "Vous devez avoir au moins 18 ans pour participer au concours"
+  },
+
   TITLE: {
-    MIN_LENGTH: 2, 
+    MIN_LENGTH: 2,
     MAX_LENGTH: 100,
     PATTERN: /^[\p{L}\p{N}\p{M}\p{Pd}\p{Po}\p{Zs}]+$/u,
     ERROR_MSG: "Le titre doit contenir entre 2 et 100 caractères (lettres, chiffres et ponctuation basique)"
   },
 
   DESCRIPTION: {
-    MIN_LENGTH: 5, 
+    MIN_LENGTH: 5,
     MAX_LENGTH: 250,
     PATTERN: /^[\p{L}\p{N}\p{M}\p{P}\p{Z}\n]*$/u,
     ERROR_MSG: "La description ne doit pas dépasser 250 caractères"
@@ -62,7 +68,7 @@ export const validateField = (fieldName, value) => {
     return { isValid: true, error: '', cleaned };
   }
 
-  
+
   if (!cleaned && constraint.MIN_LENGTH > 0) {
     return {
       isValid: false,
@@ -72,6 +78,44 @@ export const validateField = (fieldName, value) => {
   }
 
   
+  if (fieldName === 'AGE') {
+    if (!cleaned) {
+      return {
+        isValid: false,
+        error: "L'âge est requis",
+        cleaned
+      };
+    }
+
+    if (!constraint.PATTERN.test(cleaned)) {
+      return {
+        isValid: false,
+        error: "L'âge doit être un nombre valide",
+        cleaned
+      };
+    }
+
+    const ageValue = parseInt(cleaned, 10);
+    if (ageValue < constraint.MIN_VALUE) {
+      return {
+        isValid: false,
+        error: constraint.ERROR_MSG,
+        cleaned
+      };
+    }
+
+    if (ageValue > constraint.MAX_VALUE) {
+      return {
+        isValid: false,
+        error: "Veuillez entrer un âge valide",
+        cleaned
+      };
+    }
+
+    return { isValid: true, error: '', cleaned };
+  }
+
+
   if (constraint.MIN_LENGTH && cleaned.length < constraint.MIN_LENGTH) {
     return {
       isValid: false,
@@ -80,7 +124,7 @@ export const validateField = (fieldName, value) => {
     };
   }
 
-  
+
   if (constraint.MAX_LENGTH && cleaned.length > constraint.MAX_LENGTH) {
     return {
       isValid: false,
@@ -89,7 +133,7 @@ export const validateField = (fieldName, value) => {
     };
   }
 
-  
+
   if ((fieldName === 'FIRST_NAME' || fieldName === 'LAST_NAME') && containsEmoji(cleaned)) {
     return {
       isValid: false,
@@ -98,7 +142,7 @@ export const validateField = (fieldName, value) => {
     };
   }
 
-  
+
   if (constraint.PATTERN && cleaned && !constraint.PATTERN.test(cleaned)) {
     return {
       isValid: false,
@@ -115,7 +159,7 @@ export const validateForm = (formData) => {
   const errors = {};
   const cleanedData = {};
 
-  
+
   if (!formData.email || !formData.email.trim()) {
     errors.email = "L'email est requis";
   } else {
@@ -127,7 +171,7 @@ export const validateForm = (formData) => {
     }
   }
 
-  
+
   if (!formData.firstName || !formData.firstName.trim()) {
     errors.firstName = "Le prénom est requis";
   } else {
@@ -139,7 +183,7 @@ export const validateForm = (formData) => {
     }
   }
 
-  
+
   if (!formData.lastName || !formData.lastName.trim()) {
     errors.lastName = "Le nom est requis";
   } else {
@@ -151,7 +195,19 @@ export const validateForm = (formData) => {
     }
   }
 
- 
+  // Validation de l'âge
+  if (!formData.age || !formData.age.trim()) {
+    errors.age = "L'âge est requis";
+  } else {
+    const validation = validateField('AGE', formData.age);
+    if (!validation.isValid) {
+      errors.age = validation.error;
+    } else {
+      cleanedData.age = validation.cleaned;
+    }
+  }
+
+
   if (!formData.title || !formData.title.trim()) {
     errors.title = "Le titre est requis";
   } else {
@@ -163,7 +219,7 @@ export const validateForm = (formData) => {
     }
   }
 
-  
+
   if (formData.description && formData.description.trim()) {
     const validation = validateField('DESCRIPTION', formData.description);
     if (!validation.isValid) {

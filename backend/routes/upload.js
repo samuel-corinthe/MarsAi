@@ -8,6 +8,7 @@ import { validateVideoData, VIDEO_CONSTRAINTS } from '../utils/VideoValidator.js
 import { validateFormData } from '../utils/FormValidator.js';
 import { validateAltchaMiddleware } from '../utils/AltchaValidator.js';
 import { validateFileMagicBytes } from '../utils/FileTypeValidator.js';
+import { validateHoneypot } from '../utils/HoneypotValidator.js';
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
@@ -57,6 +58,7 @@ const upload = multer({
 
 router.post('/youtube',
     upload.single('video'),
+    validateHoneypot,
     validateFileMagicBytes,
     validateAltchaMiddleware,
     validateFormData,
