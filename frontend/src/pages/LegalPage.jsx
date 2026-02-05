@@ -58,6 +58,32 @@ const VARIANTS = {
     ],
     otherLink: { path: "/cgv", label: "Voir les CGV" },
   },
+  mentions: {
+    badge: "bg-amber-500/10 border-amber-500/30",
+    badgeDot: "bg-amber-400",
+    badgeText: "text-amber-400",
+    orb: "from-amber-500/20 to-orange-600/20",
+    buttonClass:
+      "px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white font-semibold rounded-full hover:shadow-lg hover:shadow-amber-500/50 transition-all duration-300",
+    linkHover: "hover:text-amber-400",
+    sectionGradients: [
+      "from-amber-500 to-orange-600",
+      "from-purple-500 to-pink-600",
+      "from-cyan-500 to-blue-600",
+      "from-emerald-500 to-teal-600",
+      "from-indigo-500 to-violet-600",
+      "from-rose-500 to-red-600",
+    ],
+    accentColors: [
+      "#fbbf24",
+      "#a78bfa",
+      "#22d3ee",
+      "#34d399",
+      "#818cf8",
+      "#f43f5e",
+    ],
+    otherLink: { path: "/cgu", label: "Voir les CGU" },
+  },
 };
 
 const parseSections = (html) => {

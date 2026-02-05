@@ -90,6 +90,10 @@ export default function WpPage({ isHome = false }) {
     return <LegalPage page={page} variant={slug} />;
   }
 
+  if (slug === "mentions-legales") {
+    return <LegalPage page={page} variant="mentions" />;
+  }
+
   if (slug === "contact") {
     return (
       <main className="min-h-screen bg-gray-50 text-gray-900 p-6 sm:p-12">
@@ -211,5 +215,8 @@ export default function WpPage({ isHome = false }) {
     </main>
   );
 }
+
+
+
 
 
