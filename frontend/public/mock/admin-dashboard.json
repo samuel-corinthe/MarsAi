@@ -1,0 +1,126 @@
+﻿{
+  "selectionTarget": 50,
+  "adminKpis": {
+    "noted": 24,
+    "remaining": 31,
+    "selected": 42,
+    "quota": 50
+  },
+  "films": [
+    {
+      "title": "L'Aube Quantique",
+      "country": "France",
+      "status": "en cours",
+      "rating": 4.1,
+      "notesCount": 48,
+      "phase": "Sélection",
+      "duration": "18 min",
+      "tools": "Gen-vidéo + sound design IA"
+    },
+    {
+      "title": "Neon Dust",
+      "country": "États-Unis",
+      "status": "sélectionné",
+      "rating": 4.6,
+      "notesCount": 61,
+      "phase": "Finale",
+      "duration": "22 min",
+      "tools": "Rotoscopie IA"
+    },
+    {
+      "title": "Ciel Inversé",
+      "country": "Canada",
+      "status": "refusé",
+      "rating": 2.8,
+      "notesCount": 30,
+      "phase": "Pré-sélection",
+      "duration": "15 min",
+      "tools": "Upscale IA"
+    },
+    {
+      "title": "Retina",
+      "country": "Espagne",
+      "status": "en cours",
+      "rating": 3.9,
+      "notesCount": 21,
+      "phase": "Sélection",
+      "duration": "19 min",
+      "tools": "Storyboard IA"
+    },
+    {
+      "title": "Low Orbit",
+      "country": "Royaume-Uni",
+      "status": "accepté",
+      "rating": 4.4,
+      "notesCount": 55,
+      "phase": "Finale",
+      "duration": "24 min",
+      "tools": "Voice clone"
+    }
+  ],
+  "statuses": ["tous", "en cours", "accepté", "sélectionné", "refusé"],
+  "countries": ["tous", "France", "États-Unis", "Canada", "Espagne", "Royaume-Uni"],
+  "phaseFilters": ["toutes", "Pré-sélection", "Sélection", "Finale"],
+  "notes": ["toutes", "≥ 4", "3 - 4", "< 3"],
+  "navItems": [
+    { "label": "Vue admin", "href": "admin-top" },
+    { "label": "Profil", "href": "profile" },
+    { "label": "Liste films", "href": "films" },
+    { "label": "Widgets admin", "href": "admin-widgets" },
+    { "label": "Super admin", "href": "super-top" },
+    { "label": "Comptes", "href": "accounts" },
+    { "label": "Phases", "href": "phases" },
+    { "label": "Logs", "href": "logs" },
+    { "label": "Newsletter", "href": "newsletter" }
+  ],
+  "phaseTimeline": [
+    {
+      "key": "depot",
+      "label": "Dépôt",
+      "start": "2026-01-10T00:00:00Z",
+      "end": "2026-02-28T23:59:59Z",
+      "quota": 50,
+      "submitted": 128,
+      "selected": 12,
+      "description": "Collecte des films et vérification des droits."
+    },
+    {
+      "key": "selection",
+      "label": "Sélection",
+      "start": "2026-03-01T00:00:00Z",
+      "end": "2026-03-14T23:59:59Z",
+      "quota": 50,
+      "submitted": 128,
+      "selected": 42,
+      "description": "Notation et choix des finalistes (objectif 50)."
+    },
+    {
+      "key": "annonce",
+      "label": "Annonce",
+      "start": "2026-03-20T00:00:00Z",
+      "end": "2026-03-21T23:59:59Z",
+      "quota": 50,
+      "submitted": 128,
+      "selected": 50,
+      "description": "Annonce publique et préparation presse."
+    }
+  ],
+  "currentUser": {
+    "id": "admin-01",
+    "name": "Idriss Benali",
+    "email": "idriss@festival-ia.io",
+    "phone": "+33 6 45 22 01 12",
+    "role": "superadmin",
+    "status": "actif",
+    "timezone": "Europe/Paris",
+    "region": "Europe",
+    "language": "fr"
+  },
+  "adminsCount": 14,
+  "logs": [
+    "Admin Léa a accepté « Neon Dust »",
+    "Super admin Idriss a modifié les dates de sélection",
+    "Admin Chloé a noté « Retina » 4/5",
+    "Super admin Idriss a exporté la newsletter (1423 emails)"
+  ]
+}
