@@ -220,7 +220,7 @@ export default function WpPage({ isHome = false }) {
     }
   };
 
-  if (loading) return <div className="app-container page">Chargementï¿½</div>;
+  if (loading) return <div className="app-container page">Chargement</div>;
   if (error) {
     return (
       <div className="app-container page">
