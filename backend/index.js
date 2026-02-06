@@ -4,6 +4,7 @@ import 'dotenv/config';
 import uploadRoutes from './routes/upload.js';
 import altchaRoutes from './routes/altcha.js';
 
+
 console.log('[DEBUG] altchaRoutes:', typeof altchaRoutes, altchaRoutes);
 
 const app = express();

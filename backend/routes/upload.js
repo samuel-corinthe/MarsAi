@@ -7,6 +7,7 @@ import { analyzeVideo } from '../utils/VideoAnalyser.js';
 import { validateVideoData, VIDEO_CONSTRAINTS } from '../utils/VideoValidator.js';
 import { validateFormData } from '../utils/FormValidator.js';
 import { validateAltchaMiddleware } from '../utils/AltchaValidator.js';
+import { validateEmail } from '../utils/EmailValidator.js';
 import { validateFileMagicBytes } from '../utils/FileTypeValidator.js';
 import { validateHoneypot } from '../utils/HoneypotValidator.js';
 import rateLimit from 'express-rate-limit';
@@ -62,6 +63,7 @@ router.post('/youtube',
     validateFileMagicBytes,
     validateAltchaMiddleware,
     validateFormData,
+    validateEmail, 
     ipLimiter,
     emailLimiter,
     async (req, res) => {
