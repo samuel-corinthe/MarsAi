@@ -1,11 +1,12 @@
 const WP_V2 = "/wp-json/wp/v2";
 
-export async function getPageBySlug(slug) {
-  const res = await fetch(`${WP_V2}/pages?slug=${encodeURIComponent(slug)}`);
-  if (!res.ok) throw new Error(`WP error ${res.status}`);
-  const data = await res.json();
-  return data[0] || null;
-}
+export const getPageBySlug = async (slug, lang = "fr") => {
+  const response = await fetch(
+    `https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-json/wp/v2/pages?slug=${slug}&lang=${lang}`,
+  );
+  const data = await response.json();
+  return data[0];
+};
 
 export async function getAgendaPosts() {
   const res = await fetch("/wp-json/wp/v2/posts?per_page=100");

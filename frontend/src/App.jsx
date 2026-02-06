@@ -28,7 +28,8 @@ export default function App() {
       {!hideChrome && <Navbar />}
       <div className="flex-1">
         <Routes>
-          <Route path="/" element={<WpPage isHome={true} />} />
+          <Route path="/accueil" element={<WpPage isHome={true} />} />
+          <Route path="/home" element={<WpPage isHome={true} />} />
           <Route path="/newsletter" element={<Newsletter />} />
           <Route path="/films" element={<Gallery />} />
           <Route path="/films/:slug" element={<FilmDetails />} />

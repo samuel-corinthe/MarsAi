@@ -30,7 +30,7 @@ const Navbar = () => {
 
   // Les listes utilisent maintenant t() pour traduire les noms
   const mainNav = [
-    { name: t("home"), path: "/", id: "home" },
+    { name: t("home"), path: "/accueil", id: "home" },
     { name: t("about"), path: "/a-propos", id: "about" },
     { name: t("films"), path: "/films", id: "films" },
     { name: t("agenda"), path: "/agenda", id: "agenda" },
