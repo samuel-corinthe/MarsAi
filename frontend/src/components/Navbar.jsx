@@ -28,19 +28,17 @@ const Navbar = () => {
     setActiveDropdown(activeDropdown === name ? null : name);
   };
 
-  // Les listes utilisent maintenant t() pour traduire les noms
   const mainNav = [
     { name: t("home"), path: "/", id: "home" },
     { name: t("about"), path: "/a-propos", id: "about" },
     { name: t("films"), path: "/films", id: "films" },
     { name: t("agenda"), path: "/agenda", id: "agenda" },
-    { name: t("call"), path: "/appel-a-projet", id: "call" },
+    { name: t("callForProjects"), path: "/appel-a-projet", id: "call" },
     { name: t("jury"), path: "/jury", id: "jury" },
   ];
 
   const moreNav = [
-    { name: t("terms_gv"), path: "/cgv", id: "terms_gv" },
-    { name: t("terms_gu"), path: "/cgu", id: "terms_gu" },
+    { name: t("terms"), path: "/cgv", id: "terms" },
     { name: t("legal"), path: "/mentions-legales", id: "legal" },
     { name: t("contact"), path: "/contact", id: "contact" },
   ];
@@ -48,7 +46,7 @@ const Navbar = () => {
   return (
     <>
       <nav
-        className={`relative z-50 w-full transition-all duration-300 ${
+        className={`fixed top-0 z-50 w-full transition-all duration-300 ${
           isScrolled
             ? "bg-black/95 backdrop-blur-lg shadow-lg shadow-cyan-500/10"
             : "bg-black/80 backdrop-blur-sm"
@@ -56,7 +54,7 @@ const Navbar = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
-            {/* Logo (Inchangé) */}
+            {/* Logo */}
             <Link to="/" className="flex items-center space-x-3 group">
               <div className="relative">
                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-400 to-pink-500 flex items-center justify-center transform group-hover:scale-110 transition-transform duration-300">
@@ -83,7 +81,7 @@ const Navbar = () => {
               </div>
             </Link>
 
-            {/* Navigation Desktop */}
+            {/* Desktop Nav */}
             <div className="hidden lg:flex items-center space-x-1">
               {mainNav.map((item) => (
                 <Link
@@ -94,7 +92,6 @@ const Navbar = () => {
                       ? "text-cyan-400"
                       : "text-gray-300 hover:text-white"
                   }`}
-                  style={{ fontFamily: "'Inter', sans-serif" }}
                 >
                   {item.name}
                   {isActive(item.path) && (
@@ -103,14 +100,12 @@ const Navbar = () => {
                 </Link>
               ))}
 
-              {/* Dropdown "Plus" */}
               <div className="relative">
                 <button
                   onClick={() => toggleDropdown("more")}
                   className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white rounded-lg transition-all duration-200 flex items-center space-x-1"
-                  style={{ fontFamily: "'Inter', sans-serif" }}
                 >
-                  <span>{t("plus")}</span>
+                  <span>{t("more")}</span>
                   <svg
                     className={`w-4 h-4 transition-transform duration-200 ${activeDropdown === "more" ? "rotate-180" : ""}`}
                     fill="none"
@@ -133,7 +128,6 @@ const Navbar = () => {
                         key={item.id}
                         to={item.path}
                         className="block px-4 py-3 text-sm text-gray-300 hover:bg-cyan-400/10 hover:text-cyan-400 transition-colors duration-200"
-                        style={{ fontFamily: "'Inter', sans-serif" }}
                       >
                         {item.name}
                       </Link>
@@ -143,9 +137,8 @@ const Navbar = () => {
               </div>
             </div>
 
-            {/* Actions (Sélection Langue + CTA) */}
+            {/* Actions */}
             <div className="hidden lg:flex items-center space-x-4">
-              {/* Sélecteur de langue discret */}
               <div className="flex items-center border-r border-gray-800 pr-4 space-x-2 text-[10px] font-bold">
                 <button
                   onClick={() => i18n.changeLanguage("fr")}
@@ -164,8 +157,7 @@ const Navbar = () => {
 
               <Link
                 to="/deposer-un-film"
-                className="group relative px-6 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-sm rounded-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-green-500/50 hover:scale-105"
-                style={{ fontFamily: "'Inter', sans-serif" }}
+                className="group relative px-6 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-sm rounded-full overflow-hidden transition-all duration-300 hover:scale-105"
               >
                 <span className="relative z-10 flex items-center space-x-2">
                   <svg
@@ -181,16 +173,15 @@ const Navbar = () => {
                       d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                     />
                   </svg>
-                  <span>{t("submit_film")}</span>
+                  <span>{t("submitFilm")}</span>
                 </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-green-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </Link>
             </div>
 
-            {/* Bouton Menu Mobile (Inchangé) */}
+            {/* Burger Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-900/50 transition-colors duration-200"
+              className="lg:hidden p-2 rounded-lg text-gray-300 hover:text-white transition-colors"
             >
               <svg
                 className="w-6 h-6"
@@ -217,11 +208,9 @@ const Navbar = () => {
             </button>
           </div>
         </div>
-
-        <div className="h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent"></div>
       </nav>
 
-      {/* Menu Mobile */}
+      {/* Mobile Menu - Ton effet d'origine */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div
@@ -230,19 +219,18 @@ const Navbar = () => {
           ></div>
           <div className="fixed top-20 left-0 right-0 bottom-0 bg-black/95 backdrop-blur-lg overflow-y-auto animate-slideDown">
             <div className="px-4 py-6 space-y-1">
-              {/* Ajout langue dans mobile */}
-              <div className="flex space-x-4 px-4 mb-4">
+              <div className="flex space-x-4 px-4 mb-6 border-b border-gray-800 pb-4">
                 <button
                   onClick={() => i18n.changeLanguage("fr")}
-                  className={`text-sm ${i18n.language === "fr" ? "text-cyan-400" : "text-gray-500"}`}
+                  className={`text-sm font-bold ${i18n.language === "fr" ? "text-cyan-400" : "text-gray-500"}`}
                 >
-                  Français
+                  FRANÇAIS
                 </button>
                 <button
                   onClick={() => i18n.changeLanguage("en")}
-                  className={`text-sm ${i18n.language === "en" ? "text-cyan-400" : "text-gray-500"}`}
+                  className={`text-sm font-bold ${i18n.language === "en" ? "text-cyan-400" : "text-gray-500"}`}
                 >
-                  English
+                  ENGLISH
                 </button>
               </div>
 
@@ -253,23 +241,44 @@ const Navbar = () => {
                   className={`block px-4 py-3 text-base font-medium rounded-lg ${
                     isActive(item.path)
                       ? "bg-cyan-400/10 text-cyan-400"
-                      : "text-gray-300 hover:bg-gray-900/50"
+                      : "text-gray-300"
                   }`}
                 >
                   {item.name}
                 </Link>
               ))}
-              {/* ... reste du menu mobile ... */}
+
+              <div className="pt-4 mt-4 border-t border-gray-800">
+                <p className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  {t("more")}
+                </p>
+                {moreNav.map((item) => (
+                  <Link
+                    key={item.id}
+                    to={item.path}
+                    className="block px-4 py-3 text-base font-medium text-gray-400"
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+              </div>
+
+              <div className="mt-8 px-4">
+                <Link
+                  to="/deposer-un-film"
+                  className="flex items-center justify-center w-full px-6 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-xl"
+                >
+                  {t("submitFilm")}
+                </Link>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Styles (Inchangés) */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fadeIn { animation: fadeIn 0.2s ease-out forwards; }
         .animate-slideDown { animation: slideDown 0.3s ease-out forwards; }
       `}</style>
