@@ -509,7 +509,7 @@ export default function YoutubeUpload() {
                                     </p>
                                 )}
                                 <p id="video-requirements" className="text-xs text-slate-500 text-center">
-                                    Taille max : 300Mo • Format : 16:9 obligatoire • Durée : 45-90 secondes
+                                    Taille max : 300Mo • Format : 16:9 obligatoire • Durée : 45-100 secondes
                                 </p>
                             </div>
                         </div>

@@ -13,6 +13,12 @@ export const VIDEO_CONSTRAINTS = {
         MAX_SIZE: 300 * 1024 * 1024,
         ALLOWED_FORMATS: ['mp4'],
         ALLOWED_CODECS: ['h264', 'vp9', 'av1']
+    },
+    QUALITY: {
+        MIN_WIDTH: 1280,
+        MIN_HEIGHT: 720,
+        MIN_BITRATE: 1_500_000,  // 1.5 Mbps (adapté pour vidéos IA)
+        MIN_FPS: 24
     }
 };
 export function validateVideoData(data) {
@@ -72,6 +78,48 @@ export function validateVideoData(data) {
             severity: 'warning',
         });
     }
+
+    
+    const { MIN_WIDTH, MIN_HEIGHT, MIN_BITRATE, MIN_FPS } = VIDEO_CONSTRAINTS.QUALITY;
+
+    if (data.width && data.width < MIN_WIDTH) {
+        errors.push({
+            field: 'resolution',
+            message: `Largeur insuffisante : ${data.width}px (min ${MIN_WIDTH}px)`,
+            value: data.width,
+            required: MIN_WIDTH
+        });
+    }
+
+    if (data.height && data.height < MIN_HEIGHT) {
+        errors.push({
+            field: 'resolution',
+            message: `Hauteur insuffisante : ${data.height}px (min ${MIN_HEIGHT}px)`,
+            value: data.height,
+            required: MIN_HEIGHT
+        });
+    }
+
+    
+    if (data.bitrate && data.bitrate < MIN_BITRATE) {
+        warnings.push({
+            field: 'bitrate',
+            message: `Bitrate faible : ${(data.bitrate / 1_000_000).toFixed(2)} Mbps (recommandé min ${MIN_BITRATE / 1_000_000} Mbps)`,
+            severity: 'warning',
+            value: data.bitrate,
+            required: MIN_BITRATE
+        });
+    }
+
+    if (data.fps && data.fps < MIN_FPS) {
+        errors.push({
+            field: 'fps',
+            message: `FPS insuffisant : ${data.fps.toFixed(1)} (min ${MIN_FPS})`,
+            value: data.fps,
+            required: MIN_FPS
+        });
+    }
+
     return {
         isValid: errors.length === 0,
         errors,
@@ -82,6 +130,8 @@ export function validateVideoData(data) {
             aspectRatio: (data.aspectRatio || 0).toFixed(2),
             codec: data.codec || 'inconnu',
             fileSize: `${((data.fileSize || 0) / (1024 * 1024)).toFixed(2)}MB`,
+            bitrate: data.bitrate ? `${(data.bitrate / 1_000_000).toFixed(2)} Mbps` : 'inconnu',
+            fps: data.fps ? data.fps.toFixed(1) : 'inconnu',
             hasAudio: data.hasAudio || false
         }
     };
