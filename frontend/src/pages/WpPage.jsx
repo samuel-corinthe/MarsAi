@@ -9,7 +9,7 @@ import LegalPage from "./LegalPage";
 
 export default function WpPage({ isHome = false }) {
   const { slug: routeSlug } = useParams();
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -17,7 +17,7 @@ export default function WpPage({ isHome = false }) {
   const slugMapping = {
     agenda: "schedule",
     accueil: "home",
-    jury: "jury",
+    jury: "jury-eng",
     "mentions-legales": "legal-notice",
   };
 
@@ -187,7 +187,7 @@ export default function WpPage({ isHome = false }) {
 
   // --- RENDU SPÉCIFIQUE ---
   if (slug === "accueil" || slug === "home") return <Home page={page} />;
-  if (slug === "jury") return <JuryWpage page={page} />;
+  if (slug === "jury" || slug === "jury-eng") return <JuryWpage page={page} />;
   if (slug === "cgv" || slug === "cgu")
     return <LegalPage page={page} variant={slug} />;
 
@@ -285,7 +285,7 @@ export default function WpPage({ isHome = false }) {
                       onClick={() => setWeekStart(addDays(weekStart, -7))}
                       className="px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-400/30 text-[10px] uppercase"
                     >
-                      Prev
+                      {t("prev")}
                     </button>
                     <span
                       className="text-[10px] uppercase tracking-widest text-cyan-100/80"
@@ -297,7 +297,7 @@ export default function WpPage({ isHome = false }) {
                       onClick={() => setWeekStart(addDays(weekStart, 7))}
                       className="px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-400/30 text-[10px] uppercase"
                     >
-                      Next
+                      {t("next")}
                     </button>
                   </div>
                   <div className="grid grid-cols-7 gap-2 sm:gap-3">
