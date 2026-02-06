@@ -14,10 +14,10 @@ export default function WpPage({ isHome = false }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [datePage, setDatePage] = useState(0);
 
   const [agendaItems, setAgendaItems] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
-  const [weekStart, setWeekStart] = useState(null);
   const [selectedArticle, setSelectedArticle] = useState(null);
 
   const getCategoryColor = (catId) => {
@@ -48,19 +48,6 @@ export default function WpPage({ isHome = false }) {
     return `${year}-${month}-${day}`;
   };
 
-  const addDays = (dateStr, delta) => {
-    const d = parseDate(dateStr);
-    d.setDate(d.getDate() + delta);
-    return getLocalDateString(d);
-  };
-
-  const getWeekStart = (dateStr) => {
-    const d = parseDate(dateStr);
-    const day = d.getDay();
-    const diff = (day + 6) % 7; // Monday as start of week
-    d.setDate(d.getDate() - diff);
-    return getLocalDateString(d);
-  };
 
   const formatDateParts = (dateStr) => {
     const d = parseDate(dateStr);
@@ -152,42 +139,62 @@ export default function WpPage({ isHome = false }) {
     return map;
   }, [agendaItems]);
 
-  const weekDates = useMemo(() => {
-    if (!weekStart) return [];
-    return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  }, [weekStart]);
+  const MAX_VISIBLE_DATES = 12;
+  const canPaginateDates = dateOptions.length > MAX_VISIBLE_DATES;
+  const datePageCount = canPaginateDates
+    ? Math.ceil(dateOptions.length / MAX_VISIBLE_DATES)
+    : 1;
+
+  const pagedDates = useMemo(() => {
+    if (!canPaginateDates) return dateOptions;
+    const start = datePage * MAX_VISIBLE_DATES;
+    return dateOptions.slice(start, start + MAX_VISIBLE_DATES);
+  }, [dateOptions, datePage, canPaginateDates]);
 
   useEffect(() => {
     if (!dateOptions.length) {
       if (!selectedDate) {
         const today = getLocalDateString(new Date());
         setSelectedDate(today);
-        setWeekStart(getWeekStart(today));
       }
       return;
     }
+
     const defaultDate = dateOptions[0];
-    if (!selectedDate) {
-      setSelectedDate(defaultDate);
-      setWeekStart(getWeekStart(defaultDate));
+    const desiredDate =
+      selectedDate && dateOptions.includes(selectedDate)
+        ? selectedDate
+        : defaultDate;
+
+    if (selectedDate !== desiredDate) {
+      setSelectedDate(desiredDate);
+    }
+  }, [dateOptions, selectedDate]);
+
+  useEffect(() => {
+    if (!canPaginateDates) {
+      if (datePage !== 0) setDatePage(0);
       return;
     }
-    if (!weekStart) {
-      setWeekStart(getWeekStart(selectedDate));
+    const maxPageIndex = Math.max(0, datePageCount - 1);
+    if (datePage > maxPageIndex) {
+      setDatePage(maxPageIndex);
+      return;
     }
-  }, [dateOptions, selectedDate, weekStart]);
-
-  const handleWeekChange = (delta) => {
-    if (!weekStart) return;
-    const nextStart = addDays(weekStart, delta * 7);
-    const nextWeekDates = Array.from({ length: 7 }, (_, i) =>
-      addDays(nextStart, i),
-    );
-    setWeekStart(nextStart);
-    if (!nextWeekDates.includes(selectedDate)) {
-      setSelectedDate(nextStart);
+    if (selectedDate) {
+      const index = dateOptions.indexOf(selectedDate);
+      if (index >= 0) {
+        const nextPage = Math.floor(index / MAX_VISIBLE_DATES);
+        if (nextPage !== datePage) setDatePage(nextPage);
+      }
     }
-  };
+  }, [
+    canPaginateDates,
+    datePage,
+    datePageCount,
+    dateOptions,
+    selectedDate,
+  ]);
 
   const activeEvents = agendaItems.filter((item) => item.date === selectedDate);
 
@@ -579,65 +586,42 @@ export default function WpPage({ isHome = false }) {
             ) : (
               <>
                 <div className="mt-6 bg-white/5 border border-cyan-400/20 rounded-[32px] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.45)] max-w-5xl mx-auto">
-                  <div
-                    className="flex items-center justify-between px-1 pb-4 text-xs text-white/80"
-                    style={{ fontFamily: "'Space Mono', monospace" }}
-                  >
-                    <button
-                      onClick={() => handleWeekChange(-1)}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-400/30 hover:bg-cyan-500/20 transition"
-                      aria-label="Semaine precedente"
+                  {canPaginateDates && (
+                    <div
+                      className="flex items-center justify-center gap-3 pb-4 text-[10px] uppercase tracking-[0.35em] text-cyan-100/80"
+                      style={{ fontFamily: "'Space Mono', monospace" }}
                     >
-                      <svg
-                        className="w-3.5 h-3.5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                      <button
+                        type="button"
+                        onClick={() => setDatePage((prev) => Math.max(0, prev - 1))}
+                        disabled={datePage === 0}
+                        className="px-3 py-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                        aria-label="Dates précédentes"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 19l-7-7 7-7"
-                        />
-                      </svg>
-                      <span className="hidden sm:inline">Semaine precedente</span>
-                    </button>
-                    {weekStart && weekDates.length ? (
-                      <div
-                        className="uppercase tracking-[0.3em] text-[10px] text-cyan-100/80"
-                        style={{ fontFamily: "'Space Mono', monospace" }}
+                        Précédent
+                      </button>
+                      <span>
+                        {datePage + 1} / {datePageCount}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setDatePage((prev) =>
+                            Math.min(datePageCount - 1, prev + 1),
+                          )
+                        }
+                        disabled={datePage >= datePageCount - 1}
+                        className="px-3 py-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                        aria-label="Dates suivantes"
                       >
-                        {formatDateParts(weekStart).day} {" "}
-                        {formatDateParts(weekStart).monthShort} - {" "}
-                        {formatDateParts(weekDates[6]).day} {" "}
-                        {formatDateParts(weekDates[6]).monthShort}
-                      </div>
-                    ) : null}
-                    <button
-                      onClick={() => handleWeekChange(1)}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-400/30 hover:bg-cyan-500/20 transition"
-                      aria-label="Semaine suivante"
-                    >
-                      <span className="hidden sm:inline">Semaine suivante</span>
-                      <svg
-                        className="w-3.5 h-3.5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-7 gap-2 sm:gap-3 pb-2">
-                    {weekDates.length ? (
-                      weekDates.map((dateStr) => {
+                        Suivant
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pb-2">
+                    {pagedDates.length ? (
+                      pagedDates.map((dateStr) => {
                         const parts = formatDateParts(dateStr);
                         const isSelected = dateStr === selectedDate;
                         const eventCount = eventsByDate.get(dateStr) || 0;
@@ -646,7 +630,7 @@ export default function WpPage({ isHome = false }) {
                           <button
                             key={dateStr}
                             onClick={() => setSelectedDate(dateStr)}
-                            className={`h-24 sm:h-32 rounded-3xl flex flex-col items-center justify-center gap-1.5 border transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ${
+                            className={`w-28 sm:w-32 md:w-36 h-24 sm:h-32 rounded-3xl flex flex-col items-center justify-center gap-1.5 border transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ${
                               isSelected
                                 ? "bg-gradient-to-br from-cyan-400 to-blue-600 text-white border-cyan-200/60 shadow-lg"
                                 : "bg-white/5 text-white border-white/10 hover:bg-cyan-500/10"
