@@ -18,13 +18,17 @@ router.get('/challenge', async (req, res) => {
     const challenge = await generateChallenge();
 
     
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET manquant dans .env');
+    }
+
     const honeypotFieldName = genenateRandomFieldName();
     const honeypotToken = jwt.sign(
-      { 
+      {
         fieldName: honeypotFieldName,
         iat: Math.floor(Date.now() / 1000)
       },
-      process.env.JWT_SECRET || 'votre-secret-jwt',
+      process.env.JWT_SECRET,
       { expiresIn: '30m' }
     );
 

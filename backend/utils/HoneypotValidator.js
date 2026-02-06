@@ -13,9 +13,13 @@ export const validateHoneypot = (req, res, next) => {
       });
     }
 
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET manquant dans .env');
+    }
+
     const decoded = jwt.verify(
-      honeypotToken, 
-      process.env.JWT_SECRET || 'votre-secret-jwt'
+      honeypotToken,
+      process.env.JWT_SECRET
     );
     
     const { fieldName } = decoded;

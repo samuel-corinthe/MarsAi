@@ -17,7 +17,7 @@ export const VIDEO_CONSTRAINTS = {
     QUALITY: {
         MIN_WIDTH: 1280,
         MIN_HEIGHT: 720,
-        MIN_BITRATE: 1_500_000,  // 1.5 Mbps (adapté pour vidéos IA)
+        MIN_BITRATE: 1_500_000,  
         MIN_FPS: 24
     }
 };
