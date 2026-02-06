@@ -589,7 +589,7 @@ export default function WpPage({ isHome = false }) {
                                     : "bg-cyan-500/20 text-cyan-100"
                                 }`}
                               >
-                                {eventCount} evt
+                                {eventCount} évènement
                               </span>
                             ) : (
                               <span className="text-[8px] sm:text-[9px] uppercase tracking-widest text-white/50">
