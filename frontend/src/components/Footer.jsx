@@ -20,7 +20,6 @@ const Footer = () => {
       links: [
         { name: 'Déposer un film', path: '/deposer-un-film' },
         { name: 'Appel à projet', path: '/appel-a-projet' },
-        { name: 'Évènement', path: '/agenda' },
       ]
     },
     legal: {
