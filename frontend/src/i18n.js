@@ -7,11 +7,13 @@ i18n.use(initReactI18next).init({
     fr: {
       translation: {
         ...navbarTranslations.fr.nav,
+        footer: navbarTranslations.fr.footer,
       },
     },
     en: {
       translation: {
         ...navbarTranslations.en.nav,
+        footer: navbarTranslations.en.footer,
       },
     },
   },
