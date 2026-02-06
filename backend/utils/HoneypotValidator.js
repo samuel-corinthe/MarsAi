@@ -35,10 +35,7 @@ export const validateHoneypot = (req, res, next) => {
     const honeypotValue = req.body?.[fieldName];
     
     if (honeypotValue && honeypotValue.trim() !== '') {
-      console.warn('[HONEYPOT] Bot détecté ! Champ piège rempli:', fieldName);
-      console.warn('[HONEYPOT] Valeur:', honeypotValue);
-      console.warn('[HONEYPOT] IP:', req.ip);
-      console.warn('[HONEYPOT] User-Agent:', req.headers['user-agent']);
+      console.warn('[HONEYPOT] Bot détecté');
       
      
       return res.status(200).json({
@@ -47,7 +44,7 @@ export const validateHoneypot = (req, res, next) => {
       });
     }
     
-    console.log(`[HONEYPOT] ✓ Champ "${fieldName}" vide (humain)`);
+    console.log('[HONEYPOT] Validation OK');
     next();
     
   } catch (error) {
@@ -60,13 +57,13 @@ export const validateHoneypot = (req, res, next) => {
     }
     
     if (error.name === 'JsonWebTokenError') {
-      console.warn('[HONEYPOT] Token invalide:', error.message);
+      console.warn('[HONEYPOT] Token invalide');
       return res.status(400).json({ 
         error: 'Invalid token' 
       });
     }
     
-    console.error('[HONEYPOT] Erreur:', error);
+    console.error('[HONEYPOT] Erreur:', error.message);
     return res.status(500).json({ 
       error: 'Internal error' 
     });

@@ -30,7 +30,7 @@ export const validateEmail = (req, res, next) =>{
     const result = isDisposableEmail(email);
 
     if (!result.valid){
-        console.warn(`[EMAIL] rejeté : ${email} - ${result.reason}`);
+        console.warn(`[EMAIL] Domaine rejeté : ${result.reason}`);
         return res.status(400).json({
             error: 'Adresse email non autorisée',
             message: 'Veuillez utiliser une adresse valide'

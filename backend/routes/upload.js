@@ -19,7 +19,7 @@ const ipLimiter = rateLimit({
     max: 10,
     validate: false,
     handler: (req, res, next, options) => {
-        console.log(' [LIMITER] IP Limit HIT for:', req.ip);
+        console.warn('[LIMITER] Limite IP atteinte');
         res.status(options.statusCode).json(options.message);
     },
     message: { error: 'Trop de soumissions depuis cette connexion. Réessayez demain.' },
@@ -33,9 +33,7 @@ const emailLimiter = rateLimit({
     max: 3,
     validate: false,
     keyGenerator: (req) => {
-        const key = req.body?.email || req.ip || 'unknown';
-        console.log(` [DEBUG LIMITER] Key generated: ${key}`);
-        return key;
+        return req.body?.email || req.ip || 'unknown';
     },
     message: { error: 'Cet email a déjà soumis 3 vidéos aujourd\'hui. Limite atteinte.' },
     standardHeaders: true,
@@ -48,7 +46,7 @@ const upload = multer({
         fileSize: 300 * 1024 * 1024
     },
     fileFilter: (req, file, cb) => {
-        console.log(' [MULTER] Filtrage fichier:', file.mimetype);
+        console.log('[MULTER] Filtrage fichier:', file.mimetype);
         const allowedMime = ['video/mp4'];
         if (!allowedMime.includes(file.mimetype)) {
             return cb(new Error(`Type non autorisé : ${file.mimetype}`));
@@ -67,9 +65,7 @@ router.post('/youtube',
     ipLimiter,
     emailLimiter,
     async (req, res) => {
-        console.log('--- Nouvelle Requête /youtube ---');
-        console.log('Body:', req.body);
-        console.log('File:', req.file ? req.file.path : 'Aucun fichier');
+        console.log('[UPLOAD] Nouvelle soumission reçue');
 
         const { title, description } = req.body;
         const videoFile = req.file;
@@ -79,14 +75,14 @@ router.post('/youtube',
         }
 
         try {
-            console.log(' Analyse de la vidéo...');
+            console.log('[UPLOAD] Analyse de la vidéo...');
             const metadata = await analyzeVideo(videoFile.path);
 
-            console.log('Validation des contraintes...');
+            console.log('[UPLOAD] Validation des contraintes...');
             const validation = validateVideoData(metadata);
 
             if (!validation.isValid) {
-                console.log(' Vidéo non conforme:', validation.errors);
+                console.log('[UPLOAD] Vidéo non conforme:', validation.errors.map(e => e.field));
                 if (fs.existsSync(videoFile.path)) fs.unlinkSync(videoFile.path);
 
                 const refusalReasons = validation.errors.map(e => e.message).join(' ; ');
@@ -99,7 +95,7 @@ router.post('/youtube',
                 });
             }
 
-            console.log(' Upload vers YouTube...');
+            console.log('[UPLOAD] Upload vers YouTube...');
             const youtube = google.youtube({ version: 'v3', auth: oauth2Client });
 
             const response = await youtube.videos.insert({
@@ -118,7 +114,7 @@ router.post('/youtube',
                 },
             });
 
-            console.log(' Upload réussi ! ID:', response.data.id);
+            console.log('[UPLOAD] Upload réussi, ID:', response.data.id);
             return res.status(200).json({
                 message: 'Upload réussi !',
                 videoId: response.data.id,
@@ -126,13 +122,13 @@ router.post('/youtube',
             });
 
         } catch (error) {
-            console.error(' [CRASH /youtube]:', error);
+            console.error('[UPLOAD] Erreur:', error.message);
             if (!res.headersSent) {
-                return res.status(500).json({ error: `Erreur interne: ${error.message}` });
+               return res.status(500).json({ error: 'Erreur interne du serveur' });
             }
         } finally {
             if (req.file && fs.existsSync(req.file.path)) {
-                console.log(' Nettoyage:', req.file.path);
+                console.log('[UPLOAD] Nettoyage fichier temporaire');
                 fs.unlinkSync(req.file.path);
             }
         }

@@ -5,7 +5,6 @@ import uploadRoutes from './routes/upload.js';
 import altchaRoutes from './routes/altcha.js';
 
 
-console.log('[DEBUG] altchaRoutes:', typeof altchaRoutes, altchaRoutes);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,6 +13,7 @@ const PORT = process.env.PORT || 3000;
 app.set('trust proxy', 1);
 
 
+// En production remplacer l'origin true 
 app.use(cors({
     origin: true,
     credentials: true,
@@ -26,20 +26,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 
-console.log('[DEBUG] Enregistrement des routes...');
 app.use('/api/altcha', altchaRoutes);
-console.log('[DEBUG] Route /api/altcha enregistrée');
 app.use('/api/upload', uploadRoutes);
-console.log('[DEBUG] Route /api/upload enregistrée');
 
 app.get('/', (req, res) => {
-    console.log('[DEBUG] Route racine appelée');
-    res.send('Serveur MarsAI opérationnel ');
+    res.send('Serveur MarsAI opérationnel');
 });
 
 
 app.use((err, req, res, next) => {
-    console.error('!!! ERREUR SERVEUR !!!', err);
+    console.error('[SERVEUR] Erreur:', err.message);
 
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
@@ -52,7 +48,7 @@ app.use((err, req, res, next) => {
         return res.status(400).json({ error: err.message });
     }
 
-    res.status(500).json({ error: 'Erreur interne du serveur', details: err.message });
+    res.status(500).json({ error: 'Erreur interne du serveur' });
 });
 
 app.listen(PORT, () => {

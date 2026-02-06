@@ -13,7 +13,7 @@ function genenateRandomFieldName(){
 
 router.get('/challenge', async (req, res) => {
   try {
-    console.log(' [ALTCHA ROUTE] Demande de nouveau challenge');
+    console.log('[ALTCHA] Nouveau challenge demandé');
 
     const challenge = await generateChallenge();
 
@@ -41,7 +41,7 @@ router.get('/challenge', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error(' [ALTCHA ROUTE ERROR]:', error);
+    console.error('[ALTCHA] Erreur:', error.message);
     res.status(500).json({
       error: 'Erreur lors de la génération du challenge CAPTCHA'
     });
