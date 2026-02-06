@@ -248,106 +248,195 @@ export default function WpPage({ isHome = false }) {
 
   if (slug === "contact") {
     return (
-      <main className="min-h-screen bg-gray-50 text-gray-900 p-6 sm:p-12">
-        <div className="max-w-3xl bg-white border border-gray-200 p-8 rounded-xl shadow-sm">
-          <h1
-            className="text-3xl md:text-4xl font-bold text-gray-900 mb-6"
-            dangerouslySetInnerHTML={{ __html: page.title.rendered }}
-          />
+      <main className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-32 -right-24 w-72 h-72 bg-cyan-500/10 blur-3xl rounded-full"></div>
+          <div className="absolute top-40 -left-24 w-72 h-72 bg-purple-500/10 blur-3xl rounded-full"></div>
+        </div>
 
-          <div
-            className="prose prose-slate max-w-none mb-10 text-gray-600"
-            dangerouslySetInnerHTML={{ __html: page.content.rendered }}
-          />
+        <div className="relative max-w-6xl mx-auto px-4 pt-10 pb-16">
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto rounded-full border-4 border-cyan-400/70 flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+              <svg
+                className="w-7 h-7"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2.5}
+                  d="M21 8.5V17a2 2 0 01-2 2H5a2 2 0 01-2-2V8.5m18 0A2 2 0 0019 6H5a2 2 0 00-2 2.5m18 0l-9 6-9-6"
+                />
+              </svg>
+            </div>
+            <h1
+              className="text-4xl md:text-5xl font-black mt-4"
+              style={{ fontFamily: "'Bebas Neue', sans-serif" }}
+              dangerouslySetInnerHTML={{ __html: page.title.rendered }}
+            />
+            <p
+              className="text-xs uppercase tracking-[0.4em] text-cyan-200 mt-2"
+              style={{ fontFamily: "'Space Mono', monospace" }}
+            >
+              Contact
+            </p>
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="flex flex-col space-y-1.5">
+          <div className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+            <form
+              onSubmit={handleSubmit}
+              className="bg-white/5 border border-cyan-400/20 rounded-[32px] p-6 sm:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.35)] space-y-5"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="flex flex-col gap-2">
+                  <label
+                    htmlFor="name"
+                    className="text-[10px] uppercase tracking-[0.3em] text-white/70"
+                    style={{ fontFamily: "'Space Mono', monospace" }}
+                  >
+                    Nom complet
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    placeholder="Votre nom"
+                    autoComplete="name"
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder:text-white/40 focus:ring-2 focus:ring-cyan-400/70 focus:border-cyan-300 outline-none transition"
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label
+                    htmlFor="email"
+                    className="text-[10px] uppercase tracking-[0.3em] text-white/70"
+                    style={{ fontFamily: "'Space Mono', monospace" }}
+                  >
+                    Adresse e-mail
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="vous@email.com"
+                    autoComplete="email"
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder:text-white/40 focus:ring-2 focus:ring-cyan-400/70 focus:border-cyan-300 outline-none transition"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
                 <label
-                  htmlFor="name"
-                  className="text-sm font-medium text-gray-700"
+                  htmlFor="subject"
+                  className="text-[10px] uppercase tracking-[0.3em] text-white/70"
+                  style={{ fontFamily: "'Space Mono', monospace" }}
                 >
-                  Nom complet
+                  Objet
                 </label>
                 <input
                   type="text"
-                  id="name"
-                  name="name"
-                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  id="subject"
+                  name="subject"
+                  placeholder="Sujet de votre message"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder:text-white/40 focus:ring-2 focus:ring-cyan-400/70 focus:border-cyan-300 outline-none transition"
                   required
                 />
               </div>
 
-              <div className="flex flex-col space-y-1.5">
+              <div className="flex flex-col gap-2">
                 <label
-                  htmlFor="email"
-                  className="text-sm font-medium text-gray-700"
+                  htmlFor="message"
+                  className="text-[10px] uppercase tracking-[0.3em] text-white/70"
+                  style={{ fontFamily: "'Space Mono', monospace" }}
                 >
-                  Adresse e-mail
+                  Votre message
                 </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                <textarea
+                  id="message"
+                  name="message"
+                  rows="6"
+                  placeholder="Dites-nous ce dont vous avez besoin."
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder:text-white/40 focus:ring-2 focus:ring-cyan-400/70 focus:border-cyan-300 outline-none transition resize-none"
                   required
-                />
+                ></textarea>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSending}
+                className="w-full bg-gradient-to-r from-cyan-400 to-blue-600 text-black font-bold uppercase tracking-[0.25em] text-[11px] py-3.5 rounded-2xl transition hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ fontFamily: "'Space Mono', monospace" }}
+              >
+                {isSending ? "Envoi en cours..." : "Envoyer le message"}
+              </button>
+            </form>
+
+            <div className="space-y-6">
+              <div className="bg-white/5 border border-cyan-400/20 rounded-[32px] p-5 sm:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-full border border-cyan-400/40 flex items-center justify-center">
+                    <svg
+                      className="w-5 h-5 text-cyan-200"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 21a9 9 0 100-18 9 9 0 000 18z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 11a1 1 0 100-2 1 1 0 000 2z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 17v-4"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <p
+                      className="text-[10px] uppercase tracking-[0.3em] text-cyan-200"
+                      style={{ fontFamily: "'Space Mono', monospace" }}
+                    >
+                      Localisation
+                    </p>
+                    <p className="text-white/80 text-sm">
+                      École La Plateforme_, Marseille
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 aspect-[4/3] rounded-2xl overflow-hidden border border-white/10">
+                  <iframe
+                    title="Carte MarsAI"
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2903.003971135914!2d5.368781999999999!3d43.3141763!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x12c9c13ddc0211b9%3A0xd1642ae4b32c4bc4!2s%C3%89cole%20La%20Plateforme_%20Marseille%20-%20Entr%C3%A9e%20Sud!5e0!3m2!1sfr!2sfr!4v1770039690847!5m2!1sfr!2sfr"
+                    className="w-full h-full"
+                    style={{ border: 0 }}
+                    allowFullScreen=""
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  ></iframe>
+                </div>
               </div>
             </div>
-
-            <div className="flex flex-col space-y-1.5">
-              <label
-                htmlFor="subject"
-                className="text-sm font-medium text-gray-700"
-              >
-                Objet
-              </label>
-              <input
-                type="text"
-                id="subject"
-                name="subject"
-                className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col space-y-1.5">
-              <label
-                htmlFor="message"
-                className="text-sm font-medium text-gray-700"
-              >
-                Votre message
-              </label>
-              <textarea
-                id="message"
-                name="message"
-                rows="5"
-                className="w-full bg-white border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none"
-                required
-              ></textarea>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSending}
-              className="w-full bg-gray-900 hover:bg-black text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              {isSending ? "Envoi en cours..." : "Envoyer le message"}
-            </button>
-          </form>
+          </div>
         </div>
 
-        <div className="mt-12">
-          <iframe
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2903.003971135914!2d5.368781999999999!3d43.3141763!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x12c9c13ddc0211b9%3A0xd1642ae4b32c4bc4!2s%C3%89cole%20La%20Plateforme_%20Marseille%20-%20Entr%C3%A9e%20Sud!5e0!3m2!1sfr!2sfr!4v1770039690847!5m2!1sfr!2sfr"
-            width="600"
-            height="450"
-            style={{ border: 0 }}
-            allowFullScreen=""
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          ></iframe>
-        </div>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+        `}</style>
       </main>
     );
   }
