@@ -28,7 +28,8 @@ const Footer = () => {
     legal: {
       title: t("footer.legal_title"),
       links: [
-        { name: t("terms"), path: "/cgv" },
+        { name: t("terms_gv"), path: "/cgv" },
+        { name: t("terms_gu"), path: "/cgu" },
         { name: t("footer.privacy"), path: "/politique-de-confidentialite" },
         { name: t("legal"), path: "/mentions-legales" },
         { name: t("contact"), path: "/contact" },
