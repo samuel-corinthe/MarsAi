@@ -1,27 +1,23 @@
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import navbarTranslations from './locales/navbar.json';
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
+import navbarTranslations from "./locales/navbar.json";
 
-i18n
-  .use(initReactI18next)
-  .init({
-    resources: {
-      fr: {
-        translation: {
-          ...navbarTranslations.fr
-        }
+i18n.use(initReactI18next).init({
+  resources: {
+    fr: {
+      translation: {
+        ...navbarTranslations.fr.nav,
       },
-      en: {
-        translation: {
-          ...navbarTranslations.en
-        }
-      }
     },
-    lng: 'fr',
-    fallbackLng: 'fr',
-    interpolation: {
-      escapeValue: false
-    }
-  });
+    en: {
+      translation: {
+        ...navbarTranslations.en.nav,
+      },
+    },
+  },
+  lng: "fr",
+  fallbackLng: "fr",
+  interpolation: { escapeValue: false },
+});
 
 export default i18n;
