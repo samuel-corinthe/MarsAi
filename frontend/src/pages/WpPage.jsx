@@ -208,7 +208,7 @@ export default function WpPage({ isHome = false }) {
       const result = await response.json();
 
       if (response.ok) {
-        alert("Message envoyï¿½ avec succï¿½s !");
+        alert("Message envoyé avec succès !");
         e.target.reset();
       } else {
         alert("Erreur : " + result.message);
