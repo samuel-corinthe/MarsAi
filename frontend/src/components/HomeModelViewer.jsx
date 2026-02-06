@@ -59,16 +59,34 @@ export default function HomeModelViewer({
   poster,
   className = "",
   alt = "Objet 3D",
+  only = "all",
 }) {
   const wrapperRef = useRef(null);
   const [shouldLoad, setShouldLoad] = useState(false);
   const [ready, setReady] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [isSmallViewport, setIsSmallViewport] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(max-width: 767px)").matches;
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     const update = () => setReduceMotion(mq.matches);
+    update();
+    if (mq.addEventListener) {
+      mq.addEventListener("change", update);
+      return () => mq.removeEventListener("change", update);
+    }
+    mq.addListener(update);
+    return () => mq.removeListener(update);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsSmallViewport(mq.matches);
     update();
     if (mq.addEventListener) {
       mq.addEventListener("change", update);
@@ -111,8 +129,12 @@ export default function HomeModelViewer({
   }, [src, shouldLoad]);
 
   if (!src) return null;
+  if (only === "mobile" && !isSmallViewport) return null;
+  if (only === "desktop" && isSmallViewport) return null;
 
-  const autoRotateProps = reduceMotion ? {} : { "auto-rotate": "" };
+  const shouldAutoRotate = !reduceMotion && !isSmallViewport;
+  const autoRotateProps = shouldAutoRotate ? { "auto-rotate": "" } : {};
+  const interactionPrompt = isSmallViewport ? "auto" : "none";
 
   return (
     <div
@@ -132,7 +154,7 @@ export default function HomeModelViewer({
           rotation-per-second="12deg"
           disable-zoom
           camera-controls
-          interaction-prompt="none"
+          interaction-prompt={interactionPrompt}
           shadow-intensity="0.6"
           exposure="1"
           style={{ width: "100%", height: "100%" }}

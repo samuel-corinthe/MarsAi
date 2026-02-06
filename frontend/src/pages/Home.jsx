@@ -93,13 +93,6 @@ export default function Home({ page }) {
       {/* --- HERO (Accessibilité : Contraste élevé) --- */}
       <section className="relative min-h-[85vh] flex items-center justify-center text-center px-6 pt-16 md:pt-20 pb-20">
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-[#1e293b] via-[#0f172a] to-[#0f172a] z-0" />
-        <HomeModelViewer
-          src={modelSrc}
-          poster={modelPoster || undefined}
-          alt="Objet 3D MarsAI"
-          className="hidden md:block absolute right-6 lg:right-16 top-1/2 -translate-y-1/2 w-44 h-44 md:w-56 md:h-56 lg:w-72 lg:h-72 z-10 cursor-grab active:cursor-grabbing"
-        />
-        
         <div className="relative z-20 max-w-4xl mx-auto">
           <h1 className="text-4xl md:text-8xl font-black uppercase tracking-tighter leading-none text-white mb-10 drop-shadow-md"
               dangerouslySetInnerHTML={{ __html: parsed.title }} />
@@ -119,7 +112,23 @@ export default function Home({ page }) {
               </a>
             ))}
           </div>
+
+          <HomeModelViewer
+            only="mobile"
+            src={modelSrc}
+            poster={modelPoster || undefined}
+            alt="Objet 3D MarsAI"
+            className="mt-8 mx-auto w-36 h-36 sm:w-44 sm:h-44 cursor-grab active:cursor-grabbing"
+          />
         </div>
+
+        <HomeModelViewer
+          only="desktop"
+          src={modelSrc}
+          poster={modelPoster || undefined}
+          alt="Objet 3D MarsAI"
+          className="absolute right-6 lg:right-16 top-1/2 -translate-y-1/2 w-56 h-56 lg:w-72 lg:h-72 z-10 cursor-grab active:cursor-grabbing"
+        />
       </section>
 
       {/* --- ABOUT (Plus clair pour la lecture prolongée) --- */}
