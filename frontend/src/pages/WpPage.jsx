@@ -19,6 +19,8 @@ export default function WpPage({ isHome = false }) {
     accueil: "home",
     jury: "jury-eng",
     "mentions-legales": "legal-notice",
+    cgu: "gcu",
+    cgv: "tos",
   };
 
   const getActiveSlug = () => {
@@ -247,6 +249,7 @@ export default function WpPage({ isHome = false }) {
             className="prose prose-slate max-w-none mb-10 text-gray-600"
             dangerouslySetInnerHTML={{ __html: page.content.rendered }}
           />
+
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="flex flex-col space-y-1.5">
@@ -254,7 +257,7 @@ export default function WpPage({ isHome = false }) {
                   htmlFor="name"
                   className="text-sm font-medium text-gray-700"
                 >
-                  Nom complet
+                  {i18n.language === "fr" ? "Nom complet" : "Full Name"}
                 </label>
                 <input
                   type="text"
@@ -269,7 +272,7 @@ export default function WpPage({ isHome = false }) {
                   htmlFor="email"
                   className="text-sm font-medium text-gray-700"
                 >
-                  Adresse e-mail
+                  {i18n.language === "fr" ? "Adresse e-mail" : "Email Address"}
                 </label>
                 <input
                   type="email"
@@ -280,12 +283,13 @@ export default function WpPage({ isHome = false }) {
                 />
               </div>
             </div>
+
             <div className="flex flex-col space-y-1.5">
               <label
                 htmlFor="subject"
                 className="text-sm font-medium text-gray-700"
               >
-                Objet
+                {i18n.language === "fr" ? "Objet" : "Subject"}
               </label>
               <input
                 type="text"
@@ -295,12 +299,13 @@ export default function WpPage({ isHome = false }) {
                 required
               />
             </div>
+
             <div className="flex flex-col space-y-1.5">
               <label
                 htmlFor="message"
                 className="text-sm font-medium text-gray-700"
               >
-                Votre message
+                {i18n.language === "fr" ? "Votre message" : "Your message"}
               </label>
               <textarea
                 id="message"
@@ -310,18 +315,26 @@ export default function WpPage({ isHome = false }) {
                 required
               ></textarea>
             </div>
+
             <button
               type="submit"
               disabled={isSending}
               className="w-full bg-gray-900 hover:bg-black text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-400"
             >
-              {isSending ? "Envoi en cours..." : "Envoyer le message"}
+              {isSending
+                ? i18n.language === "fr"
+                  ? "Envoi en cours..."
+                  : "Sending..."
+                : i18n.language === "fr"
+                  ? "Envoyer le message"
+                  : "Send Message"}
             </button>
           </form>
         </div>
+
         <div className="mt-12 max-w-3xl mx-auto rounded-xl overflow-hidden border">
           <iframe
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2903.959952542017!2d5.36881767664871!3d43.30310237112093!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x12c9c09647248889%3A0xc3124560f607d2f!2sLa%20Plateforme%2C%20le%20campus%20m%C3%A9diterran%C3%A9en%20du%20num%C3%A9rique!5e0!3m2!1sfr!2sfr!4v1715600000000!5m2!1sfr!2sfr"
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2903.655822941036!2d5.368735376594326!3d43.300523074312214!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x12c9c0944062400b%3A0x6d90da893b890a!2sLa%20Plateforme%20Marseille!5e0!3m2!1sfr!2sfr!4v1715600000000!5m2!1sfr!2sfr"
             width="100%"
             height="450"
             style={{ border: 0 }}
