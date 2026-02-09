@@ -11,6 +11,13 @@ i18n.use(initReactI18next).init({
         prev: "Précédent",
         next: "Suivant",
         home_news: "Actualités",
+        not_found: {
+          title: "Page introuvable",
+          description:
+            "Désolé, cette page n'existe pas ou a été déplacée. Elle n'a peut-être jamais été tournée...",
+          back_home: "Retour à l'accueil",
+          see_movies: "Voir les films",
+        },
         jury: {
           jury_title: "Jury",
           jury_subtitle:
@@ -66,6 +73,13 @@ i18n.use(initReactI18next).init({
         prev: "Prev",
         next: "Next",
         home_news: "News",
+        not_found: {
+          title: "Page not found",
+          description:
+            "Sorry, this page doesn't exist or has been moved. Maybe it was never filmed...",
+          back_home: "Back to Home",
+          see_movies: "View Movies",
+        },
         jury: {
           jury_title: "Jury",
           jury_subtitle:
