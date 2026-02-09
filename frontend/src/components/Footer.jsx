@@ -14,7 +14,7 @@ const Footer = () => {
         { name: t("footer.competition"), path: "/films" },
         { name: t("agenda"), path: "/agenda" },
         { name: t("footer.newsletter"), path: "/newsletter" },
-        { name: t("jury"), path: "/jury" },
+        { name: t("jury.jury_title"), path: "/jury" },
       ],
     },
     participer: {

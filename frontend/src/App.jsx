@@ -32,7 +32,6 @@ export default function App() {
           <Route path="/home" element={<WpPage isHome={true} />} />
           <Route path="/newsletter" element={<Newsletter />} />
           <Route path="/films" element={<Gallery />} />
-          <Route path="/films/:slug" element={<FilmDetails />} />
           <Route path="/movie/:id" element={<MovieDetails />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/testcountdown" element={<TestCountdown />} />
