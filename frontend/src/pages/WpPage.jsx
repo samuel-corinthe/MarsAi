@@ -47,7 +47,7 @@ export default function WpPage({ isHome = false }) {
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [isSending, setIsSending] = useState(false);
+  const [isSending, setIsSending] = useState(false); // Ajouté pour le formulaire
   const [agendaItems, setAgendaItems] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [weekStart, setWeekStart] = useState(null);
@@ -103,6 +103,17 @@ export default function WpPage({ isHome = false }) {
         .toLocaleDateString(locale, { weekday: "short" })
         .replace(".", ""),
     };
+  };
+
+  // --- GESTION FORMULAIRE CONTACT ---
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setIsSending(true);
+    // Simulation d'envoi
+    setTimeout(() => {
+      setIsSending(false);
+      alert("Message envoyé !");
+    }, 2000);
   };
 
   // --- FETCH DATA ---
@@ -191,6 +202,105 @@ export default function WpPage({ isHome = false }) {
   if (slug === "cgv" || slug === "cgu")
     return <LegalPage page={page} variant={slug} />;
 
+  // --- PAGE CONTACT ---
+  if (slug === "contact") {
+    return (
+      <main className="min-h-screen bg-gray-50 text-gray-900 p-6 sm:p-12">
+        <div className="max-w-3xl mx-auto bg-white border border-gray-200 p-8 rounded-xl shadow-sm">
+          <h1
+            className="text-3xl md:text-4xl font-bold text-gray-900 mb-6"
+            dangerouslySetInnerHTML={{ __html: page.title.rendered }}
+          />
+          <div
+            className="prose prose-slate max-w-none mb-10 text-gray-600"
+            dangerouslySetInnerHTML={{ __html: page.content.rendered }}
+          />
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="flex flex-col space-y-1.5">
+                <label
+                  htmlFor="name"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Nom complet
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  required
+                />
+              </div>
+              <div className="flex flex-col space-y-1.5">
+                <label
+                  htmlFor="email"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  Adresse e-mail
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  required
+                />
+              </div>
+            </div>
+            <div className="flex flex-col space-y-1.5">
+              <label
+                htmlFor="subject"
+                className="text-sm font-medium text-gray-700"
+              >
+                Objet
+              </label>
+              <input
+                type="text"
+                id="subject"
+                name="subject"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                required
+              />
+            </div>
+            <div className="flex flex-col space-y-1.5">
+              <label
+                htmlFor="message"
+                className="text-sm font-medium text-gray-700"
+              >
+                Votre message
+              </label>
+              <textarea
+                id="message"
+                name="message"
+                rows="5"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+                required
+              ></textarea>
+            </div>
+            <button
+              type="submit"
+              disabled={isSending}
+              className="w-full bg-gray-900 hover:bg-black text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-400"
+            >
+              {isSending ? "Envoi en cours..." : "Envoyer le message"}
+            </button>
+          </form>
+        </div>
+        <div className="mt-12 max-w-3xl mx-auto rounded-xl overflow-hidden border">
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2903.959952542017!2d5.36881767664871!3d43.30310237112093!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x12c9c09647248889%3A0xc3124560f607d2f!2sLa%20Plateforme%2C%20le%20campus%20m%C3%A9diterran%C3%A9en%20du%20num%C3%A9rique!5e0!3m2!1sfr!2sfr!4v1715600000000!5m2!1sfr!2sfr"
+            width="100%"
+            height="450"
+            style={{ border: 0 }}
+            allowFullScreen=""
+            loading="lazy"
+          ></iframe>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main
       className={
@@ -237,10 +347,6 @@ export default function WpPage({ isHome = false }) {
                 style={{ fontFamily: "'Bebas Neue', sans-serif" }}
                 dangerouslySetInnerHTML={{ __html: page.title.rendered }}
               />
-              <p
-                className="text-xs uppercase tracking-[0.4em] text-cyan-200 mt-2"
-                style={{ fontFamily: "'Space Mono', monospace" }}
-              ></p>
             </div>
 
             {selectedArticle ? (
