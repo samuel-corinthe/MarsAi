@@ -37,8 +37,8 @@ export default function Home({ page }) {
       "voir le programme": "/agenda",
       "deposer un film": "/upload",
       // Clés Anglaises
-      "participate in the festival": "/upload",
-      "see the schedule": "/agenda",
+      "take part in the festival": "/upload",
+      "see the program": "/agenda",
       "submit a film": "/upload",
     };
 
