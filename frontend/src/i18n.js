@@ -12,7 +12,7 @@ i18n.use(initReactI18next).init({
         next: "Suivant",
         home_news: "Actualités",
         jury: {
-          jury_title: "Le Jury",
+          jury_title: "Jury",
           jury_subtitle:
             "Rencontrez les experts visionnaires de notre sélection officielle.",
           jury_profile_label: "Profil Jury",
@@ -45,7 +45,7 @@ i18n.use(initReactI18next).init({
         next: "Next",
         home_news: "News",
         jury: {
-          jury_title: "The Jury",
+          jury_title: "Jury",
           jury_subtitle:
             "Meet the visionary experts of our official selection.",
           jury_profile_label: "Jury Profile",
