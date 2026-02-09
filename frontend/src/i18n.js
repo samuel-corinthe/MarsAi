@@ -71,7 +71,7 @@ i18n.use(initReactI18next).init({
       translation: {
         ...navbarTranslations.en.nav,
         footer: navbarTranslations.en.footer,
-        loading: "loading...",
+        loading: "Loading...",
         prev: "Prev",
         next: "Next",
         home_news: "News",
