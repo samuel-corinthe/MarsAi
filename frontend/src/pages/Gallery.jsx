@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom"; // Import de useNavigate au cas où
-import { allMovies } from "../components/MoviesData"; // Utilisation de ton fichier centralisé
+import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next"; // Import de i18n
+import { allMovies } from "../components/MoviesData";
 
 const Gallery = () => {
+  const { t, i18n } = useTranslation(); // Initialisation de la traduction
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -10,7 +12,9 @@ const Gallery = () => {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const searchRef = useRef(null);
 
+  // Liste des filtres (les clés doivent correspondre à ton fichier de traduction)
   const filters = ["All", "Action", "Sci-Fi", "Adventure", "Fantasy", "Drama"];
+
   const pageSize = 20;
   const topMovies = allMovies.slice(0, 5);
   const carouselShift = "clamp(90px, 18vw, 240px)";
@@ -23,16 +27,7 @@ const Gallery = () => {
   ];
   const activeCarouselPositions = carouselPositions.slice(0, topMovies.length);
 
-  // --- LOGIQUE FILTRAGE & AUTOCOMPLETION ---
-  const suggestions = allMovies
-    .filter(
-      (m) =>
-        m.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        searchQuery.length > 0 &&
-        (activeFilter === "All" || m.genre.includes(activeFilter)), // Supporte le format tableau des genres
-    )
-    .slice(0, 5);
-
+  // --- LOGIQUE FILTRAGE ---
   const filteredMovies = allMovies.filter((movie) => {
     const matchesFilter =
       activeFilter === "All" || movie.genre.includes(activeFilter);
@@ -41,6 +36,15 @@ const Gallery = () => {
       .includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+
+  const suggestions = allMovies
+    .filter(
+      (m) =>
+        m.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        searchQuery.length > 0 &&
+        (activeFilter === "All" || m.genre.includes(activeFilter)),
+    )
+    .slice(0, 5);
 
   const totalPages = Math.max(1, Math.ceil(filteredMovies.length / pageSize));
   const paginatedMovies = filteredMovies.slice(
@@ -53,17 +57,13 @@ const Gallery = () => {
   }, [activeFilter, searchQuery]);
 
   useEffect(() => {
-    if (topMovies.length <= 1) {
-      setCarouselIndex(0);
-      return;
-    }
+    if (topMovies.length <= 1) return;
     const id = setInterval(() => {
       setCarouselIndex((prev) => (prev + 1) % topMovies.length);
     }, 2400);
     return () => clearInterval(id);
   }, [topMovies.length]);
 
-  // Fermer suggestions au clic extérieur
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
@@ -81,12 +81,19 @@ const Gallery = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-blue-900/80 to-blue-950"></div>
         <div className="relative z-10 container mx-auto px-6 text-center">
           <h1 className="text-3xl md:text-5xl font-black text-white mb-10 mt-8 tracking-tighter uppercase">
-            Découvrez <span className="text-cyan-400">nos Merveilles</span>
+            {i18n.language === "fr" ? "Découvrez " : "Discover "}
+            <span className="text-cyan-400">
+              {t("gallery.title_accent", "nos Merveilles")}
+            </span>
           </h1>
+
           {topMovies.length > 0 && (
             <div className="mt-6 md:mt-10">
               <p className="text-white/90 font-black uppercase tracking-widest text-xs md:text-sm mb-6">
-                Decouvrez les 5 meilleurs films
+                {t(
+                  "gallery.top_movies_subtitle",
+                  "Découvrez les 5 meilleurs films",
+                )}
               </p>
               <div className="relative h-44 md:h-56 flex items-center justify-center">
                 {topMovies.map((movie, index) => {
@@ -111,10 +118,10 @@ const Gallery = () => {
                         <img
                           src={movie.img}
                           alt={movie.title}
-                          className="w-full h-full object-cover opacity-95 group-hover:opacity-40 transition-all duration-700 transform group-hover:scale-110"
+                          className="w-full h-full object-cover opacity-95 group-hover:opacity-40 transition-all duration-700"
                         />
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-950 shadow-xl">
+                          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-950">
                             <svg
                               className="w-6 h-6 ml-1"
                               fill="currentColor"
@@ -124,8 +131,7 @@ const Gallery = () => {
                             </svg>
                           </div>
                         </div>
-                        <div className="absolute inset-0 bg-gradient-to-t from-blue-950/80 via-blue-950/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                        <div className="absolute bottom-3 left-0 right-0 px-4 text-white text-sm md:text-base font-black uppercase tracking-tighter text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div className="absolute bottom-3 left-0 right-0 px-4 text-white text-sm font-black uppercase text-center opacity-0 group-hover:opacity-100 transition-opacity">
                           {movie.title}
                         </div>
                       </div>
@@ -146,7 +152,6 @@ const Gallery = () => {
 
         <div className="bg-white min-h-[500px] w-full relative z-20 pb-20">
           <div className="container mx-auto px-6 md:px-20 pt-8">
-            {/* --- RECHERCHE & FILTRES --- */}
             <div className="flex flex-col items-center gap-8 mb-16">
               <div className="relative w-full max-w-2xl" ref={searchRef}>
                 <div className="relative">
@@ -167,26 +172,29 @@ const Gallery = () => {
                   </div>
                   <input
                     type="text"
-                    placeholder="Rechercher un film..."
+                    placeholder={t(
+                      "gallery.search_placeholder",
+                      "Rechercher un film...",
+                    )}
                     value={searchQuery}
                     onFocus={() => setShowSuggestions(true)}
                     onChange={(e) => {
                       setSearchQuery(e.target.value);
                       setShowSuggestions(true);
                     }}
-                    className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-slate-100 rounded-3xl text-lg font-bold text-blue-950 focus:bg-white focus:border-blue-600 focus:outline-none transition-all shadow-sm"
+                    className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-slate-100 rounded-3xl text-lg font-bold text-blue-950 focus:bg-white focus:border-blue-600 outline-none transition-all shadow-sm"
                   />
                 </div>
 
-                {/* --- AUTOCOMPLETION REDIRIGEANT --- */}
+                {/* Autocomplétion */}
                 {showSuggestions && suggestions.length > 0 && (
                   <div className="absolute z-[100] w-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
                     {suggestions.map((movie) => (
                       <Link
                         key={movie.id}
-                        to={`/movie/${movie.id}`} // Redirection directe au clic
-                        onClick={() => setShowSuggestions(false)} // Ferme le menu
-                        className="w-full flex items-center gap-4 px-6 py-4 hover:bg-blue-50 transition-colors text-left border-b last:border-none border-slate-50"
+                        to={`/movie/${movie.id}`}
+                        onClick={() => setShowSuggestions(false)}
+                        className="w-full flex items-center gap-4 px-6 py-4 hover:bg-blue-50 transition-colors border-b last:border-none border-slate-50"
                       >
                         <img
                           src={movie.img}
@@ -209,7 +217,7 @@ const Gallery = () => {
                 )}
               </div>
 
-              {/* Filtres de Catégories */}
+              {/* Filtres de Catégories Traduits */}
               <div className="flex flex-wrap justify-center gap-3">
                 {filters.map((f) => (
                   <button
@@ -219,13 +227,14 @@ const Gallery = () => {
                          ${activeFilter === f ? "bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-500/40" : "bg-white border-slate-100 text-slate-400 hover:text-blue-500 hover:border-blue-200"}
                     `}
                   >
-                    {f}
+                    {t(`genres.${f.toLowerCase()}`, f)}{" "}
+                    {/* Traduction du genre */}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* --- GRID DE FILMS --- */}
+            {/* GRID DE FILMS */}
             {filteredMovies.length > 0 ? (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-10">
                 {paginatedMovies.map((movie) => (
@@ -256,7 +265,7 @@ const Gallery = () => {
               </div>
             ) : (
               <div className="py-20 text-center text-slate-300 font-black uppercase tracking-widest text-xl">
-                Aucun résultat trouvé
+                {t("gallery.no_results", "Aucun résultat trouvé")}
               </div>
             )}
 
@@ -265,13 +274,12 @@ const Gallery = () => {
               <div className="flex justify-center items-center gap-2 mt-20 flex-wrap">
                 {Array.from({ length: totalPages }, (_, index) => {
                   const page = index + 1;
-                  const isActive = page === currentPage;
                   return (
                     <button
                       key={page}
                       onClick={() => setCurrentPage(page)}
                       className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black transition-colors ${
-                        isActive
+                        page === currentPage
                           ? "bg-blue-600 text-white shadow-xl"
                           : "text-slate-400 border-2 border-transparent hover:text-blue-600 hover:border-blue-200"
                       }`}
@@ -290,8 +298,3 @@ const Gallery = () => {
 };
 
 export default Gallery;
-
-
-
-
-

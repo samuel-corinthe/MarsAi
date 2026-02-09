@@ -96,7 +96,7 @@ export default function JuryWpage({ page }) {
       // État temporaire pour déclencher l'affichage du bloc
       setSelected({
         slug,
-        title: { rendered: t("loading") },
+        title: { rendered: t("jury.loading") },
         content: { rendered: "" },
         isLoading: true,
       });
@@ -149,7 +149,7 @@ export default function JuryWpage({ page }) {
     [page, i18n.language],
   );
 
-  const title = page?.title?.rendered || t("jury_title");
+  const title = page?.title?.rendered || t("jury.jury_title");
 
   return (
     <main className="min-h-screen w-full bg-[#0f172a] text-white font-['Montserrat'] flex flex-col items-center py-20 px-4 relative overflow-x-hidden selection:bg-[#38bdf8] selection:text-[#0f172a]">
@@ -166,7 +166,7 @@ export default function JuryWpage({ page }) {
         />
         <p className="text-[#cbd5e1] text-lg md:text-xl max-w-2xl font-medium leading-relaxed">
           {t(
-            "jury_subtitle",
+            "jury.jury_subtitle",
             "Rencontrez les experts visionnaires de notre sélection officielle.",
           )}
         </p>
@@ -183,8 +183,8 @@ export default function JuryWpage({ page }) {
               <div>
                 <span className="text-[#38bdf8] font-black uppercase text-[10px] tracking-[0.2em] mb-3 block">
                   {selected.isLoading
-                    ? t("loading")
-                    : t("jury_profile_label", "Profil Jury")}
+                    ? t("jury.jury.loading")
+                    : t("jury.jury_profile_label", "Profil Jury")}
                 </span>
                 <h2
                   className="text-3xl md:text-4xl font-black text-white leading-none uppercase tracking-tight"
@@ -223,7 +223,7 @@ export default function JuryWpage({ page }) {
                 onClick={() => setSelected(null)}
                 className="text-[10px] uppercase tracking-[0.2em] font-black text-[#94a3b8] hover:text-[#38bdf8] transition-colors"
               >
-                {t("close_profile", "Fermer le profil")}
+                {t("jury.close_profile", "Fermer le profil")}
               </button>
             </div>
           </div>
@@ -269,7 +269,7 @@ export default function JuryWpage({ page }) {
 
         {members.length === 0 && (
           <div className="text-center py-20 text-[#94a3b8] font-bold uppercase tracking-widest text-sm">
-            {t("no_members", "Aucun membre détecté.")}
+            {t("jury.no_members", "Aucun membre détecté.")}
           </div>
         )}
       </div>
