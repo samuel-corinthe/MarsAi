@@ -35,7 +35,7 @@ const emailLimiter = rateLimit({
     keyGenerator: (req) => {
         return req.body?.email || req.ip || 'unknown';
     },
-    message: { error: 'Cet email a déjà soumis 3 vidéos aujourd\'hui. Limite atteinte.' },
+    message: { error: 'Cet email a déjà soumis 3 vidéos aujourd\'hui.' },
     standardHeaders: true,
     legacyHeaders: false,
 });

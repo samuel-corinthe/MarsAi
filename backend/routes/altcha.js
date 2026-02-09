@@ -11,7 +11,7 @@ const router = express.Router();
 const challengeLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 10,
-  message: { error: 'Trop de demandes de challenge. Réessayez plus tard.' },
+  message: { error: 'Vous avez dépassé le maximum de requêtes par heure. Réessayez plus tard.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
