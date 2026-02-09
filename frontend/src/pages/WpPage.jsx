@@ -125,16 +125,32 @@ export default function WpPage({ isHome = false }) {
       try {
         const pageData = await getPageBySlug(slug, i18n.language);
         if (cancelled) return;
+
         if (!pageData) {
           setPage(null);
         } else {
           setPage(pageData);
-          if (slug === "agenda" || slug === "schedule") {
+
+          // IDENTIFICATION DE L'ID (Vérifie bien que c'est le bon ID anglais ici)
+          const agendaCategoryId = i18n.language === "fr" ? 14 : 51;
+
+          // Sécurité : on vérifie si on est sur une page d'agenda (FR ou EN)
+          const isAgendaSlug = slug === "agenda" || slug === "schedule";
+
+          if (isAgendaSlug) {
+            console.log(
+              "Chargement de l'agenda pour la langue:",
+              i18n.language,
+              "ID:",
+              agendaCategoryId,
+            );
+
             const res = await fetch(
-              `https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-json/wp/v2/posts?categories=14&_embed&per_page=100&order=asc&orderby=date&lang=${i18n.language}`,
+              `https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-json/wp/v2/posts?categories=${agendaCategoryId}&_embed&per_page=100&order=asc&orderby=date&lang=${i18n.language}`,
             );
             const allPosts = await res.json();
-            if (allPosts && Array.isArray(allPosts)) {
+
+            if (allPosts && Array.isArray(allPosts) && allPosts.length > 0) {
               const formatted = allPosts.map((post) => ({
                 id: post.id,
                 date: post.date.split("T")[0],
@@ -152,18 +168,34 @@ export default function WpPage({ isHome = false }) {
                 ),
                 lieu: "Marseille",
                 subCategories: (post._embedded?.["wp:term"]?.[0] || []).filter(
-                  (c) => c.id !== 14,
+                  (c) => c.id !== agendaCategoryId,
                 ),
               }));
+
               setAgendaItems(formatted);
-              if (formatted.length > 0 && !selectedDate) {
-                setSelectedDate(formatted[0].date);
-                setWeekStart(getWeekStart(formatted[0].date));
-              }
+
+              // TRÈS IMPORTANT : On initialise la date sur le premier événement trouvé
+              const firstDate = formatted[0].date;
+              setSelectedDate(firstDate);
+              setWeekStart(getWeekStart(firstDate));
+
+              console.log(
+                "Événements chargés:",
+                formatted.length,
+                "Première date:",
+                firstDate,
+              );
+            } else {
+              console.warn(
+                "Aucun article trouvé pour la catégorie",
+                agendaCategoryId,
+              );
+              setAgendaItems([]);
             }
           }
         }
       } catch (err) {
+        console.error("Erreur Fetch:", err);
         if (!cancelled) setError(true);
       } finally {
         if (!cancelled) setLoading(false);
