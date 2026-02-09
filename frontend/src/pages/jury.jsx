@@ -5,21 +5,29 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { useTranslation } from "react-i18next"; // 1. Import de i18n
+import { useTranslation } from "react-i18next";
 
 // --- Helpers ---
-const createSlug = (text) =>
-  text
-    ?.toString()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^\w\-]+/g, "")
-    .replace(/\-\-+/g, "-") || "";
+const createSlug = (text, lang = "fr") => {
+  const baseSlug =
+    text
+      ?.toString()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/[^\w\-]+/g, "")
+      .replace(/\-\-+/g, "-") || "";
 
-const parseJuryData = (html) => {
+  // Si la langue est l'anglais, on ajoute le suffixe utilisé dans tes slugs WP
+  if (lang === "en" && baseSlug) {
+    return `${baseSlug}-eng`;
+  }
+  return baseSlug;
+};
+
+const parseJuryData = (html, lang) => {
   if (typeof window === "undefined") return [];
   return Array.from(
     new DOMParser().parseFromString(html, "text/html").querySelectorAll("li"),
@@ -29,7 +37,9 @@ const parseJuryData = (html) => {
       const strong = li.querySelector("strong") || li.querySelector("b");
       const name = strong ? strong.textContent : "";
       return {
-        slug: li.getAttribute("data-slug") || createSlug(name || img?.alt),
+        // Priorité au data-slug si présent, sinon génération auto avec suffixe langue
+        slug:
+          li.getAttribute("data-slug") || createSlug(name || img?.alt, lang),
         name,
         role: (li.textContent || "").replace(name, "").trim(),
         imgSrc: img?.src,
@@ -68,7 +78,7 @@ const GavelIcon = () => (
 );
 
 export default function JuryWpage({ page }) {
-  const { t, i18n } = useTranslation(); // 2. Hook de traduction
+  const { t, i18n } = useTranslation();
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
@@ -78,13 +88,14 @@ export default function JuryWpage({ page }) {
     async (slug) => {
       if (!slug) return;
 
-      // On inclut la langue dans la clé du cache pour éviter de servir du FR en mode EN
       const cacheKey = `${slug}_${i18n.language}`;
       if (articleCache.has(cacheKey))
         return setSelected(articleCache.get(cacheKey));
 
       setLoading(true);
+      // État temporaire pour déclencher l'affichage du bloc
       setSelected({
+        slug,
         title: { rendered: t("loading") },
         content: { rendered: "" },
         isLoading: true,
@@ -94,18 +105,25 @@ export default function JuryWpage({ page }) {
       abortRef.current = new AbortController();
 
       try {
-        // 3. Ajout du paramètre lang=${i18n.language} pour l'API WordPress
         const res = await fetch(
-          `https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_fields=id,title,content,excerpt&lang=${i18n.language}`,
+          `https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_fields=id,title,content,excerpt,slug&lang=${i18n.language}`,
           { signal: abortRef.current.signal },
         );
         const data = await res.json();
-        if (data?.[0]) {
+
+        if (data && data.length > 0) {
           articleCache.set(cacheKey, data[0]);
           setSelected(data[0]);
+        } else {
+          // Si rien n'est trouvé, on ferme pour éviter le blocage sur "loading"
+          console.warn(`Aucun post trouvé pour le slug: ${slug}`);
+          setSelected(null);
         }
       } catch (e) {
-        if (e.name !== "AbortError") console.error(e);
+        if (e.name !== "AbortError") {
+          console.error(e);
+          setSelected(null);
+        }
       } finally {
         setLoading(false);
       }
@@ -125,10 +143,12 @@ export default function JuryWpage({ page }) {
       );
   }, [selected]);
 
+  // On régénère les membres quand la langue change pour mettre à jour les slugs
   const members = useMemo(
-    () => parseJuryData(page?.content?.rendered || ""),
-    [page],
+    () => parseJuryData(page?.content?.rendered || "", i18n.language),
+    [page, i18n.language],
   );
+
   const title = page?.title?.rendered || t("jury_title");
 
   return (
