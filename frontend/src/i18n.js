@@ -8,6 +8,7 @@ i18n.use(initReactI18next).init({
       translation: {
         ...navbarTranslations.fr.nav,
         footer: navbarTranslations.fr.footer,
+        loading: "Chargement...",
         prev: "Précédent",
         next: "Suivant",
         home_news: "Actualités",
@@ -70,6 +71,7 @@ i18n.use(initReactI18next).init({
       translation: {
         ...navbarTranslations.en.nav,
         footer: navbarTranslations.en.footer,
+        loading: "loading...",
         prev: "Prev",
         next: "Next",
         home_news: "News",

@@ -227,7 +227,8 @@ export default function WpPage({ isHome = false }) {
   const isAgenda = slug === "agenda" || slug === "schedule";
   const selectedParts = selectedDate ? formatDateParts(selectedDate) : null;
 
-  if (loading) return <div className="app-container page">Chargement</div>;
+  if (loading)
+    return <div className="app-container page"> {t("loading")} </div>;
   if (!page) return <NotFound />;
 
   // --- RENDU SPÉCIFIQUE ---
