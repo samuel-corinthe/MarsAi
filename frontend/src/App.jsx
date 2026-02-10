@@ -9,7 +9,6 @@ import Gallery from "./pages/Gallery";
 import MovieDetails from "./pages/MovieDetails";
 import Dashboard from "./pages/Dashboard";
 import TestCountdown from "./pages/TestCountdown";
-import FilmDetails from "./pages/FilmDetails";
 
 export default function App() {
   const location = useLocation();
