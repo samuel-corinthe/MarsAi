@@ -44,6 +44,21 @@ const emailLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+const activeUploads = new Set();
+
+const concurrentLimiter = (req, res, next) => {
+    const ip = req.ip;
+
+    if (activeUploads.has(ip)) {
+        console.warn('[CONCURRENT] Upload déjà en cours pour', ip);
+        return res.status(429).json({ error: 'Un upload est déjà en cours. Veuillez patienter.' });
+    }
+
+    activeUploads.add(ip);
+    res.on('close', () => activeUploads.delete(ip));
+    next();
+};
+
 const upload = multer({
     dest: 'uploads/',
     limits: {
@@ -59,16 +74,9 @@ const upload = multer({
     }
 });
 
-const requireCustomHeader = (req, res, next) => {
-    if (req.get('X-Requested-With') !== 'MarsAI') {
-        return res.status(403).json({ error: 'Requête non autorisée' });
-    }
-    next();
-};
-
 router.post('/youtube',
-    requireCustomHeader,
     ipLimiter,
+    concurrentLimiter,
     upload.single('video'),
     validateHoneypot,
     validateFileMagicBytes,
@@ -149,3 +157,4 @@ router.post('/youtube',
 );
 
 export default router;
+

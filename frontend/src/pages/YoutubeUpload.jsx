@@ -26,7 +26,7 @@ export default function YoutubeUpload() {
     const fileInputRef = useRef(null);
     const statusRef = useRef(null);
 
-    // Charger le challenge honeypot au montage du composant
+    
     useEffect(() => {
         const loadChallenge = async () => {
             try {
@@ -156,7 +156,6 @@ export default function YoutubeUpload() {
             setStatus({ type: '', message: '' });
 
             const res = await axios.post('http://localhost:3000/api/upload/youtube', formData, {
-                headers: { 'X-Requested-With': 'MarsAI' },
                 onUploadProgress: (progressEvent) => {
                     const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                     setProgress(percent);

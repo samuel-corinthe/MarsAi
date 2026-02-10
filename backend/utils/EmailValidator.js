@@ -12,7 +12,7 @@ export function isDisposableEmail(email){
     const domain = email.split('@')[1]?.toLowerCase();
 
     if(!domain){
-        return {valid: false, reason: 'l\'email est  invalide'};
+        return {valid: false, reason: 'l\'email n\'est  pas valide'};
     }
 
     if(disposableSet.has(domain)){
