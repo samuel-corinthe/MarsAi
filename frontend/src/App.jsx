@@ -1,8 +1,16 @@
+<<<<<<< HEAD
 import { useEffect } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Newsletter from "./pages/Newsletter";
+=======
+import { Routes, Route } from "react-router-dom";
+import Header from "./components/Header";
+import Home from "./pages/Home";
+import React from "react";
+import About from "./pages/About";
+>>>>>>> 09310cd5efa47050f1f9dfa31916e738abfab942
 import WpPage from "./pages/WpPage";
 import NotFound from "./pages/NotFound";
 import Gallery from "./pages/Gallery";
@@ -24,6 +32,7 @@ export default function App() {
   }, [location]);
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen flex flex-col">
       {!hideChrome && <Navbar />}
       <div className="flex-1">
@@ -42,5 +51,24 @@ export default function App() {
       </div>
       {!hideChrome && <Footer />}
     </div>
+=======
+    <>
+      <Header />
+
+      <Routes>
+        {/* Home = React */}
+        <Route path="/" element={<Home />} />
+ 
+        {/* About = React */}
+        <Route path="/about" element={<About />} />
+
+        {/* Toutes les pages WordPress (par slug) */}
+        <Route path="/:slug" element={<WpPage />} />
+          
+        {/* 404 */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
+>>>>>>> 09310cd5efa47050f1f9dfa31916e738abfab942
   );
 }
