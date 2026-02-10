@@ -1,6 +1,32 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { getPageBySlug } from '../api';
 
 const About = () => {
+  const [wpContent, setWpContent] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadContent = async () => {
+      try {
+        const data = await getPageBySlug('a-propos');
+        setWpContent(data);
+      } catch (error) {
+        console.error('Erreur chargement WordPress:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadContent();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-blue-950 text-white">
+        <div className="text-xl">Chargement...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col bg-blue-950 text-white min-h-screen relative selection:bg-cyan-500/30">
 
@@ -8,9 +34,10 @@ const About = () => {
         {/* Curved section - Modernisé façon "Dark Glass" */}
         <div className="relative pt-20 pb-10">
           <div className="absolute top-20 left-0 w-3/4 md:w-1/2 h-28 bg-white rounded-r-full shadow-[0_0_30px_rgba(59,130,246,0.4)] flex items-center pl-10 md:pl-20 z-10">
-            <h1 className="text-4xl md:text-6xl font-extrabold text-blue-600 tracking-tight">
-              About us
-            </h1>
+            <h1 
+              className="text-4xl md:text-6xl font-extrabold text-blue-600 tracking-tight"
+              dangerouslySetInnerHTML={{ __html: wpContent?.title?.rendered || 'About us' }}
+            />
           </div>
         </div>
 
@@ -28,26 +55,36 @@ const About = () => {
             </div>
 
             <div className="md:w-1/2 space-y-8">
-              <p className="text-gray-300 text-lg leading-relaxed border-l-4 border-cyan-500 pl-6">
-                <span className="text-cyan-400 font-semibold">MarsAi</span> est une plateforme dédiée aux créateurs de vidéo réalisée par intelligence artificielle. Nous soutenons les esprits passionnés par les vidéos IA et l'innovation.
-              </p>
+              {/* Contenu WordPress ou contenu par défaut */}
+              {wpContent?.content?.rendered ? (
+                <div 
+                  className="wp-content-about text-gray-300 text-lg leading-relaxed space-y-6"
+                  dangerouslySetInnerHTML={{ __html: wpContent.content.rendered }}
+                />
+              ) : (
+                <>
+                  <p className="text-gray-300 text-lg leading-relaxed border-l-4 border-cyan-500 pl-6">
+                    <span className="text-cyan-400 font-semibold">MarsAi</span> est une plateforme dédiée aux créateurs de vidéo réalisée par intelligence artificielle. Nous soutenons les esprits passionnés par les vidéos IA et l'innovation.
+                  </p>
 
-              {/* Tags décoratifs */}
-              <div className="flex flex-wrap gap-3">
-                 {['Innovation', 'Deep Learning', 'Creative Tools'].map((tag) => (
-                    <span key={tag} className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-500/20">
-                      #{tag}
-                    </span>
-                 ))}
-              </div>
+                  {/* Tags décoratifs */}
+                  <div className="flex flex-wrap gap-3">
+                     {['Innovation', 'Deep Learning', 'Creative Tools'].map((tag) => (
+                        <span key={tag} className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-300 border border-blue-500/20">
+                          #{tag}
+                        </span>
+                     ))}
+                  </div>
 
-              <p className="text-gray-300 text-lg leading-relaxed">
-                Rejoignez une communauté créative, audacieuse et tournée vers l'exploration d'un avenir où l'intelligence artificielle transforme la création vidéo.
-              </p>
+                  <p className="text-gray-300 text-lg leading-relaxed">
+                    Rejoignez une communauté créative, audacieuse et tournée vers l'exploration d'un avenir où l'intelligence artificielle transforme la création vidéo.
+                  </p>
 
-              <h2 className="text-3xl md:text-5xl font-bold text-white pt-4">
-                Show Your cr<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500">AI</span>tivity
-              </h2>
+                  <h2 className="text-3xl md:text-5xl font-bold text-white pt-4">
+                    Show Your cr<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500">AI</span>tivity
+                  </h2>
+                </>
+              )}
 
               <div className="pt-4 flex flex-col sm:flex-row gap-4">
                 <a
@@ -82,9 +119,11 @@ const About = () => {
             <p className="hover:text-cyan-400 transition-colors cursor-default">Technologie Avancée</p>
           </div>
 
-          <button className="mt-10 bg-white text-blue-950 px-8 py-3 rounded-full hover:bg-cyan-400 hover:text-white transition-all duration-300 font-bold shadow-lg hover:shadow-cyan-500/50">
+          <a
+            href="/contact"
+            className="mt-10 bg-white text-blue-950 px-8 py-3 rounded-full hover:bg-cyan-400 hover:text-white transition-all duration-300 font-bold shadow-lg hover:shadow-cyan-500/50">
             Contactez-nous
-          </button>
+          </a>
         </div>
       </section>
     </div>

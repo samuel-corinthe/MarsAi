@@ -14,12 +14,12 @@ export default function App() {
       <Routes>
         {/* Home = React */}
         <Route path="/" element={<Home />} />
+ 
+        {/* About = React */}
+        <Route path="/about" element={<About />} />
 
         {/* Toutes les pages WordPress (par slug) */}
         <Route path="/:slug" element={<WpPage />} />
- 
-        {/* About = React */}
-          <Route path="/about" element={<About />} />
           
         {/* 404 */}
         <Route path="*" element={<NotFound />} />
