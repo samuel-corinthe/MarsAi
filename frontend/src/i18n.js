@@ -14,8 +14,7 @@ i18n.use(initReactI18next).init({
         home_news: "Actualités",
         not_found: {
           title: "Page introuvable",
-          description:
-            "Désolé, cette page n'existe pas ou a été déplacée. Elle n'a peut-être jamais été tournée...",
+          description: "Désolé, cette page n'existe pas ou a été déplacée.",
           back_home: "Retour à l'accueil",
           see_movies: "Voir les films",
         },
@@ -77,8 +76,7 @@ i18n.use(initReactI18next).init({
         home_news: "News",
         not_found: {
           title: "Page not found",
-          description:
-            "Sorry, this page doesn't exist or has been moved. Maybe it was never filmed...",
+          description: "Sorry, this page doesn't exist or has been moved.",
           back_home: "Back to Home",
           see_movies: "View Movies",
         },

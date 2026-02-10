@@ -11,11 +11,16 @@ export default function FilmDetails() {
           Page en construction
         </h1>
         <p className="mt-4 text-slate-600">
-          Tu as demandé la vidéo&nbsp;: <span className="font-semibold">{slug}</span>
+          Tu as demandé la vidéo&nbsp;:{" "}
+          <span className="font-semibold">{slug}</span>
         </p>
-        <div className="mt-6 flex gap-3">
-          <Link className="btn-primary" to="/dashboard">Retour dashboard</Link>
-          <Link className="btn-ghost" to="/">Accueil</Link>
+        <div className="mt-6 flnex gap-3">
+          <Link className="btn-primary" to="/dashboard">
+            Retour dashboard
+          </Link>
+          <Link className="btn-ghost" to="/">
+            Accueil
+          </Link>
         </div>
       </section>
     </main>
