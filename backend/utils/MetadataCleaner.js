@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import ffmpegPath from 'ffmpeg-static';
-import { promises as fs } from 'fs'
+import { promises as fs } from 'fs';
+import { existsSync } from 'fs';
 import path from 'path';
 
 
@@ -10,7 +11,7 @@ export function cleanMetadata(filePath, timeout = 30_000) {
       return reject(new Error('Chemin de fichier invalide'));
     }
 
-    if (!fs.existsSync(filePath)) {
+    if (!existsSync(filePath)) {
       return reject(new Error('Fichier vidéo introuvable'));
     }
 
@@ -21,9 +22,10 @@ export function cleanMetadata(filePath, timeout = 30_000) {
 
     const args = [
       '-i', filePath,
-      '-map_metadata', '-1',  
-      '-c', 'copy',           
-      '-y',                   
+      '-map_metadata', '-1',
+      '-c', 'copy',
+      '-f', 'mp4',
+      '-y',
       cleanedPath
     ];
 
@@ -40,7 +42,7 @@ export function cleanMetadata(filePath, timeout = 30_000) {
       stderr += chunk.toString();
     });
 
-    ffmpeg.on('close', code => {
+    ffmpeg.on('close', async (code) => {
       clearTimeout(timeoutId);
 
       if (code !== 0) {
@@ -50,8 +52,8 @@ export function cleanMetadata(filePath, timeout = 30_000) {
       }
 
       try {
-        fs.unlinkSync(filePath);
-        fs.renameSync(cleanedPath, filePath);
+        await fs.unlink(filePath);
+        await fs.rename(cleanedPath, filePath);
         console.log('[METADATA] Métadonnées supprimées avec succès');
         resolve(filePath);
       } catch (error) {

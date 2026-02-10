@@ -10,6 +10,10 @@ import { validateAltchaMiddleware } from '../utils/AltchaValidator.js';
 import { validateEmail } from '../utils/EmailValidator.js';
 import { validateFileMagicBytes } from '../utils/FileTypeValidator.js';
 import { validateHoneypot } from '../utils/HoneypotValidator.js';
+import { cleanMetadataMiddleware } from '../utils/MetadataCleaner.js';
+
+
+
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
@@ -55,7 +59,15 @@ const upload = multer({
     }
 });
 
+const requireCustomHeader = (req, res, next) => {
+    if (req.get('X-Requested-With') !== 'MarsAI') {
+        return res.status(403).json({ error: 'Requête non autorisée' });
+    }
+    next();
+};
+
 router.post('/youtube',
+    requireCustomHeader,
     ipLimiter,
     upload.single('video'),
     validateHoneypot,
@@ -64,6 +76,7 @@ router.post('/youtube',
     validateFormData,
     validateEmail, 
     emailLimiter,
+    cleanMetadataMiddleware,
     async (req, res) => {
         console.log('[UPLOAD] Nouvelle soumission reçue');
 

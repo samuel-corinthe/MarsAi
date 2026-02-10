@@ -156,6 +156,7 @@ export default function YoutubeUpload() {
             setStatus({ type: '', message: '' });
 
             const res = await axios.post('http://localhost:3000/api/upload/youtube', formData, {
+                headers: { 'X-Requested-With': 'MarsAI' },
                 onUploadProgress: (progressEvent) => {
                     const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                     setProgress(percent);
