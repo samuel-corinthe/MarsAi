@@ -74,6 +74,24 @@ i18n.use(initReactI18next).init({
             "Vous souhaitez nous accompagner dans notre aventure ? Rejoignez nos partenaires et participez à un projet innovant.",
           cta_button: "Nous contacter",
         },
+        about: {
+          loading: "Chargement...",
+          defaultTitle: "À propos",
+          description:
+            "MarsAi est une plateforme dédiée aux créateurs de vidéo réalisée par intelligence artificielle. Nous soutenons les esprits passionnés par les vidéos IA et l'innovation.",
+          community:
+            "Rejoignez une communauté créative, audacieuse et tournée vers l'exploration d'un avenir où l'intelligence artificielle transforme la création vidéo.",
+          cta_join: "Rejoindre MarsAi",
+          cta_more: "En savoir plus",
+          cta_contact: "Contactez-nous",
+          features: {
+            ai: "Intelligence Artificielle",
+            innovation: "Innovation Vidéo",
+            creativity: "Créativité Sans Limites",
+            future: "Futur du Numérique",
+            tech: "Technologie Avancée",
+          },
+        },
       },
     },
     en: {
@@ -145,6 +163,24 @@ i18n.use(initReactI18next).init({
           cta_text:
             "Want to join us in our adventure? Join our partners and take part in an innovative project.",
           cta_button: "Contact us",
+        },
+        about: {
+          loading: "Loading database...",
+          defaultTitle: "About ",
+          description:
+            "is a platform dedicated to creators of AI-generated video. We support minds passionate about AI cinematography and innovation.",
+          community:
+            "Join a creative and bold community, focused on exploring a future where artificial intelligence transforms video creation.",
+          cta_join: "Join MarsAi",
+          cta_more: "Learn more",
+          cta_contact: "Contact us",
+          features: {
+            ai: "Artificial Intelligence",
+            innovation: "Video Innovation",
+            creativity: "Limitless Creativity",
+            future: "Digital Future",
+            tech: "Advanced Technology",
+          },
         },
       },
     },

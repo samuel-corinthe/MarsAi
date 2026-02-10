@@ -31,7 +31,7 @@ const Navbar = () => {
   // Les listes utilisent maintenant t() pour traduire les noms
   const mainNav = [
     { name: t("home"), path: "/accueil", id: "home" },
-    { name: t("about"), path: "/a-propos", id: "about" },
+    { name: t("about.defaultTitle"), path: "/a-propos", id: "about" },
     { name: t("films"), path: "/films", id: "films" },
     { name: t("agenda"), path: "/agenda", id: "agenda" },
     { name: t("callForProjects"), path: "/appel-a-projet", id: "call" },

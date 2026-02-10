@@ -9,7 +9,6 @@ import LegalPage from "./LegalPage";
 
 export default function WpPage({ isHome = false, fixedSlug = null }) {
   const { slug: routeSlug } = useParams();
-<<<<<<< HEAD
   const { i18n, t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,9 +45,6 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
       navigate(targetPath, { replace: true });
     }
   }, [i18n.language, slug, navigate, location.pathname, isHome, routeSlug]);
-=======
-  const slug = fixedSlug || (isHome ? "accueil" : routeSlug);
->>>>>>> 09310cd5efa47050f1f9dfa31916e738abfab942
 
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);

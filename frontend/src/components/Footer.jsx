@@ -10,7 +10,7 @@ const Footer = () => {
     festival: {
       title: t("footer.festival"),
       links: [
-        { name: t("about"), path: "/a-propos" },
+        { name: t("about.defaultTitle"), path: "/a-propos" },
         { name: t("footer.competition"), path: "/films" },
         { name: t("agenda"), path: "/agenda" },
         { name: t("footer.newsletter"), path: "/newsletter" },
