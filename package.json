@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@google/model-viewer": "^4.1.0",
     "i18next": "^25.8.0",
     "react-i18next": "^16.5.4",
     "react-router-dom": "^7.13.0"
