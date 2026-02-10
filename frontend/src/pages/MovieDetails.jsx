@@ -241,6 +241,14 @@ const MovieDetails = () => {
                   <span className="text-[10px] uppercase font-black text-slate-400 mb-1">
                     Réalisateur
                   </span>
+                  <span className="text-[10px] uppercase font-black text-slate-400 mb-1">
+                    Pays
+                  </span>
+                  <img
+                    src="../public/images/flags/ad.png"
+                    alt={movie.title}
+                    className="w-15 "
+                  />
                   <span className="font-bold text-blue-900 uppercase">
                     {movie.director}
                   </span>

@@ -12,7 +12,7 @@ const connection = mysql.createConnection({
   user: "samy",
   password: "YClfdmvjlm181200.",
   database: "samuel-corinthe_MarsAi",
-  port: 3306, // Port standard MariaDB
+  port: 3306,
 });
 
 connection.connect((err) => {
