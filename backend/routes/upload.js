@@ -56,13 +56,13 @@ const upload = multer({
 });
 
 router.post('/youtube',
+    ipLimiter,
     upload.single('video'),
     validateHoneypot,
     validateFileMagicBytes,
     validateAltchaMiddleware,
     validateFormData,
     validateEmail, 
-    ipLimiter,
     emailLimiter,
     async (req, res) => {
         console.log('[UPLOAD] Nouvelle soumission reçue');

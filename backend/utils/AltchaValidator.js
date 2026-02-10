@@ -9,8 +9,8 @@ const ALTCHA_SECRET = process.env.ALTCHA_SECRET || crypto.randomBytes(32).toStri
 
 const CHALLENGE_OPTIONS = {
   algorithm: 'SHA-256',
-  maxNumber: 100000, 
-  saltLength: 12,    
+  maxNumber: 1_000_000, 
+  saltLength: 16,    
   hmacKey: ALTCHA_SECRET 
 };
 

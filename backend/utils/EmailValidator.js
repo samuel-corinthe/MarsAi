@@ -12,11 +12,11 @@ export function isDisposableEmail(email){
     const domain = email.split('@')[1]?.toLowerCase();
 
     if(!domain){
-        return {valid: false, reason: 'email invalide'};
+        return {valid: false, reason: 'l\'email est  invalide'};
     }
 
     if(disposableSet.has(domain)){
-        return {valid: false, reason: `Domaine de mail jetable : ${domain}`};
+        return {valid: false, reason: `Ce domaine  de mail n\' est pas autorisé : ${domain}`};
     }
     return {valid: true};
 }
@@ -32,8 +32,8 @@ export const validateEmail = (req, res, next) =>{
     if (!result.valid){
         console.warn(`[EMAIL] Domaine rejeté : ${result.reason}`);
         return res.status(400).json({
-            error: 'Adresse email non autorisée',
-            message: 'Veuillez utiliser une adresse valide'
+            error: 'Cette adresse email n\'est pas autorisée',
+            message: 'Veuillez utiliser une adresse autorisée'
         });
     }
     next();

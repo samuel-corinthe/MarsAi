@@ -195,7 +195,7 @@ export const validateForm = (formData) => {
     }
   }
 
-  // Validation de l'âge
+  
   if (!formData.age || !formData.age.trim()) {
     errors.age = "L'âge est requis";
   } else {

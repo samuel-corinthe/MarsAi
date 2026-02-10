@@ -32,7 +32,7 @@ export const getVideoMetadata = (file) => {
 
         video.onerror = () => {
             window.URL.revokeObjectURL(video.src);
-            reject("Impossible de lire le fichier vidéo. Assurez-vous qu'il s'agit d'un format valide.");
+            reject("Impossible de lire le fichier vidéo. Le format de la vidéo doit être valide (mp4).");
         };
 
         video.src = URL.createObjectURL(file);

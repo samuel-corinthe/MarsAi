@@ -8,8 +8,8 @@ export const validateHoneypot = (req, res, next) => {
     if (!honeypotToken) {
       console.warn('[HONEYPOT] Token manquant');
       return res.status(400).json({ 
-        error: 'Invalid request',
-        message: 'Honeypot token required' 
+        error: 'la requête est invalide',
+        message: 'Un token est nécessaire' 
       });
     }
 
@@ -27,7 +27,7 @@ export const validateHoneypot = (req, res, next) => {
     if (!fieldName) {
       console.warn('[HONEYPOT] Token invalide - fieldName manquant');
       return res.status(400).json({ 
-        error: 'Invalid token' 
+        error: 'Token non valide' 
       });
     }
 
@@ -51,21 +51,21 @@ export const validateHoneypot = (req, res, next) => {
     if (error.name === 'TokenExpiredError') {
       console.warn('[HONEYPOT] Token expiré');
       return res.status(400).json({ 
-        error: 'Token expired',
-        message: 'Please refresh the page' 
+        error: 'Le token est expriré',
+        message: 'Rafraichichez la page et rééssayez' 
       });
     }
     
     if (error.name === 'JsonWebTokenError') {
       console.warn('[HONEYPOT] Token invalide');
       return res.status(400).json({ 
-        error: 'Invalid token' 
+        error: 'Le token n\' est pas valide' 
       });
     }
     
     console.error('[HONEYPOT] Erreur:', error.message);
     return res.status(500).json({ 
-      error: 'Internal error' 
+      error: 'Une erreur serveur est survenue' 
     });
   }
 };
