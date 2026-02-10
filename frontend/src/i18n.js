@@ -64,6 +64,16 @@ i18n.use(initReactI18next).init({
           modal_delete: "Supprimer la note",
           na: "N/A",
         },
+        partners: {
+          partners_title: "Partenaires",
+          loading: "Chargement des partenaires…",
+          badge: "Ils nous font confiance",
+          subtitle: "Découvrez les partenaires qui accompagnent notre projet",
+          cta_title: "Devenez partenaire",
+          cta_text:
+            "Vous souhaitez nous accompagner dans notre aventure ? Rejoignez nos partenaires et participez à un projet innovant.",
+          cta_button: "Nous contacter",
+        },
       },
     },
     en: {
@@ -125,6 +135,16 @@ i18n.use(initReactI18next).init({
           modal_confirm: "Confirm",
           modal_delete: "Delete rating",
           na: "N/A",
+        },
+        partners: {
+          partners_title: "Partners",
+          loading: "Loading partners…",
+          badge: "They trust us",
+          subtitle: "Discover the partners who support our project",
+          cta_title: "Become a partner",
+          cta_text:
+            "Want to join us in our adventure? Join our partners and take part in an innovative project.",
+          cta_button: "Contact us",
         },
       },
     },

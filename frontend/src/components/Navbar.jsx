@@ -36,6 +36,11 @@ const Navbar = () => {
     { name: t("agenda"), path: "/agenda", id: "agenda" },
     { name: t("callForProjects"), path: "/appel-a-projet", id: "call" },
     { name: t("jury.jury_title"), path: "/jury", id: "jury" },
+    {
+      name: t("partners.partners_title"),
+      path: "/partenaires",
+      id: "partners",
+    },
   ];
 
   const moreNav = [

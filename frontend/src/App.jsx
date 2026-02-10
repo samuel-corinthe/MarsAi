@@ -9,6 +9,7 @@ import Gallery from "./pages/Gallery";
 import MovieDetails from "./pages/MovieDetails";
 import Dashboard from "./pages/Dashboard";
 import TestCountdown from "./pages/TestCountdown";
+import Partenaires from "./pages/Partenaires";
 
 export default function App() {
   const location = useLocation();
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/accueil" element={<WpPage isHome={true} />} />
           <Route path="/home" element={<WpPage isHome={true} />} />
           <Route path="/newsletter" element={<Newsletter />} />
+          <Route path="/partenaires" element={<Partenaires />} />
           <Route path="/films" element={<Gallery />} />
           <Route path="/movie/:id" element={<MovieDetails />} />
           <Route path="/dashboard" element={<Dashboard />} />
