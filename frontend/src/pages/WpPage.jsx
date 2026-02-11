@@ -22,6 +22,14 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     cgu: "gcu",
     cgv: "tos",
   };
+  const legalVariantBySlug = {
+    cgv: "cgv",
+    tos: "cgv",
+    cgu: "cgu",
+    gcu: "cgu",
+    "mentions-legales": "mentions",
+    "legal-notice": "mentions",
+  };
 
   const getActiveSlug = () => {
     if (isHome) return i18n.language === "en" ? "home" : "accueil";
@@ -234,8 +242,9 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   // --- RENDU SPÉCIFIQUE ---
   if (slug === "accueil" || slug === "home") return <Home page={page} />;
   if (slug === "jury" || slug === "jury-eng") return <JuryWpage page={page} />;
-  if (slug === "cgv" || slug === "cgu")
-    return <LegalPage page={page} variant={slug} />;
+  if (legalVariantBySlug[slug]) {
+    return <LegalPage page={page} variant={legalVariantBySlug[slug]} />;
+  }
 
   // --- PAGE CONTACT ---
   if (slug === "contact") {
