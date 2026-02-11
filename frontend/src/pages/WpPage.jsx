@@ -1,5 +1,6 @@
-﻿import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { getPageBySlug } from "../api";
 import Home from "./Home";
 import JuryWpage from "./jury";
@@ -9,7 +10,58 @@ import CallForProject from "./Appel a projet";
 
 export default function WpPage({ isHome = false, fixedSlug = null }) {
   const { slug: routeSlug } = useParams();
-  const slug = fixedSlug || (isHome ? "accueil" : routeSlug);
+  const { i18n } = useTranslation();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const slugMapping = {
+    agenda: "schedule",
+    accueil: "home",
+    jury: "jury-eng",
+    "mentions-legales": "legal-notice",
+    cgu: "gcu",
+    cgv: "tos",
+  };
+  const legalVariantBySlug = {
+    cgv: "cgv",
+    tos: "cgv",
+    cgu: "cgu",
+    gcu: "cgu",
+    "mentions-legales": "mentions",
+    "legal-notice": "mentions",
+  };
+
+  const getActiveSlug = () => {
+    if (fixedSlug) return fixedSlug;
+    if (isHome) return i18n.language === "en" ? "home" : "accueil";
+    const entry = Object.entries(slugMapping).find(
+      ([fr, en]) => fr === routeSlug || en === routeSlug,
+    );
+    if (entry) return i18n.language === "en" ? entry[1] : entry[0];
+    return routeSlug;
+  };
+
+  const slug = getActiveSlug();
+
+  useEffect(() => {
+    if (fixedSlug) return;
+    const targetPath = isHome
+      ? i18n.language === "en"
+        ? "/home"
+        : "/accueil"
+      : `/${slug}`;
+    if (location.pathname !== targetPath && (routeSlug || isHome)) {
+      navigate(targetPath, { replace: true });
+    }
+  }, [
+    fixedSlug,
+    i18n.language,
+    isHome,
+    location.pathname,
+    navigate,
+    routeSlug,
+    slug,
+  ]);
 
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -52,13 +104,14 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
 
   const formatDateParts = (dateStr) => {
     const d = parseDate(dateStr);
+    const locale = i18n.language === "fr" ? "fr-FR" : "en-GB";
     const monthShort = d
-      .toLocaleDateString("fr-FR", { month: "short" })
+      .toLocaleDateString(locale, { month: "short" })
       .replace(".", "");
-    const monthLong = d.toLocaleDateString("fr-FR", { month: "long" });
-    const weekday = d.toLocaleDateString("fr-FR", { weekday: "long" });
+    const monthLong = d.toLocaleDateString(locale, { month: "long" });
+    const weekday = d.toLocaleDateString(locale, { weekday: "long" });
     const weekdayShort = d
-      .toLocaleDateString("fr-FR", { weekday: "short" })
+      .toLocaleDateString(locale, { weekday: "short" })
       .replace(".", "");
     return { day: d.getDate(), monthShort, monthLong, weekday, weekdayShort };
   };
@@ -69,20 +122,23 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
       setLoading(true);
       setError(false);
       try {
-        const pageData = await getPageBySlug(slug);
+        const pageData = await getPageBySlug(slug, i18n.language);
         if (cancelled) return;
 
         if (!pageData) {
           setPage(null);
         } else {
           setPage(pageData);
-          if (slug === "agenda") {
+          const agendaCategoryId = i18n.language === "fr" ? 14 : 51;
+          const isAgendaSlug = slug === "agenda" || slug === "schedule";
+          if (isAgendaSlug) {
             try {
               const res = await fetch(
-                "/wp-json/wp/v2/posts?categories=14&_embed&per_page=100&order=asc&orderby=date",
+                `https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-json/wp/v2/posts?categories=${agendaCategoryId}&_embed&per_page=100&order=asc&orderby=date&lang=${i18n.language}`,
               );
               const allPosts = await res.json();
               if (allPosts && Array.isArray(allPosts)) {
+                const timeLocale = i18n.language === "fr" ? "fr-FR" : "en-GB";
                 const formattedEvents = allPosts.map((post) => {
                   const categoriesData = post._embedded?.["wp:term"]?.[0] || [];
                   const dateOnly = post.date.split("T")[0];
@@ -98,12 +154,12 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                     contenu: post.content.rendered,
                     resume: truncate(stripHtml(excerpt), 180),
                     image: featured,
-                    heure: new Date(post.date).toLocaleTimeString("fr-FR", {
+                    heure: new Date(post.date).toLocaleTimeString(timeLocale, {
                       hour: "2-digit",
                       minute: "2-digit",
                     }),
                     lieu: "Marseille",
-                    subCategories: categoriesData.filter((cat) => cat.id !== 14),
+                    subCategories: categoriesData.filter((cat) => cat.id !== agendaCategoryId),
                   };
                 });
                 setAgendaItems(formattedEvents);
@@ -125,7 +181,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [slug, i18n.language]);
 
   const dateOptions = useMemo(() => {
     const unique = Array.from(new Set(agendaItems.map((item) => item.date)));
@@ -216,7 +272,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
       const result = await response.json();
 
       if (response.ok) {
-        alert("Message envoyé avec succès !");
+        alert("Message envoy� avec succ�s !");
         e.target.reset();
       } else {
         alert("Erreur : " + result.message);
@@ -242,20 +298,17 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     return <CallForProject page={page} />;
   }
 
-  if (slug === "accueil") {
+  if (slug === "accueil" || slug === "home") {
     return <Home page={page} />;
   }
 
-  if (slug === "jury") {
+  if (slug === "jury" || slug === "jury-eng") {
     return <JuryWpage page={page} />;
   }
 
-  if (slug === "cgv" || slug === "cgu") {
-    return <LegalPage page={page} variant={slug} />;
-  }
-
-  if (slug === "mentions-legales") {
-    return <LegalPage page={page} variant="mentions" />;
+  const legalVariant = legalVariantBySlug[slug];
+  if (legalVariant) {
+    return <LegalPage page={page} variant={legalVariant} />;
   }
 
   if (slug === "contact") {
@@ -425,7 +478,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                       Localisation
                     </p>
                     <p className="text-white/80 text-sm">
-                      École La Plateforme_, Marseille
+                      �cole La Plateforme_, Marseille
                     </p>
                   </div>
                 </div>
@@ -453,7 +506,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     );
   }
 
-  const isAgenda = slug === "agenda";
+  const isAgenda = slug === "agenda" || slug === "schedule";
   const selectedParts = selectedDate ? formatDateParts(selectedDate) : null;
 
   return (
@@ -601,9 +654,9 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                         onClick={() => setDatePage((prev) => Math.max(0, prev - 1))}
                         disabled={datePage === 0}
                         className="px-3 py-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                        aria-label="Dates précédentes"
+                        aria-label="Dates pr�c�dentes"
                       >
-                        Précédent
+                        Pr�c�dent
                       </button>
                       <span>
                         {datePage + 1} / {datePageCount}
@@ -667,7 +720,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                                     : "bg-cyan-500/20 text-cyan-100"
                                 }`}
                               >
-                                {eventCount} évènement
+                                {eventCount} �v�nement
                               </span>
                             ) : (
                               <span className="text-[8px] sm:text-[9px] uppercase tracking-widest text-white/50">
@@ -774,7 +827,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                           className="mt-4 text-xs font-bold uppercase tracking-widest text-cyan-200 hover:text-white"
                           style={{ fontFamily: "'Space Mono', monospace" }}
                         >
-                          Lire l'article ➙
+                          Lire l'article ?
                         </button>
                       </div>
                     ))
@@ -807,4 +860,3 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     </main>
   );
 }
-

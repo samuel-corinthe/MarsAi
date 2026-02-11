@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { CookiesProvider } from "react-cookie";
 import App from "./App.jsx";
+import "./i18n";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(

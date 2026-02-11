@@ -7,8 +7,10 @@
       "agenda": "Agenda",
       "callForProjects": "Appel à projet",
       "jury": "Jury",
+      "partners": "Partenaires",
       "more": "Plus",
-      "terms": "CGV & CGU",
+      "terms_gv": "CGV ",
+      "terms_gu": "CGU",
       "privacy": "Confidentialité",
       "legal": "Mentions légales",
       "examplePage": "Page d'exemple",
@@ -16,18 +18,30 @@
       "language": "Langue",
       "login": "Connexion",
       "submitFilm": "Déposer un film"
+    },
+    "footer": {
+      "description": "Le premier festival international dédié aux films créés avec l'intelligence artificielle. Une célébration de la créativité augmentée et de l'innovation cinématographique.",
+      "festival": "Festival",
+      "participate": "Participer",
+      "legal_title": "Légal",
+      "newsletter": "Newsletter",
+      "competition": "Films en compétition",
+      "privacy": "Politique de confidentialité",
+      "rights": "Tous droits réservés."
     }
   },
   "en": {
     "nav": {
       "home": "Home",
       "about": "About",
-      "films": "Films",
+      "films": "Movies",
       "agenda": "Schedule",
       "callForProjects": "Call for Projects",
       "jury": "Jury",
+      "partners": "Partners",
       "more": "More",
-      "terms": "Terms & Conditions",
+      "terms_gv": "T&Cs ",
+      "terms_gu": "GCU",
       "privacy": "Privacy",
       "legal": "Legal Notice",
       "examplePage": "Example Page",
@@ -35,6 +49,16 @@
       "language": "Language",
       "login": "Login",
       "submitFilm": "Submit a Film"
+    },
+    "footer": {
+      "description": "The first international festival dedicated to films created with artificial intelligence. A celebration of augmented creativity and cinematic innovation.",
+      "festival": "Festival",
+      "participate": "Participate",
+      "legal_title": "Legal",
+      "newsletter": "Newsletter",
+      "competition": "Movies in competition",
+      "privacy": "Privacy Policy",
+      "rights": "All rights reserved."
     }
   }
 }

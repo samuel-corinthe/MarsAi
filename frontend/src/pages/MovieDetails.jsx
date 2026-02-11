@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next"; // 1. Import du hook
 import { allMovies } from "../components/MoviesData";
 
 const MovieDetails = () => {
   const { id } = useParams();
+  const { t } = useTranslation(); // 2. Initialisation
 
   // --- ÉTATS ---
   const [isAdmin] = useState(true);
@@ -19,13 +21,13 @@ const MovieDetails = () => {
     return (
       <div className="min-h-screen bg-blue-950 text-white flex flex-col items-center justify-center p-6">
         <h1 className="text-3xl font-black mb-4 uppercase tracking-tighter">
-          Film non trouvé
+          {t("movie_details.not_found")}
         </h1>
         <Link
           to="/films"
           className="bg-cyan-500 text-blue-950 px-8 py-3 rounded-full font-bold uppercase tracking-widest hover:bg-cyan-400 transition-all"
         >
-          Retour à la galerie
+          {t("movie_details.back_to_gallery")}
         </Link>
       </div>
     );
@@ -84,7 +86,8 @@ const MovieDetails = () => {
                     key={g}
                     className="px-3 py-1 bg-cyan-500/20 border border-cyan-500/50 text-cyan-300 text-xs font-bold rounded-full uppercase tracking-wider"
                   >
-                    {g}
+                    {/* Traduction dynamique du genre */}
+                    {t(`genres.${g.toLowerCase()}`, g)}
                   </span>
                 ))}
               </div>
@@ -95,7 +98,9 @@ const MovieDetails = () => {
               <div className="flex justify-center md:justify-start items-center gap-6 text-slate-300 font-medium mb-10 text-lg">
                 <span className="flex items-center gap-2">
                   <span className="text-yellow-400 text-2xl">★</span>
-                  {officialRating ? `${officialRating}/5` : "N/A"}
+                  {officialRating
+                    ? `${officialRating}/5`
+                    : t("movie_details.na")}
                 </span>
                 <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></span>
                 <span>{movie.releaseDate}</span>
@@ -104,7 +109,7 @@ const MovieDetails = () => {
               </div>
 
               <button className="bg-cyan-500 hover:bg-cyan-400 text-blue-950 font-black px-12 py-5 rounded-2xl transition-all shadow-lg shadow-cyan-500/20 mx-auto md:mx-0 uppercase tracking-widest text-sm">
-                Regarder le Film
+                {t("movie_details.watch_movie")}
               </button>
             </div>
           </div>
@@ -115,12 +120,11 @@ const MovieDetails = () => {
       <section className="relative bg-white text-slate-800 rounded-t-[60px] md:rounded-t-[100px] -mt-12 z-20 pb-20">
         <div className="container mx-auto px-6 md:px-20 pt-20">
           <div className="grid lg:grid-cols-3 gap-16">
-            {/* Colonne Gauche */}
             <div className="lg:col-span-2">
               <div className="mb-12">
                 <h2 className="text-3xl font-black mb-6 flex items-center gap-3 uppercase tracking-tighter">
                   <span className="w-10 h-2 bg-blue-600 rounded-full"></span>{" "}
-                  Synopsis
+                  {t("movie_details.synopsis")}
                 </h2>
                 <p className="text-xl text-slate-600 leading-relaxed font-medium">
                   {movie.description}
@@ -131,7 +135,7 @@ const MovieDetails = () => {
               <div className="mb-12">
                 <h2 className="text-3xl font-black mb-6 flex items-center gap-3 uppercase tracking-tighter">
                   <span className="w-10 h-2 bg-cyan-500 rounded-full"></span>{" "}
-                  Stack IA
+                  {t("movie_details.ai_stack")}
                 </h2>
                 <div className="flex flex-wrap gap-3">
                   {movie.aiTools?.length > 0 ? (
@@ -145,7 +149,7 @@ const MovieDetails = () => {
                     ))
                   ) : (
                     <p className="text-slate-400 italic">
-                      Aucun outil IA spécifié.
+                      {t("movie_details.no_ai_tools")}
                     </p>
                   )}
                 </div>
@@ -155,7 +159,7 @@ const MovieDetails = () => {
               <div className="mb-12">
                 <h2 className="text-3xl font-black mb-8 flex items-center gap-3 uppercase tracking-tighter">
                   <span className="w-10 h-2 bg-blue-600 rounded-full"></span>{" "}
-                  Casting
+                  {t("movie_details.casting")}
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   {movie.cast?.map((p) => (
@@ -186,18 +190,20 @@ const MovieDetails = () => {
                 <div className="mt-16 p-8 bg-blue-950 rounded-[40px] flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl border border-white/10">
                   <div>
                     <p className="text-cyan-400 font-bold text-xs uppercase tracking-widest mb-1">
-                      Database Access
+                      {t("movie_details.admin_db_access")}
                     </p>
                     <h4 className="text-white font-black text-2xl uppercase tracking-tighter">
-                      Note :{" "}
-                      {officialRating ? `${officialRating}/5` : "Non noté"}
+                      {t("movie_details.admin_note")} :{" "}
+                      {officialRating
+                        ? `${officialRating}/5`
+                        : t("movie_details.admin_not_rated")}
                     </h4>
                   </div>
                   <button
                     onClick={openRatingModal}
                     className="bg-white text-blue-950 font-black px-10 py-4 rounded-2xl hover:bg-cyan-400 transition-all uppercase tracking-widest text-sm"
                   >
-                    Gérer la Note
+                    {t("movie_details.admin_manage_note")}
                   </button>
                 </div>
               )}
@@ -206,42 +212,31 @@ const MovieDetails = () => {
             {/* Colonne Droite : Fiche Technique */}
             <div className="bg-slate-50 rounded-[40px] p-8 border border-slate-100 h-fit shadow-sm">
               <h3 className="font-black text-blue-950 mb-8 uppercase text-sm tracking-[0.2em]">
-                Fiche Technique
+                {t("movie_details.tech_specs")}
               </h3>
               <div className="space-y-6">
-                <div className="flex flex-col border-b border-slate-200 pb-4">
-                  <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">
-                    Note Globale
-                  </span>
-                  <span className="font-bold text-blue-900 uppercase flex items-center gap-2">
-                    <span className="text-yellow-500 text-lg">★</span>
-                    {officialRating ? `${officialRating} / 5` : "N/A"}
-                  </span>
-                </div>
-                <div className="flex flex-col border-b border-slate-200 pb-4">
-                  <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">
-                    Réalisateur
-                  </span>
-                  <span className="font-bold text-blue-900 uppercase">
-                    {movie.director}
-                  </span>
-                </div>
-                <div className="flex flex-col border-b border-slate-200 pb-4">
-                  <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">
-                    Date de Sortie
-                  </span>
-                  <span className="font-bold text-blue-900 uppercase">
-                    {movie.releaseDate}
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">
-                    Durée
-                  </span>
-                  <span className="font-bold text-blue-900 uppercase">
-                    {movie.duration}
-                  </span>
-                </div>
+                <DetailRow
+                  label={t("movie_details.global_rating")}
+                  value={
+                    officialRating
+                      ? `${officialRating} / 5`
+                      : t("movie_details.na")
+                  }
+                  isStar
+                />
+                <DetailRow
+                  label={t("movie_details.director")}
+                  value={movie.director}
+                />
+                <DetailRow
+                  label={t("movie_details.release_date")}
+                  value={movie.releaseDate}
+                />
+                <DetailRow
+                  label={t("movie_details.duration")}
+                  value={movie.duration}
+                  last
+                />
               </div>
             </div>
           </div>
@@ -257,18 +252,14 @@ const MovieDetails = () => {
           ></div>
           <div className="relative bg-white rounded-[50px] p-12 w-full max-w-sm shadow-2xl text-center">
             <h3 className="text-3xl font-black text-blue-950 mb-8 uppercase tracking-tighter italic">
-              Évaluer
+              {t("movie_details.modal_title")}
             </h3>
             <div className="flex justify-center gap-3 mb-12">
               {[1, 2, 3, 4, 5].map((num) => (
                 <button
                   key={num}
                   onClick={() => setTempRating(num)}
-                  className={`w-12 h-14 rounded-2xl font-black text-2xl transition-all ${
-                    tempRating === num
-                      ? "bg-blue-600 text-white scale-110 shadow-xl"
-                      : "bg-slate-100 text-slate-300"
-                  }`}
+                  className={`w-12 h-14 rounded-2xl font-black text-2xl transition-all ${tempRating === num ? "bg-blue-600 text-white scale-110 shadow-xl" : "bg-slate-100 text-slate-300"}`}
                 >
                   {num}
                 </button>
@@ -282,14 +273,14 @@ const MovieDetails = () => {
                 }}
                 className="w-full py-5 bg-blue-950 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-800 transition-all"
               >
-                Confirmer
+                {t("movie_details.modal_confirm")}
               </button>
               {officialRating && (
                 <button
                   onClick={handleDeleteVote}
                   className="text-red-500 font-bold uppercase text-xs tracking-widest py-2"
                 >
-                  Supprimer la note
+                  {t("movie_details.modal_delete")}
                 </button>
               )}
             </div>
@@ -299,5 +290,20 @@ const MovieDetails = () => {
     </div>
   );
 };
+
+// Petit composant helper pour la fiche technique
+const DetailRow = ({ label, value, isStar, last }) => (
+  <div
+    className={`flex flex-col ${!last ? "border-b border-slate-200 pb-4" : ""}`}
+  >
+    <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">
+      {label}
+    </span>
+    <span className="font-bold text-blue-900 uppercase flex items-center gap-2">
+      {isStar && <span className="text-yellow-500 text-lg">★</span>}
+      {value}
+    </span>
+  </div>
+);
 
 export default MovieDetails;

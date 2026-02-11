@@ -32,6 +32,8 @@ export default function App() {
       <div className="flex-1">
         <Routes>
           <Route path="/" element={<WpPage isHome={true} />} />
+          <Route path="/accueil" element={<WpPage isHome={true} />} />
+          <Route path="/home" element={<WpPage isHome={true} />} />
           <Route path="/newsletter" element={<Newsletter />} />
           <Route path="/a-propos" element={<About />} />
           <Route path="/about" element={<About />} />
