@@ -42,6 +42,7 @@ const Navbar = () => {
 
   // Menu "Plus" (dropdown)
   const moreNav = [
+    { name: 'Partenaires', path: '/partenaires', id: 'partners' },
     { name: 'CGV', path: '/cgv', id: 'terms' },
     { name: 'CGU', path: '/cgu', id: 'terms' },
     { name: 'Mentions légales', path: '/mentions-legales', id: 'legal' },
