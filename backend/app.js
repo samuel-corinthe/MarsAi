@@ -1,14 +1,45 @@
-require("dotenv").config();
-const express = require("express");
-const cors = require("cors");
+import express from "express";
+import cors from "cors";
+import "dotenv/config";
+import multer from "multer";
+import { createRequire } from "node:module";
+import uploadRoutes from "./routes/upload.js";
+import altchaRoutes from "./routes/altcha.js";
+
+const require = createRequire(import.meta.url);
 const { validate } = require("deep-email-validator");
 const nodemailer = require("nodemailer");
 const SibApiV3Sdk = require("@getbrevo/brevo");
 
 const app = express();
+app.set("trust proxy", 1);
 
-app.use(cors({ origin: "http://localhost:5173", methods: ["POST"] }));
+const allowedOrigins = ["http://localhost:5173"];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  }),
+);
+
+const verifyOrigin = (req, res, next) => {
+  const origin = req.get("Origin") || req.get("Referer") || "";
+  const isAllowed = allowedOrigins.some((allowed) =>
+    origin.startsWith(allowed),
+  );
+
+  if (!isAllowed) {
+    return res.status(403).json({ error: "Origine non autorisee" });
+  }
+
+  return next();
+};
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Brevo Contacts API (newsletter)
 const apiInstance = new SibApiV3Sdk.ContactsApi();
@@ -35,12 +66,12 @@ app.post("/send-email", async (req, res) => {
   if (!name || !email || !subject || !message) {
     return res
       .status(400)
-      .json({ status: "error", message: "Tous les champs sont requis !" });
+      .json({ status: "error", message: "Tous les champs sont requis." });
   }
 
   try {
     const validateResult = await validate({
-      email: email,
+      email,
       validateRegex: true,
       validateMX: true,
       validateTypo: false,
@@ -66,9 +97,9 @@ app.post("/send-email", async (req, res) => {
 
     await transporter.sendMail(mailOptions);
 
-    res.status(200).json({
+    return res.status(200).json({
       status: "success",
-      message: "Message envoye avec succes via Brevo !",
+      message: "Message envoye avec succes via Brevo.",
     });
   } catch (error) {
     console.error("DETAILS DE L'ERREUR SMTP :");
@@ -76,7 +107,7 @@ app.post("/send-email", async (req, res) => {
     console.error("Message:", error.message);
     if (error.response) console.error("Reponse du serveur:", error.response);
 
-    res.status(500).json({
+    return res.status(500).json({
       status: "error",
       message: error.message,
     });
@@ -96,7 +127,7 @@ app.post("/subscribe-newsletter", async (req, res) => {
 
   try {
     const validateResult = await validate({
-      email: email,
+      email,
       validateRegex: true,
       validateMX: true,
       validateTypo: false,
@@ -111,7 +142,7 @@ app.post("/subscribe-newsletter", async (req, res) => {
     }
 
     try {
-      let contact = new SibApiV3Sdk.CreateContact();
+      const contact = new SibApiV3Sdk.CreateContact();
       contact.email = email;
       contact.attributes = {
         PRENOM: firstName,
@@ -140,19 +171,39 @@ app.post("/subscribe-newsletter", async (req, res) => {
 
     await transporter.sendMail(mailOptions);
 
-    res
+    return res
       .status(200)
       .json({ status: "success", message: "Inscription reussie !" });
   } catch (error) {
     console.error("Erreur generale:", error);
-    res.status(500).json({ status: "error", message: "Erreur serveur" });
+    return res.status(500).json({ status: "error", message: "Erreur serveur" });
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Serveur demarre sur http://localhost:${PORT}`);
-  console.log("Pret a envoyer des emails via Brevo.");
+app.use("/api/altcha", altchaRoutes);
+app.use("/api/upload", verifyOrigin, uploadRoutes);
+
+app.get("/", (req, res) => {
+  res.send("Serveur MarsAI operationnel");
 });
 
-module.exports = app;
+app.use((err, req, res, next) => {
+  console.error("[SERVEUR] Erreur:", err.message);
+
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res
+        .status(400)
+        .json({ error: "Le fichier est trop volumineux : max 300Mo" });
+    }
+    return res.status(400).json({ error: `Erreur d'upload : ${err.message}` });
+  }
+
+  if (err.message && err.message.startsWith("Type non autorise")) {
+    return res.status(400).json({ error: err.message });
+  }
+
+  return res.status(500).json({ error: "Erreur interne du serveur" });
+});
+
+export default app;

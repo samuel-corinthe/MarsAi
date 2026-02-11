@@ -17,6 +17,8 @@
     "@google/model-viewer": "^4.1.0",
     "@tailwindcss/typography": "^0.5.19",
     "@unhead/react": "^2.1.2",
+    "altcha": "^2.3.0",
+    "axios": "^1.13.4",
     "date-fns-tz": "^2.0.1",
     "i18next": "^25.8.4",
     "react": "^19.2.0",

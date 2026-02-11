@@ -7,6 +7,7 @@ import Newsletter from "./pages/Newsletter";
 import About from "./pages/About";
 import Partenaires from "./pages/Partenaires";
 import WpPage from "./pages/WpPage";
+import YoutubeUpload from "./pages/YoutubeUpload";
 import NotFound from "./pages/NotFound";
 import Gallery from "./pages/Gallery";
 import MovieDetails from "./pages/MovieDetails";
@@ -43,6 +44,9 @@ export default function App() {
           <Route path="/movie/:id" element={<MovieDetails />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/testcountdown" element={<TestCountdown />} />
+          <Route path="/deposer-un-film" element={<YoutubeUpload />} />
+          <Route path="/submit-film" element={<YoutubeUpload />} />
+          <Route path="/concours" element={<YoutubeUpload />} />
           <Route path="/:slug" element={<WpPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

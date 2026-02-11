@@ -2,20 +2,33 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
-  "license": "ISC",
-  "author": "",
-  "type": "commonjs",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
   "dependencies": {
     "@getbrevo/brevo": "^3.0.1",
+    "altcha-lib": "^1.4.1",
     "cors": "^2.8.6",
     "deep-email-validator": "^0.1.21",
+    "disposable-email-domains": "^1.0.62",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0",
+    "file-type": "^21.3.0",
+    "google-auth-library": "^10.5.0",
+    "googleapis": "^170.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.0.2",
     "nodemailer": "^7.0.13",
-    "notenv": "^2.0.3"
+    "notenv": "^2.0.3",
+    "open": "^11.0.0",
+    "validator": "^13.15.26"
   }
 }
