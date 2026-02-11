@@ -1,135 +1,123 @@
-import React, { useMemo, useState, useRef, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 
-export default function CallForProject({ page, article: initialArticle }) {
-  const [openModal, setOpenModal] = useState(false);
-  const [modalArticle, setModalArticle] = useState(null);
+export default function CallForProject({ page }) {
+  const [open, setOpen] = useState(false);
+  const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(false);
-  const abortRef = useRef(null);
-  const cacheRef = useRef(null);
 
-  const fetchArticle = useCallback(async () => {
-    if (cacheRef.current) {
-      setModalArticle(cacheRef.current);
-      return;
-    }
+  const openModal = async () => {
+    setOpen(true);
+
+    if (article) return;
 
     setLoading(true);
-    if (abortRef.current) abortRef.current.abort();
-    abortRef.current = new AbortController();
-
     try {
-      const res = await fetch(`/wp-json/wp/v2/posts?slug=appel&_fields=title,content`, { signal: abortRef.current.signal });
+      const res = await fetch(
+        "/wp-json/wp/v2/posts?slug=appel&_fields=title,content"
+      );
       const data = await res.json();
-      if (data?.[0]) {
-        cacheRef.current = data[0];
-        setModalArticle(data[0]);
-      }
-    } catch (e) {
-      if (e.name !== "AbortError") console.error(e);
+      setArticle(data?.[0] || null);
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    if (openModal && !modalArticle) fetchArticle();
-    return () => {
-      if (abortRef.current) abortRef.current.abort();
-    };
-  }, [openModal, fetchArticle]);
-
-  const mainPage = useMemo(() => {
-    const doc = new DOMParser().parseFromString(page?.content?.rendered || "", "text/html");
-    const lastA = doc.querySelector("a:last-of-type");
-    const btnText = lastA?.textContent?.trim() || "Login";
-    if (lastA) lastA.remove();
-    return { title: page?.title?.rendered || "Festival", listHtml: doc.body.innerHTML, btnText };
-  }, [page]);
+  };
 
   return (
-    <main className="min-h-screen bg-[#010409] text-slate-100 font-sans selection:bg-blue-500 selection:text-white">
-      
-      {/* BACKGROUND LAYER : Profondeur spatiale */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-blue-600/20 rounded-full blur-[140px] animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[5%] w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px]" />
-        {/* Grain de film pour le côté organique */}
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.15] contrast-150" />
-      </div>
+    <main className="relative min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white overflow-hidden">
 
-      <div className="relative z-10 max-w-6xl mx-auto px-6 py-12 md:py-24">
-        
-        {/* HEADER : Brutalisme & Lumière */}
-        <header className="relative mb-32 flex flex-col items-start md:items-center">
-          <div className="mb-4 flex items-center gap-2">
-            <span className="w-12 h-[1px] bg-blue-500"></span>
+      {/* 🌌 Glow background */}
+      <div className="absolute top-[-250px] left-[-250px] w-[700px] h-[700px] bg-blue-500/20 blur-[200px] rounded-full" />
+      <div className="absolute bottom-[-250px] right-[-250px] w-[700px] h-[700px] bg-indigo-400/20 blur-[200px] rounded-full" />
+
+      <div className="relative z-10 max-w-5xl mx-auto px-6 py-24">
+
+        {/* 🔷 BOX PRINCIPALE FESTIVAL */}
+        <div className="relative group">
+
+          {/* contour lumineux */}
+          <div className="absolute -inset-[2px] rounded-3xl bg-gradient-to-r from-blue-500 via-indigo-400 to-blue-600 opacity-60 blur-sm group-hover:opacity-100 transition duration-500" />
+
+          <div className="relative bg-blue-950/70 backdrop-blur-xl rounded-3xl border border-blue-400/30 p-14 shadow-[0_0_80px_rgba(59,130,246,0.25)]">
+
+            {/* Titre WP */}
+            <h1
+              className="text-6xl md:text-7xl font-black uppercase tracking-tight mb-8 bg-gradient-to-r from-white to-blue-300 bg-clip-text text-transparent"
+              dangerouslySetInnerHTML={{ __html: page?.title?.rendered }}
+            />
+
+            <div className="h-[3px] w-32 bg-gradient-to-r from-blue-400 to-indigo-400 mb-10" />
+
+            {/* Contenu WP */}
+            <div
+              className="prose prose-invert prose-lg max-w-none text-blue-100"
+              dangerouslySetInnerHTML={{ __html: page?.content?.rendered }}
+            />
+
+            {/* Bouton premium */}
+            <div className="mt-14">
+              <button
+                onClick={openModal}
+                className="relative px-12 py-5 uppercase font-bold tracking-widest rounded-xl bg-transparent border border-blue-400 text-blue-200 hover:text-white transition-all duration-300 group overflow-hidden"
+              >
+                <span className="relative z-10">Voir l'appel à projet</span>
+                <div className="absolute inset-0 bg-blue-600 opacity-0 group-hover:opacity-100 transition duration-300" />
+              </button>
+            </div>
+
           </div>
-          
-          <h1 className="text-7xl md:text-[10rem] font-[1000] leading-[0.8] tracking-tighter uppercase italic text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/20">
-            {mainPage.title}
-          </h1>
-        
-        </header>
-
-        {/* CONTENT CARD : Le "Monolithe" */}
-        <div className="relative group max-w-3xl mx-auto">
-          {/* Lueur de contour */}
-          <div className="absolute -inset-px bg-gradient-to-b from-blue-500/50 to-transparent rounded-[2rem] opacity-50 group-hover:opacity-100 transition duration-500" />
-          
-          <section className="relative bg-[#0d1117]/80 backdrop-blur-xl rounded-[2rem] p-12 md:p-20 shadow-[0_40px_100px_rgba(0,0,0,0.5)] overflow-hidden">
-            {/* Décor interne */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full" />
-            
-            <div className="relative prose prose-invert max-w-none 
-                            prose-li:list-none prose-li:p-0 prose-li:mb-8
-                            prose-li:flex prose-li:items-start prose-li:gap-6
-                            prose-li:before:content-['→'] prose-li:before:text-blue-500 prose-li:before:font-bold prose-li:before:text-xl
-                            prose-li:text-2xl prose-li:font-medium prose-li:tracking-tight prose-li:text-slate-200"
-               dangerouslySetInnerHTML={{ __html: mainPage.listHtml }} />
-
-            {/* ACTION : Le bouton "Void" */}
-            <button 
-              onClick={() => setOpenModal(true)}
-              className="mt-16 group relative w-full h-20 flex items-center justify-center bg-white text-black font-black uppercase tracking-[0.4em] text-xs transition-all hover:bg-blue-600 hover:text-white"
-            >
-              <span className="relative z-10">{mainPage.btnText}</span>
-              <div className="absolute inset-0 bg-blue-600 scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-500" />
-            </button>
-          </section>
         </div>
       </div>
 
-      {/* MODAL : Full-Screen Experience */}
-      {openModal && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#010409]/95 backdrop-blur-3xl animate-in fade-in duration-500">
-          <button 
-            onClick={() => setOpenModal(false)}
-            className="absolute top-10 right-10 text-white/50 hover:text-white transition-all group"
-          >
-            <span className="text-[10px] tracking-[0.5em] uppercase mr-4 opacity-0 group-hover:opacity-100 transition-all">Close</span>
-            <span className="text-4xl font-light">/</span>
-          </button>
+      {/* 🔷 MODAL FESTIVAL PREMIUM */}
+      {open && (
+        <div className="fixed inset-0 z-50 bg-blue-950/95 backdrop-blur-2xl flex items-center justify-center p-10 animate-fadeIn">
 
-          <div className="w-full max-w-5xl px-10 overflow-y-auto custom-scrollbar h-full py-32">
-            {loading ? (
-              <div className="h-full flex items-center justify-center font-mono text-xs tracking-[1em] uppercase animate-pulse">Synchronisation...</div>
-            ) : modalArticle ? (
-              <article className="flex flex-col md:flex-row gap-20">
-                <div className="flex-1">
-                  <h2 className="text-5xl md:text-8xl font-black uppercase leading-none tracking-tighter mb-10">
-                    {modalArticle?.title?.rendered}
-                  </h2>
-                  <div className="h-2 w-32 bg-blue-600" />
+          <div className="relative w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+
+            {/* contour glow */}
+            <div className="absolute -inset-[2px] rounded-3xl bg-gradient-to-r from-blue-400 via-indigo-400 to-blue-600 blur-sm opacity-70" />
+
+            <div className="relative bg-gradient-to-br from-blue-900 to-indigo-950 rounded-3xl border border-blue-400/30 p-16 shadow-[0_0_100px_rgba(59,130,246,0.3)]">
+
+              <button
+                onClick={() => setOpen(false)}
+                className="absolute top-6 right-6 text-blue-300 hover:text-white text-2xl transition"
+              >
+                ✕
+              </button>
+
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-20">
+                  <div className="w-12 h-12 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mb-6"></div>
+                  <p className="uppercase tracking-widest text-blue-300">
+                    Chargement...
+                  </p>
                 </div>
-                
-                <div className="flex-[1.5] prose prose-invert prose-xl 
-                                prose-p:text-slate-400 prose-p:leading-relaxed 
-                                prose-strong:text-blue-500"
-                     dangerouslySetInnerHTML={{ __html: modalArticle?.content?.rendered }} />
-              </article>
-            ) : (
-              <div className="h-full flex items-center justify-center font-mono text-xs tracking-[1em] uppercase text-slate-500">Article introuvable</div>
-            )}
+              ) : article ? (
+                <>
+                  <h2
+                    className="text-5xl md:text-6xl font-extrabold mb-8 uppercase bg-gradient-to-r from-white to-blue-300 bg-clip-text text-transparent"
+                    dangerouslySetInnerHTML={{
+                      __html: article.title.rendered,
+                    }}
+                  />
+
+                  <div className="h-[3px] w-40 bg-gradient-to-r from-blue-400 to-indigo-400 mb-10" />
+
+                  <div
+                    className="prose prose-invert prose-lg max-w-none text-blue-100"
+                    dangerouslySetInnerHTML={{
+                      __html: article.content.rendered,
+                    }}
+                  />
+                </>
+              ) : (
+                <p className="text-blue-300">Article introuvable</p>
+              )}
+
+            </div>
           </div>
         </div>
       )}
