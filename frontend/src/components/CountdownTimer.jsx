@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
-import { format as formatDate, utcToZonedTime } from "date-fns-tz";
+import * as tz from "date-fns-tz";
 import { fr } from "date-fns/locale";
 import useMultiPhaseCountdown from "../hooks/useMultiPhaseCountdown";
 
@@ -29,7 +29,8 @@ const UserLocalTime = ({ utcDate, showLabel = true }) => {
 
   const localTime = useMemo(() => {
     try {
-      return utcToZonedTime(utcDate, userTimezone);
+      const toZonedTime = tz.utcToZonedTime ?? tz.toZonedTime;
+      return toZonedTime ? toZonedTime(utcDate, userTimezone) : new Date(utcDate);
     } catch (error) {
       console.error("Erreur de conversion timezone:", error);
       return new Date(utcDate);
@@ -38,7 +39,7 @@ const UserLocalTime = ({ utcDate, showLabel = true }) => {
 
   const formattedTime = useMemo(() => {
     try {
-      return formatDate(localTime, "PPpp", { locale: fr });
+      return tz.format(localTime, "PPpp", { locale: fr });
     } catch (error) {
       console.error("Erreur de formatage:", error);
       return localTime.toLocaleString();

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { utcToZonedTime } from "date-fns-tz";
+import * as tz from "date-fns-tz";
 
 /*
 but du hook
@@ -15,14 +15,15 @@ important pour les tests
 
 const ZERO = { days: 0, hours: 0, minutes: 0, seconds: 0 };
 
-const normalizeTarget = (target, tz) => {
+const normalizeTarget = (target, tzName) => {
   // si c est deja un Date on le garde
   if (target instanceof Date) return target;
 
   // si c est une string iso on converti en date timezone
-  // utcToZonedTime renvoi une date utilisable pour la diff
+  // utcToZonedTime (v2) / toZonedTime (v3) renvoi une date utilisable pour la diff
   try {
-    return utcToZonedTime(target, tz);
+    const toZonedTime = tz.utcToZonedTime ?? tz.toZonedTime;
+    return toZonedTime ? toZonedTime(target, tzName) : new Date(target);
   } catch (e) {
     return new Date(target);
   }
