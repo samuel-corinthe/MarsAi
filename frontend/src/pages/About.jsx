@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { getPageBySlug } from "../api";
 import { useTranslation } from "react-i18next";
+import Seo from "../components/Seo";
 
 const About = () => {
   const { t, i18n } = useTranslation();
@@ -33,8 +34,15 @@ const About = () => {
     );
   }
 
+  const seoTitle =
+    wpContent?.title?.rendered || t("about.defaultTitle") || "A propos";
+  const seoDescription =
+    wpContent?.excerpt?.rendered || wpContent?.content?.rendered || t("about.description");
+
   return (
-    <div className="flex flex-col bg-blue-950 text-white min-h-screen relative selection:bg-cyan-500/30">
+    <>
+      <Seo title={seoTitle} description={seoDescription} />
+      <div className="flex flex-col bg-blue-950 text-white min-h-screen relative selection:bg-cyan-500/30">
       <section className="relative overflow-hidden w-full">
         <div className="relative pt-20 pb-10">
           <div className="absolute top-20 left-0 w-3/4 md:w-1/2 h-28 bg-white rounded-r-full shadow-[0_0_30px_rgba(59,130,246,0.4)] flex items-center pl-10 md:pl-20 z-10">
@@ -155,7 +163,8 @@ const About = () => {
           </a>
         </div>
       </section>
-    </div>
+      </div>
+    </>
   );
 };
 

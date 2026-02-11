@@ -1,6 +1,7 @@
-ï»¿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import Seo from "../components/Seo";
 import { getPageBySlug } from "../api";
 import Home from "./Home";
 import JuryWpage from "./jury";
@@ -272,7 +273,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
       const result = await response.json();
 
       if (response.ok) {
-        alert("Message envoyÃ© avec succÃ¨s !");
+        alert("Message envoyé avec succès !");
         e.target.reset();
       } else {
         alert("Erreur : " + result.message);
@@ -293,6 +294,10 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     );
   }
   if (!page) return <NotFound />;
+
+  const seoTitle = page?.title?.rendered || slug;
+  const seoDescription = page?.excerpt?.rendered || page?.content?.rendered || "";
+  const seoLang = i18n.language;
   
   if (slug === "appel-a-projet") {
     return <CallForProject page={page} />;
@@ -314,6 +319,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   if (slug === "contact") {
     return (
       <main className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white relative overflow-hidden">
+        <Seo title={seoTitle} description={seoDescription} lang={seoLang} />
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-32 -right-24 w-72 h-72 bg-cyan-500/10 blur-3xl rounded-full"></div>
           <div className="absolute top-40 -left-24 w-72 h-72 bg-purple-500/10 blur-3xl rounded-full"></div>
@@ -478,7 +484,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                       Localisation
                     </p>
                     <p className="text-white/80 text-sm">
-                      Ã©cole La Plateforme_, Marseille
+                      école La Plateforme_, Marseille
                     </p>
                   </div>
                 </div>
@@ -517,6 +523,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
           : "min-h-screen bg-[#fcfcfc] text-[#333] p-4 md:p-12"
       }
     >
+      <Seo title={seoTitle} description={seoDescription} lang={seoLang} />
       {isAgenda && (
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-32 -right-24 w-72 h-72 bg-cyan-500/10 blur-3xl rounded-full"></div>
@@ -654,9 +661,9 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                         onClick={() => setDatePage((prev) => Math.max(0, prev - 1))}
                         disabled={datePage === 0}
                         className="px-3 py-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                        aria-label="Dates prÃ©cÃ©dentes"
+                        aria-label="Dates précédentes"
                       >
-                        PrÃ©cÃ©dent
+                        Précédent
                       </button>
                       <span>
                         {datePage + 1} / {datePageCount}
@@ -720,7 +727,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                                     : "bg-cyan-500/20 text-cyan-100"
                                 }`}
                               >
-                                {eventCount} Ã©vÃ¨nement
+                                {eventCount} évènement
                               </span>
                             ) : (
                               <span className="text-[8px] sm:text-[9px] uppercase tracking-widest text-white/50">
@@ -860,3 +867,5 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     </main>
   );
 }
+
+

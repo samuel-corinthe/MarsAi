@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { getVideoMetadata, validateVideoFrontend, VIDEO_CONSTRAINTS } from '../utils/videoValidation';
 import { validateForm, FORM_CONSTRAINTS, exceedsMaxLength } from '../utils/formvalidation';
+import Seo from "../components/Seo";
 import 'altcha';
 
 export default function YoutubeUpload() {
@@ -198,6 +199,8 @@ export default function YoutubeUpload() {
     };
 
     return (
+        <>
+        <Seo title="Soumettre un film" description="Page de soumission de film MarsAI." />
         <div className="section app-container py-12">
             <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
                 <div className="bg-slate-900 p-8 text-white">
@@ -621,5 +624,6 @@ export default function YoutubeUpload() {
                 </form>
             </div>
         </div>
+        </>
     );
 }

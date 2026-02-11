@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next"; // 1. Import du hook
 import { allMovies } from "../components/MoviesData";
+import Seo from "../components/Seo";
 
 const MovieDetails = () => {
   const { id } = useParams();
@@ -19,19 +20,29 @@ const MovieDetails = () => {
   // Sécurité si le film n'existe pas
   if (!movie) {
     return (
-      <div className="min-h-screen bg-blue-950 text-white flex flex-col items-center justify-center p-6">
-        <h1 className="text-3xl font-black mb-4 uppercase tracking-tighter">
-          {t("movie_details.not_found")}
-        </h1>
-        <Link
-          to="/films"
-          className="bg-cyan-500 text-blue-950 px-8 py-3 rounded-full font-bold uppercase tracking-widest hover:bg-cyan-400 transition-all"
-        >
-          {t("movie_details.back_to_gallery")}
-        </Link>
-      </div>
+      <>
+        <Seo
+          title={t("movie_details.not_found")}
+          description={t("movie_details.back_to_gallery")}
+          noIndex
+        />
+        <div className="min-h-screen bg-blue-950 text-white flex flex-col items-center justify-center p-6">
+          <h1 className="text-3xl font-black mb-4 uppercase tracking-tighter">
+            {t("movie_details.not_found")}
+          </h1>
+          <Link
+            to="/films"
+            className="bg-cyan-500 text-blue-950 px-8 py-3 rounded-full font-bold uppercase tracking-widest hover:bg-cyan-400 transition-all"
+          >
+            {t("movie_details.back_to_gallery")}
+          </Link>
+        </div>
+      </>
     );
   }
+
+  const seoTitle = movie.title;
+  const seoDescription = movie.description;
 
   const openRatingModal = () => {
     setTempRating(officialRating || 0);
@@ -44,7 +55,9 @@ const MovieDetails = () => {
   };
 
   return (
-    <div className="min-h-screen bg-blue-950 text-white font-sans relative">
+    <>
+      <Seo title={seoTitle} description={seoDescription} />
+      <div className="min-h-screen bg-blue-950 text-white font-sans relative">
       {/* BOUTON RETOUR */}
       <Link
         to="/films"
@@ -287,7 +300,8 @@ const MovieDetails = () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

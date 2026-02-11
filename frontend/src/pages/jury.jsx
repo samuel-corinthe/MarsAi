@@ -6,6 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import { useTranslation } from "react-i18next";
+import Seo from "../components/Seo";
 
 // --- Helpers ---
 const createSlug = (text, lang = "fr") => {
@@ -151,8 +152,16 @@ export default function JuryWpage({ page }) {
 
   const title = page?.title?.rendered || t("jury.jury_title");
 
+  const seoTitle = page?.title?.rendered || t("jury.jury_title");
+  const seoDescription = t(
+    "jury.jury_subtitle",
+    "Rencontrez les experts visionnaires de notre selection officielle.",
+  );
+
   return (
-    <main className="min-h-screen w-full bg-[#0f172a] text-white font-['Montserrat'] flex flex-col items-center py-20 px-4 relative overflow-x-hidden selection:bg-[#38bdf8] selection:text-[#0f172a]">
+    <>
+      <Seo title={seoTitle} description={seoDescription} />
+      <main className="min-h-screen w-full bg-[#0f172a] text-white font-['Montserrat'] flex flex-col items-center py-20 px-4 relative overflow-x-hidden selection:bg-[#38bdf8] selection:text-[#0f172a]">
       <Background />
 
       <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 mix-blend-overlay pointer-events-none z-[60]"></div>
@@ -273,6 +282,7 @@ export default function JuryWpage({ page }) {
           </div>
         )}
       </div>
-    </main>
+      </main>
+    </>
   );
 }

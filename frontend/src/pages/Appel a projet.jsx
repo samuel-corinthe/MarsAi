@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Seo from "../components/Seo";
 
 export default function CallForProject({ page }) {
   const [open, setOpen] = useState(false);
@@ -24,8 +25,13 @@ export default function CallForProject({ page }) {
     }
   };
 
+  const seoTitle = page?.title?.rendered || "Appel a projet";
+  const seoDescription = page?.excerpt?.rendered || page?.content?.rendered || "";
+
   return (
-    <main className="relative min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white overflow-hidden">
+    <>
+      <Seo title={seoTitle} description={seoDescription} />
+      <main className="relative min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white overflow-hidden">
 
       {/* 🌌 Glow background */}
       <div className="absolute top-[-250px] left-[-250px] w-[700px] h-[700px] bg-blue-500/20 blur-[200px] rounded-full" />
@@ -121,6 +127,7 @@ export default function CallForProject({ page }) {
           </div>
         </div>
       )}
-    </main>
+      </main>
+    </>
   );
 }

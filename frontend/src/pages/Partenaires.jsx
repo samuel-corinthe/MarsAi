@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getPageBySlug } from "../api";
 import NotFound from "./NotFound";
+import Seo from "../components/Seo";
 
 export default function Partenaires() {
   const { t, i18n } = useTranslation();
@@ -50,8 +51,14 @@ export default function Partenaires() {
 
   if (!page) return <NotFound />;
 
+  const seoTitle = page?.title?.rendered || t("nav.partners");
+  const seoDescription =
+    page?.excerpt?.rendered || page?.content?.rendered || t("partners.subtitle");
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <>
+      <Seo title={seoTitle} description={seoDescription} />
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* En-tête avec titre dynamique (WordPress) et labels traduits */}
       <div className="bg-gradient-to-r from-blue-600 via-blue-500 to-blue-700 py-16 shadow-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -111,6 +118,7 @@ export default function Partenaires() {
           </div>
         </div>
       </div>
-    </main>
+      </main>
+    </>
   );
 }

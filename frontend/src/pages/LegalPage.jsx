@@ -1,4 +1,5 @@
-﻿import { useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import Seo from "../components/Seo";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -157,7 +158,9 @@ export default function LegalPage({ page, variant = "cgv" }) {
   const lastUpdated = formatDate(page?.modified || page?.date, locale);
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <>
+      <Seo title={page?.title?.rendered || "Mentions legales"} description={page?.excerpt?.rendered || page?.content?.rendered} />
+      <div className="min-h-screen bg-black text-white">
       <div className="relative overflow-hidden bg-gradient-to-br from-black via-gray-900 to-black border-b border-gray-800">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30"></div>
 
@@ -294,12 +297,15 @@ export default function LegalPage({ page, variant = "cgv" }) {
           padding-left: 1.25rem;
         }
         .legal-content li::before {
-          content: "•";
+          content: "�";
           position: absolute;
           left: 0;
           color: var(--accent-color);
         }
       `}</style>
-    </div>
+      </div>
+    </>
   );
 }
+
+

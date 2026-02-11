@@ -1,5 +1,6 @@
 import React from "react";
 import CountdownTimer from "../components/CountdownTimer";
+import Seo from "../components/Seo";
 
 const TestCountdown = () => {
   const now = new Date();
@@ -26,7 +27,9 @@ const TestCountdown = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4">
+    <>
+      <Seo title="Test Countdown" description="Page de test du compte a rebours." noIndex />
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4">
       <div className="max-w-4xl w-full space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-white mb-2">
@@ -57,7 +60,8 @@ const TestCountdown = () => {
           Relancer le test
         </button>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

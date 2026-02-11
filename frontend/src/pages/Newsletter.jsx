@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Seo from "../components/Seo";
 
 const Newsletter = () => {
   const [formData, setFormData] = useState({
@@ -137,7 +138,12 @@ const Newsletter = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-black">
+    <>
+      <Seo
+        title="Newsletter"
+        description="Inscription a la newsletter marsAI et mises a jour du festival."
+      />
+      <div className="min-h-screen bg-black">
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 px-4 overflow-hidden">
         {/* Gradient Background */}
@@ -523,7 +529,8 @@ const Newsletter = () => {
           animation: fadeIn 0.5s ease-out forwards;
         }
       `}</style>
-    </div>
+      </div>
+    </>
   );
 };
 

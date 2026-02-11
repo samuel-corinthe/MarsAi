@@ -1,11 +1,14 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next"; // 1. Import
+import Seo from "../components/Seo";
 
 const NotFound = () => {
   const { t } = useTranslation(); // 2. Initialisation
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4 py-20">
+    <>
+      <Seo title="Page introuvable" description={t("not_found.description")} noIndex />
+      <div className="min-h-screen bg-black flex items-center justify-center px-4 py-20">
       <div className="max-w-4xl w-full text-center space-y-8">
         {/* Animated 404 */}
         <div className="relative">
@@ -91,7 +94,8 @@ const NotFound = () => {
           </Link>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

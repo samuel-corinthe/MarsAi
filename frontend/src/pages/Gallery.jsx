@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next"; // Import de i18n
 import { allMovies } from "../components/MoviesData";
+import Seo from "../components/Seo";
 
 const Gallery = () => {
   const { t, i18n } = useTranslation(); // Initialisation de la traduction
@@ -74,8 +75,16 @@ const Gallery = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const seoTitle = t("nav.films", "Films");
+  const seoDescription = t(
+    "gallery.top_movies_subtitle",
+    "Decouvrez les films selectionnes du festival marsAI.",
+  );
+
   return (
-    <div className="min-h-screen bg-blue-950 flex flex-col font-sans text-slate-800">
+    <>
+      <Seo title={seoTitle} description={seoDescription} />
+      <div className="min-h-screen bg-blue-950 flex flex-col font-sans text-slate-800">
       {/* --- HERO SECTION --- */}
       <section className="relative w-full pb-36 md:pb-40 pt-10">
         <div className="absolute inset-0 bg-gradient-to-b from-blue-900/80 to-blue-950"></div>
@@ -293,7 +302,8 @@ const Gallery = () => {
           </div>
         </div>
       </section>
-    </div>
+      </div>
+    </>
   );
 };
 

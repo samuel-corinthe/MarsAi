@@ -1,5 +1,7 @@
 import React, { useMemo } from "react";
 import HomeModelViewer from "../components/HomeModelViewer";
+import Seo from "../components/Seo";
+import { OrganizationSchema, EventSchema } from "../components/Schema";
 
 export default function Home({ page }) {
   const modelSrc =
@@ -88,8 +90,16 @@ export default function Home({ page }) {
     return { title: page?.title?.rendered || "", heroLead, heroLinks, aboutTitle, aboutText, articles };
   }, [page]);
 
+  const seoTitle = page?.title?.rendered || parsed.title || "Accueil";
+  const seoDescription =
+    parsed.heroLead || page?.excerpt?.rendered || page?.content?.rendered || "";
+
   return (
-    <main className="w-full overflow-hidden bg-[#0f172a] text-white font-['Montserrat']">
+    <>
+      <Seo title={seoTitle} description={seoDescription} />
+      <OrganizationSchema />
+      <EventSchema />
+      <main className="w-full overflow-hidden bg-[#0f172a] text-white font-['Montserrat']">
 
       {/* Texture Grain - Opacité réduite pour ne pas géner la lecture */}
       <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 mix-blend-overlay pointer-events-none z-[60]"></div>
@@ -198,6 +208,7 @@ export default function Home({ page }) {
         /* Focus visible pour l'accessibilité clavier */
         a:focus { outline: 3px solid #38bdf8; outline-offset: 4px; border-radius: 4px; }
       `}</style>
-    </main>
+      </main>
+    </>
   );
 }

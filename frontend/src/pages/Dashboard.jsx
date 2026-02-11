@@ -1,4 +1,5 @@
-Ôªøimport { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import Seo from "../components/Seo";
 import { Link } from "react-router-dom";
 import { getAdminDashboardData } from "../api";
 
@@ -44,7 +45,8 @@ function SparkLine({ data, stroke = "#f6c452" }) {
           points={`${points} 100,60 0,60`}
         />
       </svg>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -63,7 +65,8 @@ function DonutSplit({ accepted, pending, rejected }) {
         <div className="text-xs text-slate-100/85">Statuts</div>
         <div className="font-semibold">{accepted}/{total}</div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -75,7 +78,8 @@ function ProgressBar({ label, value, color }) {
         <div className="bar-fill" style={{ width: `${Math.min(value, 100)}%`, background: color }} />
       </div>
       <div className="text-xs font-semibold">{Math.round(value)}%</div>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -91,7 +95,7 @@ function Pill({ children, tone = "pink", active = false, onClick }) {
 
 function FilmRow({ film }) {
   const badgeColor =
-    film.status === "accept√©" || film.status === "s√©lectionn√©"
+    film.status === "acceptÈ" || film.status === "sÈlectionnÈ"
       ? "bg-emerald-500/20 text-emerald-200"
       : film.status === "en cours"
         ? "bg-amber-400/15 text-amber-200"
@@ -111,13 +115,13 @@ function FilmRow({ film }) {
             <span className="text-xs text-slate-300/90">{film.phase}</span>
           </div>
           <div className="mt-1 text-xs text-slate-200/90">
-            <span>{film.country}</span> ¬∑ <span>{film.duration}</span> ¬∑{" "}
+            <span>{film.country}</span> ∑ <span>{film.duration}</span> ∑{" "}
             <span className="text-slate-300/90">{film.tools}</span>
           </div>
         </div>
         <div className="flex items-center justify-between gap-3 md:justify-end">
           <div className="text-sm text-slate-100">
-            <span className="font-semibold">{ratingLabel}</span> ‚òÖ
+            <span className="font-semibold">{ratingLabel}</span> ?
             <span className="text-xs text-slate-300/80"> ({film.notesCount})</span>
           </div>
           <div className="flex gap-2">
@@ -133,7 +137,8 @@ function FilmRow({ film }) {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -207,7 +212,7 @@ export default function Dashboard() {
   }
 
   if (!adminData) {
-    return <div className="app-container page">Aucune donn√©e admin disponible.</div>;
+    return <div className="app-container page">Aucune donnÈe admin disponible.</div>;
   }
 
   const {
@@ -227,7 +232,7 @@ export default function Dashboard() {
   const quotaTarget = selectionTarget || adminKpis.quota || 0;
 
   if (!phaseTimeline?.length) {
-    return <div className="app-container page">Aucune phase configur√©e.</div>;
+    return <div className="app-container page">Aucune phase configurÈe.</div>;
   }
 
   const effectiveUser = currentUser ?? adminData.currentUser;
@@ -266,7 +271,7 @@ export default function Dashboard() {
     if (filters.status !== "tous" && film.status !== filters.status) return false;
     if (filters.country !== "tous" && film.country !== filters.country) return false;
     if (filters.phase !== "toutes" && film.phase !== filters.phase) return false;
-    if (filters.note === "‚â• 4" && film.rating < 4) return false;
+    if (filters.note === "= 4" && film.rating < 4) return false;
     if (filters.note === "3 - 4" && (film.rating < 3 || film.rating >= 4)) return false;
     if (filters.note === "< 3" && film.rating >= 3) return false;
     return true;
@@ -318,7 +323,9 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="dash-page">
+    <>
+      <Seo title="Dashboard" description="Espace administration marsAI." noIndex />
+      <div className="dash-page">
       <div className="dash-shell dash-layout">
         <div className="flex gap-5 items-start">
           {/* Sidebar desktop */}
@@ -341,16 +348,16 @@ export default function Dashboard() {
           <div className="flex-1 space-y-8">
         <header id="admin-top" className="glass p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <div className="pill pill-pink">Festival IA ¬∑ cockpit</div>
+            <div className="pill pill-pink">Festival IA ∑ cockpit</div>
             <h1 className="dash-title mt-3 text-white">Dashboard Admin & Super Admin</h1>
             <p className="dash-subtitle text-slate-100/90">
-              Vue unifi√©e : juger les films, piloter les r√®gles et la gouvernance du festival.
+              Vue unifiÈe : juger les films, piloter les rËgles et la gouvernance du festival.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Pill tone="cyan">Quota {quotaTarget}</Pill>
             <Pill tone="amber">Phase : {currentPhase.label}</Pill>
-            <Pill>Tra√ßabilit√© active</Pill>
+            <Pill>TraÁabilitÈ active</Pill>
           </div>
         </header>
 
@@ -362,7 +369,7 @@ export default function Dashboard() {
                 <div className="pill pill-cyan">Profil admin</div>
                 <h2 className="text-xl font-semibold mt-2 text-white">{profilePreview.name}</h2>
                 <p className="text-sm text-slate-100/80">
-                  R√¥le actuel : {profilePreview.role === "superadmin" ? "Super admin" : "Admin"} ‚Äî statut {profilePreview.status}.
+                  RÙle actuel : {profilePreview.role === "superadmin" ? "Super admin" : "Admin"} ó statut {profilePreview.status}.
                 </p>
               </div>
               <span
@@ -404,7 +411,7 @@ export default function Dashboard() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-slate-100/90">
-                T√©l√©phone
+                TÈlÈphone
                 <input
                   className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-300"
                   value={effectiveProfile.phone}
@@ -430,7 +437,7 @@ export default function Dashboard() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-slate-100/90">
-                R√¥le
+                RÙle
                 <select
                   className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white focus:outline-none focus:border-cyan-300"
                   value={effectiveProfile.role}
@@ -446,7 +453,7 @@ export default function Dashboard() {
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-sm text-slate-100/90">
-                R√©gion
+                RÈgion
                 <input
                   className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-300"
                   value={effectiveProfile.region}
@@ -468,7 +475,7 @@ export default function Dashboard() {
                   className="btn-ghost px-4 py-2 rounded-lg border border-white/10"
                   onClick={() => setProfileForm(effectiveUser)}
                 >
-                  R√©initialiser
+                  RÈinitialiser
                 </button>
               {isSuperAdmin && <span className="pill pill-amber">Super admin : peut changer de phase</span>}
             </div>
@@ -493,7 +500,7 @@ export default function Dashboard() {
               <div className="bar-fill" style={{ width: `${phaseProgress}%` }} />
             </div>
             <div className="text-xs text-slate-100/85">
-              S√©lection : {currentPhase.selected}/{quotaTarget} vis√©s ¬∑ Films d√©pos√©s : {currentPhase.submitted}
+              SÈlection : {currentPhase.selected}/{quotaTarget} visÈs ∑ Films dÈposÈs : {currentPhase.submitted}
             </div>
             <div className="bar-track h-2">
               <div
@@ -505,7 +512,7 @@ export default function Dashboard() {
               />
             </div>
             <div className="text-xs text-slate-100/75">
-              Progression s√©lection : {Math.round(selectionProgress)}%
+              Progression sÈlection : {Math.round(selectionProgress)}%
             </div>
             <div className="flex gap-2 flex-wrap">
               <button
@@ -513,13 +520,13 @@ export default function Dashboard() {
                 disabled={!isSuperAdmin || !nextPhase}
                 onClick={handleNextPhase}
               >
-                Passer √† {nextPhase ? nextPhase.label : "la derni√®re phase"}
+                Passer ‡ {nextPhase ? nextPhase.label : "la derniËre phase"}
               </button>
               <button
                 className="btn-ghost px-4 py-2 rounded-lg border border-white/10"
                 onClick={() => setCurrentPhaseIndex(0)}
               >
-                Revenir au d√©p√¥t
+                Revenir au dÈpÙt
               </button>
             </div>
             {!isSuperAdmin && (
@@ -545,25 +552,25 @@ export default function Dashboard() {
                   cursor: adminKpis.selected >= adminKpis.quota ? "not-allowed" : "pointer",
                 }}
               >
-                Ajouter √† la s√©lection ({adminKpis.selected}/{adminKpis.quota})
+                Ajouter ‡ la sÈlection ({adminKpis.selected}/{adminKpis.quota})
               </button>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="stat-card glass-strong">
-                <div className="kpi-label text-slate-100">Films not√©s par vous</div>
+                <div className="kpi-label text-slate-100">Films notÈs par vous</div>
                 <div className="kpi-value">{adminKpis.noted}</div>
                 <div className="kpi-trend text-emerald-300">+4 cette semaine</div>
                 <SparkLine data={[2, 5, 4, 7, 6, 9, 8]} stroke="#25d0ff" />
               </div>
               <div className="stat-card">
-                <div className="kpi-label text-slate-100">Restants √† voir</div>
+                <div className="kpi-label text-slate-100">Restants ‡ voir</div>
                 <div className="kpi-value">{adminKpis.remaining}</div>
                 <div className="kpi-trend text-amber-200">Prioriser aujourd'hui</div>
                 <SparkLine data={[9, 8, 7, 6, 5, 4, 4]} stroke="#f6c452" />
               </div>
               <div className="stat-card">
-                <div className="kpi-label text-slate-100">S√©lection officielle</div>
+                <div className="kpi-label text-slate-100">SÈlection officielle</div>
                 <div className="kpi-value">
                   {adminKpis.selected}/{adminKpis.quota}
                 </div>
@@ -622,8 +629,8 @@ export default function Dashboard() {
             {/* Film list */}
             <div className="list-card space-y-3" data-testid="films-list">
               <div className="flex items-center justify-between text-xs text-slate-300/80">
-                <span>Films affich√©s : {filteredFilms.length}</span>
-                <span>Tri : par d√©faut</span>
+                <span>Films affichÈs : {filteredFilms.length}</span>
+                <span>Tri : par dÈfaut</span>
               </div>
               {filteredFilms.map((film) => (
                 <FilmRow key={film.title} film={film} />
@@ -640,16 +647,16 @@ export default function Dashboard() {
               <DonutSplit accepted={2} pending={2} rejected={1} />
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-cyan-300" /> accept√©s (2)
+                  <span className="w-3 h-3 rounded-full bg-cyan-300" /> acceptÈs (2)
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-amber-300" /> En cours (2)
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-rose-300" /> refus√©s (1)
+                  <span className="w-3 h-3 rounded-full bg-rose-300" /> refusÈs (1)
                 </div>
                 <p className="text-xs text-slate-100/80">
-                  Vue perso bas√©e sur vos notations.
+                  Vue perso basÈe sur vos notations.
                 </p>
               </div>
             </div>
@@ -657,12 +664,12 @@ export default function Dashboard() {
             <div className="glass p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Retards de notation</h3>
-                <span className="pill pill-amber">Priorit√©</span>
+                <span className="pill pill-amber">PrioritÈ</span>
               </div>
               <ul className="space-y-2 text-sm text-slate-200">
                 <li>4 films en attente depuis 72h</li>
                 <li>2 films proches de la deadline (48h)</li>
-                <li>Quota {quotaTarget} : {adminKpis.selected}/{quotaTarget} utilis√©s</li>
+                <li>Quota {quotaTarget} : {adminKpis.selected}/{quotaTarget} utilisÈs</li>
               </ul>
               <div className="bar-track">
                 <div className="bar-fill" style={{ width: `${selectionRatio}%` }} />
@@ -674,7 +681,7 @@ export default function Dashboard() {
                 <h3 className="font-semibold">Vos indicateurs</h3>
                 <span className="text-xs text-slate-100/80">Auto-refresh 5 min</span>
               </div>
-              <ProgressBar label="Notes d√©pos√©es" value={68} color="linear-gradient(90deg,#25d0ff,#f6c452)" />
+              <ProgressBar label="Notes dÈposÈes" value={68} color="linear-gradient(90deg,#25d0ff,#f6c452)" />
               <ProgressBar label="Commentaires" value={54} color="linear-gradient(90deg,#f2438b,#25d0ff)" />
               <ProgressBar label="Visionnage" value={72} color="linear-gradient(90deg,#f6c452,#f2438b)" />
             </div>
@@ -688,15 +695,15 @@ export default function Dashboard() {
               <div className="pill pill-pink">Espace super admin</div>
               <h2 className="text-2xl font-semibold mt-2">Pilotage & gouvernance</h2>
               <p className="dash-subtitle text-slate-100/90">
-                Comptes, phases, r√®gles m√©tier, logs et newsletter ‚Äî tout au m√™me endroit.
+                Comptes, phases, rËgles mÈtier, logs et newsletter ó tout au mÍme endroit.
               </p>
             </div>
-            <button className="btn-primary rounded-full px-4 py-2">Cr√©er un admin</button>
+            <button className="btn-primary rounded-full px-4 py-2">CrÈer un admin</button>
           </div>
 
           <div className="grid gap-4 md:grid-cols-4">
             <div className="stat-card glass-strong">
-              <div className="kpi-label text-slate-100">Films d√©pos√©s</div>
+              <div className="kpi-label text-slate-100">Films dÈposÈs</div>
               <div className="kpi-value">{superStats.films}</div>
               <div className="kpi-trend text-cyan-200">+12 vs hier</div>
             </div>
@@ -713,7 +720,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="stat-card">
-              <div className="kpi-label text-slate-100">Compte √† rebours</div>
+              <div className="kpi-label text-slate-100">Compte ‡ rebours</div>
               <div className="kpi-value text-xl">{superStats.countdown}</div>
               <SparkLine data={[5, 4, 3, 3, 2, 1, 0]} stroke="#25d0ff" />
             </div>
@@ -723,7 +730,7 @@ export default function Dashboard() {
             <div className="list-card space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Gestion des comptes</h3>
-                <span className="pill pill-cyan">R√¥les</span>
+                <span className="pill pill-cyan">RÙles</span>
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
@@ -738,11 +745,11 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-semibold">L√©a</div>
+                    <div className="font-semibold">LÈa</div>
                     <div className="text-xs text-slate-200/90">Admin - Europe</div>
                   </div>
                   <div className="flex gap-2">
-                    <button className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10">D√©sactiver</button>
+                    <button className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10">DÈsactiver</button>
                     <button className="btn-primary px-3 py-1.5 rounded-lg">Promouvoir</button>
                   </div>
                 </div>
@@ -752,7 +759,7 @@ export default function Dashboard() {
                     <div className="text-xs text-slate-200/90">Admin - Asie</div>
                   </div>
                   <div className="flex gap-2">
-                    <button className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10">D√©sactiver</button>
+                    <button className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10">DÈsactiver</button>
                     <button className="btn-primary px-3 py-1.5 rounded-lg">Promouvoir</button>
                   </div>
                 </div>
@@ -761,26 +768,26 @@ export default function Dashboard() {
 
             <div className="list-card space-y-3" id="phases">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Phases & r√®gles</h3>
-                <span className="pill pill-amber">Dates cl√©s</span>
+                <h3 className="font-semibold">Phases & rËgles</h3>
+                <span className="pill pill-amber">Dates clÈs</span>
               </div>
               <ul className="space-y-2 text-sm">
-                <li>üì• D√©p√¥t : jusqu'au 28 f√©v 2026</li>
-                <li>üßë‚Äç‚öñÔ∏è S√©lection : 1 mars ‚Üí 14 mars 2026</li>
-                <li>üì¢ Annonce publique : 20 mars 2026</li>
+                <li>?? DÈpÙt : jusqu'au 28 fÈv 2026</li>
+                <li>????? SÈlection : 1 mars ? 14 mars 2026</li>
+                <li>?? Annonce publique : 20 mars 2026</li>
               </ul>
               <div className="bar-track">
                 <div className="bar-fill" style={{ width: `${superStats.phasesProgress}%` }} />
               </div>
-              <button className="btn-primary w-full mt-2 rounded-lg">Modifier les r√®gles (quota {quotaTarget}, notation)</button>
+              <button className="btn-primary w-full mt-2 rounded-lg">Modifier les rËgles (quota {quotaTarget}, notation)</button>
             </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
             <div className="list-card space-y-3 md:col-span-2" id="logs">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Logs & s√©curit√©</h3>
-                <span className="pill pill-pink">Tra√ßabilit√©</span>
+                <h3 className="font-semibold">Logs & sÈcuritÈ</h3>
+                <span className="pill pill-pink">TraÁabilitÈ</span>
               </div>
               <ul className="space-y-2 text-sm">
                 {logs.map((item) => (
@@ -802,10 +809,10 @@ export default function Dashboard() {
                 <span className="pill pill-cyan">1 423 inscrits</span>
               </div>
               <p className="text-sm text-slate-200">
-                Export rapide pour annonce finale. Validation RGPD et opt-in d√©j√† effectu√©s.
+                Export rapide pour annonce finale. Validation RGPD et opt-in dÈj‡ effectuÈs.
               </p>
               <button className="btn-primary w-full rounded-lg">Exporter emails</button>
-              <button className="btn-ghost w-full rounded-lg border border-white/10">Voir abonn√©s</button>
+              <button className="btn-ghost w-full rounded-lg border border-white/10">Voir abonnÈs</button>
             </div>
           </div>
         </section>
@@ -848,9 +855,12 @@ export default function Dashboard() {
         </div>
 
       </div>
-    </div>
+      </div>
+    </>
   );
 }
+
+
 
 
 
