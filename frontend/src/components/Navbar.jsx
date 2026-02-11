@@ -35,10 +35,10 @@ const Navbar = () => {
     { name: t("nav.agenda"), path: "/agenda", id: "agenda" },
     { name: t("nav.callForProjects"), path: "/appel-a-projet", id: "call" },
     { name: t("nav.jury"), path: "/jury", id: "jury" },
+    { name: t("nav.partners"), path: "/partenaires", id: "partners" },
   ];
 
   const moreNav = [
-    { name: t("nav.partners"), path: "/partenaires", id: "partners" },
     { name: t("nav.terms_gv"), path: "/cgv", id: "terms_gv" },
     { name: t("nav.terms_gu"), path: "/cgu", id: "terms_gu" },
     { name: t("nav.legal"), path: "/mentions-legales", id: "legal" },
@@ -228,7 +228,7 @@ const Navbar = () => {
                   onClick={() => i18n.changeLanguage("fr")}
                   className={`text-sm ${i18n.language === "fr" ? "text-cyan-400" : "text-gray-500"}`}
                 >
-                  Français
+                  FranÃ§ais
                 </button>
                 <button
                   onClick={() => i18n.changeLanguage("en")}

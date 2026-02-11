@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const VARIANTS = {
   cgv: {
@@ -26,7 +27,7 @@ const VARIANTS = {
       "#34d399",
       "#60a5fa",
     ],
-    otherLink: { path: "/cgu", label: "Voir les CGU" },
+    otherLink: { path: "/cgu", labelKey: "legal.viewCgu" },
   },
   cgu: {
     badge: "bg-purple-500/10 border-purple-500/30",
@@ -56,7 +57,7 @@ const VARIANTS = {
       "#818cf8",
       "#f43f5e",
     ],
-    otherLink: { path: "/cgv", label: "Voir les CGV" },
+    otherLink: { path: "/cgv", labelKey: "legal.viewCgv" },
   },
   mentions: {
     badge: "bg-amber-500/10 border-amber-500/30",
@@ -82,7 +83,7 @@ const VARIANTS = {
       "#818cf8",
       "#f43f5e",
     ],
-    otherLink: { path: "/cgu", label: "Voir les CGU" },
+    otherLink: { path: "/cgu", labelKey: "legal.viewCgu" },
   },
 };
 
@@ -127,10 +128,10 @@ const parseSections = (html) => {
   return sections;
 };
 
-const formatDate = (value) => {
+const formatDate = (value, locale) => {
   if (!value) return "";
   try {
-    return new Date(value).toLocaleDateString("fr-FR", {
+    return new Date(value).toLocaleDateString(locale, {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -142,6 +143,7 @@ const formatDate = (value) => {
 
 export default function LegalPage({ page, variant = "cgv" }) {
   const config = VARIANTS[variant] || VARIANTS.cgv;
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -151,7 +153,8 @@ export default function LegalPage({ page, variant = "cgv" }) {
     () => parseSections(page?.content?.rendered),
     [page?.content?.rendered],
   );
-  const lastUpdated = formatDate(page?.modified || page?.date);
+  const locale = i18n.language === "fr" ? "fr-FR" : "en-GB";
+  const lastUpdated = formatDate(page?.modified || page?.date, locale);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -171,7 +174,7 @@ export default function LegalPage({ page, variant = "cgv" }) {
                   className={`text-sm font-medium tracking-wider ${config.badgeText}`}
                   style={{ fontFamily: "'Space Mono', monospace" }}
                 >
-                  DOCUMENTS LÉGAUX
+                  {t("legal.badge")}
                 </span>
               </div>
             </div>
@@ -180,7 +183,7 @@ export default function LegalPage({ page, variant = "cgv" }) {
               className="text-6xl md:text-8xl font-black text-transparent bg-gradient-to-r from-white via-gray-300 to-gray-500 bg-clip-text leading-tight"
               style={{ fontFamily: "'Bebas Neue', sans-serif" }}
               dangerouslySetInnerHTML={{
-                __html: page?.title?.rendered || "Document légal",
+                __html: page?.title?.rendered || t("legal.defaultTitle"),
               }}
             />
 
@@ -188,7 +191,7 @@ export default function LegalPage({ page, variant = "cgv" }) {
               className="text-xl text-gray-400 max-w-2xl leading-relaxed"
               style={{ fontFamily: "'Inter', sans-serif" }}
             >
-              {lastUpdated ? `Dernière mise à jour : ${lastUpdated}` : ""}
+              {lastUpdated ? t("legal.lastUpdated", { date: lastUpdated }) : ""}
             </p>
           </div>
         </div>
@@ -261,7 +264,7 @@ export default function LegalPage({ page, variant = "cgv" }) {
                   d="M10 19l-7-7m0 0l7-7m-7 7h18"
                 />
               </svg>
-              <span>Retour à l'accueil</span>
+              <span>{t("legal.backHome")}</span>
             </Link>
 
             <Link
@@ -269,7 +272,7 @@ export default function LegalPage({ page, variant = "cgv" }) {
               className={config.buttonClass}
               style={{ fontFamily: "'Inter', sans-serif" }}
             >
-              {config.otherLink.label}
+              {t(config.otherLink.labelKey)}
             </Link>
           </div>
         </div>

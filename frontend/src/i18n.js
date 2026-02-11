@@ -6,7 +6,7 @@ i18n.use(initReactI18next).init({
   resources: {
     fr: {
       translation: {
-        ...navbarTranslations.fr.nav,
+        nav: navbarTranslations.fr.nav,
         footer: navbarTranslations.fr.footer,
         loading: "Chargement...",
         prev: "Précédent",
@@ -74,6 +74,14 @@ i18n.use(initReactI18next).init({
             "Vous souhaitez nous accompagner dans notre aventure ? Rejoignez nos partenaires et participez à un projet innovant.",
           cta_button: "Nous contacter",
         },
+        legal: {
+          badge: "DOCUMENTS LÉGAUX",
+          lastUpdated: "Dernière mise à jour : {{date}}",
+          backHome: "Retour à l'accueil",
+          viewCgv: "Voir les CGV",
+          viewCgu: "Voir les CGU",
+          defaultTitle: "Document légal",
+        },
         about: {
           loading: "Chargement...",
           defaultTitle: "À propos",
@@ -96,7 +104,7 @@ i18n.use(initReactI18next).init({
     },
     en: {
       translation: {
-        ...navbarTranslations.en.nav,
+        nav: navbarTranslations.en.nav,
         footer: navbarTranslations.en.footer,
         loading: "Loading...",
         prev: "Prev",
@@ -163,6 +171,14 @@ i18n.use(initReactI18next).init({
           cta_text:
             "Want to join us in our adventure? Join our partners and take part in an innovative project.",
           cta_button: "Contact us",
+        },
+        legal: {
+          badge: "LEGAL DOCUMENTS",
+          lastUpdated: "Last updated: {{date}}",
+          backHome: "Back to home",
+          viewCgv: "View T&Cs",
+          viewCgu: "View Terms of Use",
+          defaultTitle: "Legal document",
         },
         about: {
           loading: "Loading database...",

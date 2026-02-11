@@ -14,6 +14,7 @@ const Footer = () => {
         { name: t("nav.agenda"), path: "/agenda" },
         { name: t("footer.newsletter"), path: "/newsletter" },
         { name: t("nav.jury"), path: "/jury" },
+        { name: t("nav.partners"), path: "/partenaires" },
       ],
     },
     participer: {
@@ -177,7 +178,7 @@ const Footer = () => {
         <div className="border-t border-gray-900 py-6">
           <div className="flex items-center justify-center text-sm text-gray-500">
             <p style={{ fontFamily: "'Inter', sans-serif" }}>
-              © {currentYear} marsAI Festival. {t("footer.rights")}
+              @ {currentYear} marsAI Festival. {t("footer.rights")}
             </p>
           </div>
         </div>
