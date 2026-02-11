@@ -177,6 +177,15 @@ i18n.use(initReactI18next).init({
           error: "Échec de la vérification",
           expired: "Délai expiré, veuillez réessayer",
         },
+
+        projects: {
+          main_title: "Appel à projets",
+          view_call: "Voir l'appel à projet",
+          not_found: "Article introuvable",
+        },
+        common: {
+          loading: "Chargement...",
+        },
       },
     },
     en: {
@@ -349,6 +358,15 @@ i18n.use(initReactI18next).init({
           verified: "Verified",
           error: "Verification failed",
           expired: "Challenge expired, please try again",
+        },
+
+        projects: {
+          main_title: "Call for projects",
+          view_call: "View call for projects",
+          not_found: "Article not found",
+        },
+        common: {
+          loading: "Loading...",
         },
       },
     },
