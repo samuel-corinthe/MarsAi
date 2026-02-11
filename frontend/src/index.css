@@ -1,18 +1,21 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
-:root{
+/* =========================
+   Root
+========================= */
+:root {
   --lp-bg: 210 40% 98%;
   --lp-surface: 0 0% 100%;
   --lp-text: 222 22% 12%;
   --lp-muted: 215 16% 47%;
   --lp-border: 214 20% 90%;
 
-  --lp-accent: 158 84% 39%; 
-  --lp-accent-2: 222 84% 56%; 
+  --lp-accent: 158 84% 39%;
+  --lp-accent-2: 222 84% 56%;
 
   --lp-radius: 1.25rem;
-  --lp-shadow: 0 12px 30px rgba(2, 6, 23, .08);
+  --lp-shadow: 0 12px 30px rgba(2, 6, 23, 0.08);
 
   /* dashboard dark theme */
   --dash-bg-1: #0c0f26;
@@ -28,9 +31,16 @@
   --dash-shadow: 0 20px 80px rgba(0,0,0,0.35);
 }
 
+/* =========================
+   Base
+========================= */
 @layer components {
-  .app-container { @apply mx-auto w-full max-w-6xl px-4; }
-  .page { @apply py-10 md:py-12; }
+  .app-container {
+    @apply mx-auto w-full max-w-6xl px-4;
+  }
+  .page {
+    @apply py-10 md:py-12;
+  }
 
   .topbar {
     @apply sticky top-0 z-50 border-b border-slate-200 bg-white/70 backdrop-blur;
@@ -42,30 +52,77 @@
     box-shadow: var(--lp-shadow);
   }
 
-  .card-pad { @apply p-5 md:p-7; }
+  .card-pad {
+    @apply p-5 md:p-7;
+  }
 
-  .section { @apply py-10 md:py-14; }
-  .section-title { @apply text-2xl md:text-3xl font-semibold tracking-tight; }
-  .section-subtitle { @apply mt-2 text-slate-600 md:text-lg; }
-
+  /* sections */
+  .section {
+    @apply py-10 md:py-14;
+  }
+  .section-title {
+    @apply text-2xl md:text-3xl font-semibold tracking-tight;
+  }
+  .section-subtitle {
+    @apply mt-2 text-slate-600 md:text-lg;
+  }
 
   .btn-primary {
     @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition;
     background: hsl(var(--lp-accent));
     color: white;
   }
-  .btn-primary:hover { filter: brightness(.95); }
+  .btn-primary:hover {
+    filter: brightness(0.95);
+  }
 
   .btn-ghost {
     @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition;
     @apply hover:bg-slate-100 text-slate-900;
   }
 
-  .navlink { @apply text-sm font-medium text-slate-600 hover:text-slate-900 transition; }
+  /* liens */
+  .navlink {
+    @apply text-sm font-medium text-slate-600 hover:text-slate-900 transition;
+  }
 
-  .richtext { @apply prose prose-slate max-w-none; }
-  .richtext :where(a) { color: hsl(var(--lp-accent)); @apply underline underline-offset-4; }
-  .richtext :where(h2, h3) { @apply scroll-mt-24; }
+  /* WP rich text */
+  .richtext {
+    @apply prose prose-slate max-w-none;
+  }
+  .richtext :where(a) {
+    color: hsl(var(--lp-accent));
+    @apply underline underline-offset-4;
+  }
+  .richtext :where(h2, h3) {
+    @apply scroll-mt-24;
+  }
+
+  /* WP content pour About page */
+  .wp-content-about {
+    @apply text-gray-300;
+  }
+  .wp-content-about :where(p) {
+    @apply mb-4 leading-relaxed border-l-4 border-cyan-500 pl-6;
+  }
+  .wp-content-about :where(h2) {
+    @apply text-2xl md:text-3xl font-bold text-white mt-6 mb-4;
+  }
+  .wp-content-about :where(h3) {
+    @apply text-xl md:text-2xl font-semibold text-cyan-400 mt-4 mb-3;
+  }
+  .wp-content-about :where(a) {
+    @apply text-cyan-400 hover:text-cyan-300 underline underline-offset-4 transition;
+  }
+  .wp-content-about :where(ul, ol) {
+    @apply ml-6 space-y-2;
+  }
+  .wp-content-about :where(li) {
+    @apply text-gray-300;
+  }
+  .wp-content-about :where(strong) {
+    @apply text-cyan-400 font-semibold;
+  }
 }
 
 /* =========================

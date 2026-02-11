@@ -6,9 +6,9 @@ import JuryWpage from "./jury";
 import NotFound from "./NotFound";
 import LegalPage from "./LegalPage";
 
-export default function WpPage({ isHome = false }) {
+export default function WpPage({ isHome = false, fixedSlug = null }) {
   const { slug: routeSlug } = useParams();
-  const slug = isHome ? "accueil" : routeSlug;
+  const slug = fixedSlug || (isHome ? "accueil" : routeSlug);
 
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);

@@ -42,3 +42,4 @@ $RECYCLE.BIN/
 coverage/
 *.tmp
 *.temp
+upload-notifications.json

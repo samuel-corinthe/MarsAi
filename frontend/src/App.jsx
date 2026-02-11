@@ -4,6 +4,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CookieModal from "./components/CookieModal";
 import Newsletter from "./pages/Newsletter";
+import About from "./pages/About";
 import WpPage from "./pages/WpPage";
 import NotFound from "./pages/NotFound";
 import Gallery from "./pages/Gallery";
@@ -31,6 +32,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<WpPage isHome={true} />} />
           <Route path="/newsletter" element={<Newsletter />} />
+          <Route path="/a-propos" element={<About />} />
+          <Route path="/about" element={<About />} />
           <Route path="/films" element={<Gallery />} />
           <Route path="/films/:slug" element={<FilmDetails />} />
           <Route path="/movie/:id" element={<MovieDetails />} />
