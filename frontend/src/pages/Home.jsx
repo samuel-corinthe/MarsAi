@@ -91,10 +91,10 @@ export default function Home({ page }) {
   return (
     <main className="w-full overflow-hidden bg-[#0f172a] text-white font-['Montserrat']">
 
-      {/* Texture Grain - Opacité réduite pour ne pas gêner la lecture */}
+      {/* Texture Grain - OpacitÃ© rÃ©duite pour ne pas gÃ©ner la lecture */}
       <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 mix-blend-overlay pointer-events-none z-[60]"></div>
 
-      {/* --- HERO (Accessibilité : Contraste élevé) --- */}
+      {/* --- HERO (AccessibilitÃ© : Contraste Ã©levÃ©) --- */}
       <section className="relative min-h-[85vh] flex items-center justify-center text-center px-6 pt-16 md:pt-20 pb-20">
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-[#1e293b] via-[#0f172a] to-[#0f172a] z-0" />
         <div className="relative z-20 max-w-4xl mx-auto">
@@ -110,7 +110,7 @@ export default function Home({ page }) {
           <div className="mt-12 flex flex-col sm:flex-row gap-6 justify-center">
             {parsed.heroLinks.map((l, i) => (
               <a key={i} href={l.href}
-                 aria-label={`Accéder à ${l.text}`}
+                 aria-label={`AccÃ©der Ã  ${l.text}`}
                  className="px-12 py-5 rounded-full bg-[#38bdf8] text-[#0f172a] font-black uppercase tracking-widest text-[12px] hover:bg-white transition-colors shadow-lg">
                 {l.text}
               </a>
@@ -135,7 +135,7 @@ export default function Home({ page }) {
         />
       </section>
 
-      {/* --- ABOUT (Plus clair pour la lecture prolongée) --- */}
+      {/* --- ABOUT (Plus clair pour la lecture prolongÃ©e) --- */}
       {(parsed.aboutTitle || parsed.aboutText) && (
         <section className="relative py-24 md:py-40 bg-[#0f172a]">
           <div className="max-w-5xl mx-auto px-10">
@@ -152,7 +152,7 @@ export default function Home({ page }) {
                 <div className="aspect-square rounded-3xl bg-[#0f172a] border border-[#334155] overflow-hidden shadow-inner">
                    <img src="https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=2059"
                         className="w-full h-full object-cover filter contrast-[1.1]"
-                        alt="Illustration de la section à propos" />
+                        alt="Illustration de la section Ã  propos" />
                 </div>
               </div>
             </div>
@@ -160,12 +160,12 @@ export default function Home({ page }) {
         </section>
       )}
 
-      {/* --- NEWS (Cartes plus contrastées et aérées) --- */}
+      {/* --- NEWS (Cartes plus contrastÃ©es et aÃ©rÃ©es) --- */}
       {parsed.articles.length > 0 && (
         <section className="relative py-20 md:py-32 bg-[#0f172a]">
           <div className="max-w-4xl mx-auto px-10 md:px-4">
             <h3 className="text-2xl md:text-4xl font-black uppercase tracking-[0.4em] text-[#38bdf8] mb-24 text-center">
-              Actualités
+              ActualitÃ©s
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16 md:gap-12 justify-items-center">
               {parsed.articles.slice(0, 6).map((a, i) => (
@@ -195,7 +195,7 @@ export default function Home({ page }) {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;900&display=swap');
         body { background-color: #0f172a; color: #ffffff; }
-        /* Focus visible pour l'accessibilité clavier */
+        /* Focus visible pour l'accessibilitÃ© clavier */
         a:focus { outline: 3px solid #38bdf8; outline-offset: 4px; border-radius: 4px; }
       `}</style>
     </main>

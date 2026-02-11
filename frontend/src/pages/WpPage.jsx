@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getPageBySlug } from "../api";
@@ -272,7 +272,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
       const result = await response.json();
 
       if (response.ok) {
-        alert("Message envoy� avec succ�s !");
+        alert("Message envoyé avec succès !");
         e.target.reset();
       } else {
         alert("Erreur : " + result.message);
@@ -478,7 +478,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                       Localisation
                     </p>
                     <p className="text-white/80 text-sm">
-                      �cole La Plateforme_, Marseille
+                      école La Plateforme_, Marseille
                     </p>
                   </div>
                 </div>
@@ -654,9 +654,9 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                         onClick={() => setDatePage((prev) => Math.max(0, prev - 1))}
                         disabled={datePage === 0}
                         className="px-3 py-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                        aria-label="Dates pr�c�dentes"
+                        aria-label="Dates précédentes"
                       >
-                        Pr�c�dent
+                        Précédent
                       </button>
                       <span>
                         {datePage + 1} / {datePageCount}
@@ -720,7 +720,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                                     : "bg-cyan-500/20 text-cyan-100"
                                 }`}
                               >
-                                {eventCount} �v�nement
+                                {eventCount} évènement
                               </span>
                             ) : (
                               <span className="text-[8px] sm:text-[9px] uppercase tracking-widest text-white/50">
