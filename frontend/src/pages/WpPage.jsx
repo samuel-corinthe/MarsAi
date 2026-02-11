@@ -5,6 +5,7 @@ import Home from "./Home";
 import JuryWpage from "./jury";
 import NotFound from "./NotFound";
 import LegalPage from "./LegalPage";
+import CallForProject from "./Appel a projet";
 
 export default function WpPage({ isHome = false, fixedSlug = null }) {
   const { slug: routeSlug } = useParams();
@@ -236,6 +237,10 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     );
   }
   if (!page) return <NotFound />;
+  
+  if (slug === "appel-a-projet") {
+    return <CallForProject page={page} />;
+  }
 
   if (slug === "accueil") {
     return <Home page={page} />;
