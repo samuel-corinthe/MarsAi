@@ -2,13 +2,15 @@ import express from "express";
 import cors from "cors";
 import "dotenv/config";
 import multer from "multer";
+import dns from "node:dns/promises";
 import { createRequire } from "node:module";
+import validator from "validator";
 import uploadRoutes from "./routes/upload.js";
 import altchaRoutes from "./routes/altcha.js";
 import moviesRoutes from "./routes/movies.js";
 
 const require = createRequire(import.meta.url);
-const { validate } = require("deep-email-validator");
+const disposableDomains = require("disposable-email-domains");
 const nodemailer = require("nodemailer");
 const SibApiV3Sdk = require("@getbrevo/brevo");
 
@@ -42,6 +44,31 @@ const verifyOrigin = (req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+const disposableSet = new Set(disposableDomains);
+
+async function validateEmail(email) {
+  if (!validator.isEmail(email)) {
+    return { valid: false, reason: "regex" };
+  }
+
+  const domain = email.split("@")[1];
+
+  if (disposableSet.has(domain)) {
+    return { valid: false, reason: "disposable" };
+  }
+
+  try {
+    const mxRecords = await dns.resolveMx(domain);
+    if (!mxRecords || mxRecords.length === 0) {
+      return { valid: false, reason: "mx" };
+    }
+  } catch {
+    return { valid: false, reason: "mx" };
+  }
+
+  return { valid: true };
+}
+
 // Brevo Contacts API (newsletter)
 const apiInstance = new SibApiV3Sdk.ContactsApi();
 apiInstance.setApiKey(
@@ -58,6 +85,9 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.MAIL_PASS,
   },
+  tls: {
+    rejectUnauthorized: false,
+  },
 });
 
 // Contact form (page contact)
@@ -71,14 +101,7 @@ app.post("/send-email", async (req, res) => {
   }
 
   try {
-    const validateResult = await validate({
-      email,
-      validateRegex: true,
-      validateMX: true,
-      validateTypo: false,
-      validateDisposable: true,
-      validateSMTP: false,
-    });
+    const validateResult = await validateEmail(email);
 
     if (!validateResult.valid) {
       return res.status(400).json({
@@ -127,14 +150,7 @@ app.post("/subscribe-newsletter", async (req, res) => {
   }
 
   try {
-    const validateResult = await validate({
-      email,
-      validateRegex: true,
-      validateMX: true,
-      validateTypo: false,
-      validateDisposable: true,
-      validateSMTP: false,
-    });
+    const validateResult = await validateEmail(email);
 
     if (!validateResult.valid) {
       return res
