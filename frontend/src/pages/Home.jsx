@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import HomeModelViewer from "../components/HomeModelViewer";
 import Seo from "../components/Seo";
-import { OrganizationSchema, EventSchema } from "../components/Schema";
+import { OrganizationSchema, EventSchema, WebSiteSchema } from "../components/Schema"; // ← AJOUT WebSiteSchema
 
 export default function Home({ page }) {
   const modelSrc =
@@ -99,6 +99,7 @@ export default function Home({ page }) {
       <Seo title={seoTitle} description={seoDescription} />
       <OrganizationSchema />
       <EventSchema />
+      <WebSiteSchema /> {/* ← AJOUT */}
       <main className="w-full overflow-hidden bg-[#0f172a] text-white font-['Montserrat']">
 
       {/* Texture Grain - Opacité réduite pour ne pas géner la lecture */}
