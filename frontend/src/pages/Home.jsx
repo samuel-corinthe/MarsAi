@@ -5,7 +5,7 @@ import { OrganizationSchema, EventSchema } from "../components/Schema";
 
 export default function Home({ page }) {
   const modelSrc =
-    import.meta.env.VITE_HOME_MODEL_URL ||
+    import.meta.env.VITE_HOME_MODEL_URL || 
     `${import.meta.env.BASE_URL}models/walking_robot_mr.glb`;
   const modelPoster = import.meta.env.VITE_HOME_MODEL_POSTER_URL || "";
   const parsed = useMemo(() => {

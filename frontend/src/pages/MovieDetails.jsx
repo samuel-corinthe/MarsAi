@@ -1,23 +1,21 @@
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useTranslation } from "react-i18next"; // 1. Import du hook
+import { useTranslation } from "react-i18next";
 import { allMovies } from "../components/MoviesData";
 import Seo from "../components/Seo";
+import { MovieSchema, BreadcrumbSchema } from "../components/Schema"; 
 
 const MovieDetails = () => {
   const { id } = useParams();
-  const { t } = useTranslation(); // 2. Initialisation
+  const { t } = useTranslation();
 
-  // --- ÉTATS ---
   const [isAdmin] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [officialRating, setOfficialRating] = useState(4);
   const [tempRating, setTempRating] = useState(0);
 
-  // Recherche du film par ID
   const movie = allMovies.find((m) => m.id === parseInt(id));
 
-  // Sécurité si le film n'existe pas
   if (!movie) {
     return (
       <>
@@ -44,6 +42,20 @@ const MovieDetails = () => {
   const seoTitle = movie.title;
   const seoDescription = movie.description;
 
+  // ← AJOUT : Helper pour extraire la durée
+  const extractDuration = (durationStr) => {
+    if (!durationStr) return undefined;
+    const match = durationStr.match(/(\d+)/);
+    return match ? parseInt(match[1]) : undefined;
+  };
+
+  // ← AJOUT : Breadcrumb
+  const breadcrumbItems = [
+    { name: "Accueil", url: "/" },
+    { name: "Films", url: "/films" },
+    { name: movie.title, url: `/movie/${id}` }
+  ];
+
   const openRatingModal = () => {
     setTempRating(officialRating || 0);
     setIsModalOpen(true);
@@ -57,49 +69,40 @@ const MovieDetails = () => {
   return (
     <>
       <Seo title={seoTitle} description={seoDescription} />
+      
+      {/* ← AJOUT : Schémas Schema.org */}
+      <MovieSchema
+        title={movie.title}
+        description={movie.description}
+        director={movie.director}
+        datePublished={movie.releaseDate}
+        image={movie.img}
+        duration={extractDuration(movie.duration)}
+        genre={movie.genre}
+      />
+      <BreadcrumbSchema items={breadcrumbItems} />
+      
       <div className="min-h-screen bg-blue-950 text-white font-sans relative">
-      {/* BOUTON RETOUR */}
       <Link
         to="/films"
         className="fixed top-25 left-6 z-50 bg-white/10 backdrop-blur-md p-4 rounded-full text-white hover:bg-cyan-500 transition-all shadow-xl border border-white/10"
       >
-        <svg
-          className="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M10 19l-7-7m0 0l7-7m-7 7h18"
-          />
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
         </svg>
       </Link>
 
-      {/* --- SECTION HERO --- */}
       <section className="relative w-full pt-20 md:pt-32 pb-20 overflow-hidden bg-gradient-to-b from-blue-900 to-blue-950">
         <div className="relative z-10 container mx-auto px-6">
           <div className="flex flex-col md:flex-row gap-10 md:gap-16 items-center md:items-start">
-            {/* Poster */}
             <div className="w-64 h-70 md:w-80 shrink-0 shadow-2xl rounded-[40px] overflow-hidden border-4 border-white/10">
-              <img
-                src={movie.img}
-                alt={movie.title}
-                className="w-full h-auto object-cover aspect-[2/3]"
-              />
+              <img src={movie.img} alt={movie.title} className="w-full h-auto object-cover aspect-[2/3]" />
             </div>
 
-            {/* Infos Entête */}
             <div className="flex-1 text-center md:text-left">
               <div className="flex justify-center md:justify-start gap-2 mb-6">
                 {movie.genre?.map((g) => (
-                  <span
-                    key={g}
-                    className="px-3 py-1 bg-cyan-500/20 border border-cyan-500/50 text-cyan-300 text-xs font-bold rounded-full uppercase tracking-wider"
-                  >
-                    {/* Traduction dynamique du genre */}
+                  <span key={g} className="px-3 py-1 bg-cyan-500/20 border border-cyan-500/50 text-cyan-300 text-xs font-bold rounded-full uppercase tracking-wider">
                     {t(`genres.${g.toLowerCase()}`, g)}
                   </span>
                 ))}
@@ -111,9 +114,7 @@ const MovieDetails = () => {
               <div className="flex justify-center md:justify-start items-center gap-6 text-slate-300 font-medium mb-10 text-lg">
                 <span className="flex items-center gap-2">
                   <span className="text-yellow-400 text-2xl">★</span>
-                  {officialRating
-                    ? `${officialRating}/5`
-                    : t("movie_details.na")}
+                  {officialRating ? `${officialRating}/5` : t("movie_details.na")}
                 </span>
                 <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></span>
                 <span>{movie.releaseDate}</span>
@@ -129,170 +130,97 @@ const MovieDetails = () => {
         </div>
       </section>
 
-      {/* --- SECTION CONTENU --- */}
       <section className="relative bg-white text-slate-800 rounded-t-[60px] md:rounded-t-[100px] -mt-12 z-20 pb-20">
         <div className="container mx-auto px-6 md:px-20 pt-20">
           <div className="grid lg:grid-cols-3 gap-16">
             <div className="lg:col-span-2">
               <div className="mb-12">
                 <h2 className="text-3xl font-black mb-6 flex items-center gap-3 uppercase tracking-tighter">
-                  <span className="w-10 h-2 bg-blue-600 rounded-full"></span>{" "}
-                  {t("movie_details.synopsis")}
+                  <span className="w-10 h-2 bg-blue-600 rounded-full"></span> {t("movie_details.synopsis")}
                 </h2>
-                <p className="text-xl text-slate-600 leading-relaxed font-medium">
-                  {movie.description}
-                </p>
+                <p className="text-xl text-slate-600 leading-relaxed font-medium">{movie.description}</p>
               </div>
 
-              {/* Outils IA */}
               <div className="mb-12">
                 <h2 className="text-3xl font-black mb-6 flex items-center gap-3 uppercase tracking-tighter">
-                  <span className="w-10 h-2 bg-cyan-500 rounded-full"></span>{" "}
-                  {t("movie_details.ai_stack")}
+                  <span className="w-10 h-2 bg-cyan-500 rounded-full"></span> {t("movie_details.ai_stack")}
                 </h2>
                 <div className="flex flex-wrap gap-3">
                   {movie.aiTools?.length > 0 ? (
                     movie.aiTools.map((tool) => (
-                      <span
-                        key={tool}
-                        className="px-5 py-3 bg-slate-100 text-blue-900 font-bold rounded-2xl border border-slate-200 uppercase text-xs tracking-widest"
-                      >
+                      <span key={tool} className="px-5 py-3 bg-slate-100 text-blue-900 font-bold rounded-2xl border border-slate-200 uppercase text-xs tracking-widest">
                         {tool}
                       </span>
                     ))
                   ) : (
-                    <p className="text-slate-400 italic">
-                      {t("movie_details.no_ai_tools")}
-                    </p>
+                    <p className="text-slate-400 italic">{t("movie_details.no_ai_tools")}</p>
                   )}
                 </div>
               </div>
 
-              {/* Casting */}
               <div className="mb-12">
                 <h2 className="text-3xl font-black mb-8 flex items-center gap-3 uppercase tracking-tighter">
-                  <span className="w-10 h-2 bg-blue-600 rounded-full"></span>{" "}
-                  {t("movie_details.casting")}
+                  <span className="w-10 h-2 bg-blue-600 rounded-full"></span> {t("movie_details.casting")}
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   {movie.cast?.map((p) => (
-                    <div
-                      key={p.name}
-                      className="flex items-center gap-4 p-5 rounded-[30px] bg-slate-50 border border-slate-100 group hover:bg-white hover:shadow-xl transition-all"
-                    >
-                      <img
-                        src={p.img}
-                        className="w-16 h-16 rounded-2xl object-cover shadow-md"
-                        alt={p.name}
-                      />
+                    <div key={p.name} className="flex items-center gap-4 p-5 rounded-[30px] bg-slate-50 border border-slate-100 group hover:bg-white hover:shadow-xl transition-all">
+                      <img src={p.img} className="w-16 h-16 rounded-2xl object-cover shadow-md" alt={p.name} />
                       <div>
-                        <p className="font-black text-blue-900 leading-tight uppercase tracking-tighter">
-                          {p.name}
-                        </p>
-                        <p className="text-sm text-slate-400 font-bold uppercase tracking-wider">
-                          {p.role}
-                        </p>
+                        <p className="font-black text-blue-900 leading-tight uppercase tracking-tighter">{p.name}</p>
+                        <p className="text-sm text-slate-400 font-bold uppercase tracking-wider">{p.role}</p>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Zone Admin */}
               {isAdmin && (
                 <div className="mt-16 p-8 bg-blue-950 rounded-[40px] flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl border border-white/10">
                   <div>
-                    <p className="text-cyan-400 font-bold text-xs uppercase tracking-widest mb-1">
-                      {t("movie_details.admin_db_access")}
-                    </p>
+                    <p className="text-cyan-400 font-bold text-xs uppercase tracking-widest mb-1">{t("movie_details.admin_db_access")}</p>
                     <h4 className="text-white font-black text-2xl uppercase tracking-tighter">
-                      {t("movie_details.admin_note")} :{" "}
-                      {officialRating
-                        ? `${officialRating}/5`
-                        : t("movie_details.admin_not_rated")}
+                      {t("movie_details.admin_note")} : {officialRating ? `${officialRating}/5` : t("movie_details.admin_not_rated")}
                     </h4>
                   </div>
-                  <button
-                    onClick={openRatingModal}
-                    className="bg-white text-blue-950 font-black px-10 py-4 rounded-2xl hover:bg-cyan-400 transition-all uppercase tracking-widest text-sm"
-                  >
+                  <button onClick={openRatingModal} className="bg-white text-blue-950 font-black px-10 py-4 rounded-2xl hover:bg-cyan-400 transition-all uppercase tracking-widest text-sm">
                     {t("movie_details.admin_manage_note")}
                   </button>
                 </div>
               )}
             </div>
 
-            {/* Colonne Droite : Fiche Technique */}
             <div className="bg-slate-50 rounded-[40px] p-8 border border-slate-100 h-fit shadow-sm">
-              <h3 className="font-black text-blue-950 mb-8 uppercase text-sm tracking-[0.2em]">
-                {t("movie_details.tech_specs")}
-              </h3>
+              <h3 className="font-black text-blue-950 mb-8 uppercase text-sm tracking-[0.2em]">{t("movie_details.tech_specs")}</h3>
               <div className="space-y-6">
-                <DetailRow
-                  label={t("movie_details.global_rating")}
-                  value={
-                    officialRating
-                      ? `${officialRating} / 5`
-                      : t("movie_details.na")
-                  }
-                  isStar
-                />
-                <DetailRow
-                  label={t("movie_details.director")}
-                  value={movie.director}
-                />
-                <DetailRow
-                  label={t("movie_details.release_date")}
-                  value={movie.releaseDate}
-                />
-                <DetailRow
-                  label={t("movie_details.duration")}
-                  value={movie.duration}
-                  last
-                />
+                <DetailRow label={t("movie_details.global_rating")} value={officialRating ? `${officialRating} / 5` : t("movie_details.na")} isStar />
+                <DetailRow label={t("movie_details.director")} value={movie.director} />
+                <DetailRow label={t("movie_details.release_date")} value={movie.releaseDate} />
+                <DetailRow label={t("movie_details.duration")} value={movie.duration} last />
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* --- MODALE --- */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-blue-950/95 backdrop-blur-md"
-            onClick={() => setIsModalOpen(false)}
-          ></div>
+          <div className="absolute inset-0 bg-blue-950/95 backdrop-blur-md" onClick={() => setIsModalOpen(false)}></div>
           <div className="relative bg-white rounded-[50px] p-12 w-full max-w-sm shadow-2xl text-center">
-            <h3 className="text-3xl font-black text-blue-950 mb-8 uppercase tracking-tighter italic">
-              {t("movie_details.modal_title")}
-            </h3>
+            <h3 className="text-3xl font-black text-blue-950 mb-8 uppercase tracking-tighter italic">{t("movie_details.modal_title")}</h3>
             <div className="flex justify-center gap-3 mb-12">
               {[1, 2, 3, 4, 5].map((num) => (
-                <button
-                  key={num}
-                  onClick={() => setTempRating(num)}
-                  className={`w-12 h-14 rounded-2xl font-black text-2xl transition-all ${tempRating === num ? "bg-blue-600 text-white scale-110 shadow-xl" : "bg-slate-100 text-slate-300"}`}
-                >
+                <button key={num} onClick={() => setTempRating(num)} className={`w-12 h-14 rounded-2xl font-black text-2xl transition-all ${tempRating === num ? "bg-blue-600 text-white scale-110 shadow-xl" : "bg-slate-100 text-slate-300"}`}>
                   {num}
                 </button>
               ))}
             </div>
             <div className="flex flex-col gap-4">
-              <button
-                onClick={() => {
-                  setOfficialRating(tempRating);
-                  setIsModalOpen(false);
-                }}
-                className="w-full py-5 bg-blue-950 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-800 transition-all"
-              >
+              <button onClick={() => { setOfficialRating(tempRating); setIsModalOpen(false); }} className="w-full py-5 bg-blue-950 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-800 transition-all">
                 {t("movie_details.modal_confirm")}
               </button>
               {officialRating && (
-                <button
-                  onClick={handleDeleteVote}
-                  className="text-red-500 font-bold uppercase text-xs tracking-widest py-2"
-                >
+                <button onClick={handleDeleteVote} className="text-red-500 font-bold uppercase text-xs tracking-widest py-2">
                   {t("movie_details.modal_delete")}
                 </button>
               )}
@@ -305,14 +233,9 @@ const MovieDetails = () => {
   );
 };
 
-// Petit composant helper pour la fiche technique
 const DetailRow = ({ label, value, isStar, last }) => (
-  <div
-    className={`flex flex-col ${!last ? "border-b border-slate-200 pb-4" : ""}`}
-  >
-    <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">
-      {label}
-    </span>
+  <div className={`flex flex-col ${!last ? "border-b border-slate-200 pb-4" : ""}`}>
+    <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">{label}</span>
     <span className="font-bold text-blue-900 uppercase flex items-center gap-2">
       {isStar && <span className="text-yellow-500 text-lg">★</span>}
       {value}
