@@ -59,25 +59,29 @@ const MovieDetails = () => {
     <>
       <Seo title={seoTitle} description={seoDescription} />
       <div className="min-h-screen bg-blue-950 text-white font-sans relative">
-      {/* BOUTON RETOUR */}
-      <Link
-        to={galleryPath}
-        className="fixed top-25 left-6 z-50 bg-white/10 backdrop-blur-md p-4 rounded-full text-white hover:bg-cyan-500 transition-all shadow-xl border border-white/10"
-      >
-        <svg
-          className="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M10 19l-7-7m0 0l7-7m-7 7h18"
-          />
-        </svg>
-      </Link>
+      <div className="sticky top-0 z-50 border-b border-white/10 bg-blue-950/85 backdrop-blur-md">
+        <div className="mx-auto w-full max-w-7xl px-4 py-3 sm:px-6">
+          <Link
+            to={galleryPath}
+            className="inline-flex max-w-full items-center gap-2 rounded-full border border-cyan-300/30 bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.15em] text-white shadow-lg shadow-black/30 transition-all hover:border-cyan-300 hover:bg-cyan-500 hover:text-blue-950 sm:text-xs"
+          >
+            <svg
+              className="h-4 w-4 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2.5"
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            <span className="truncate">{t("movie_details.back_to_gallery")}</span>
+          </Link>
+        </div>
+      </div>
 
       {/* --- SECTION HERO --- */}
       <section className="relative w-full pt-20 md:pt-32 pb-20 overflow-hidden bg-gradient-to-b from-blue-900 to-blue-950">

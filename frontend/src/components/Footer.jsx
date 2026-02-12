@@ -6,7 +6,6 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
   const homePath = i18n.language === "en" ? "/home" : "/accueil";
   const aboutPath = i18n.language === "en" ? "/about" : "/a-propos";
-  const filmsPath = i18n.language === "en" ? "/movies" : "/films";
   const agendaPath = i18n.language === "en" ? "/schedule" : "/agenda";
   const juryPath = i18n.language === "en" ? "/jury-eng" : "/jury";
   const partnersPath = i18n.language === "en" ? "/partners" : "/partenaires";
@@ -24,7 +23,6 @@ const Footer = () => {
       title: t("footer.festival"),
       links: [
         { name: t("nav.about"), path: aboutPath },
-        { name: t("footer.competition"), path: filmsPath },
         { name: t("nav.agenda"), path: agendaPath },
         { name: t("footer.newsletter"), path: "/newsletter" },
         { name: t("nav.jury"), path: juryPath },
@@ -44,7 +42,6 @@ const Footer = () => {
       links: [
         { name: t("nav.terms_gv"), path: cgvPath },
         { name: t("nav.terms_gu"), path: cguPath },
-        { name: t("footer.privacy"), path: "/politique-de-confidentialite" },
         { name: t("nav.legal"), path: legalPath },
         { name: t("nav.contact"), path: "/contact" },
       ],

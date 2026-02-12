@@ -13,7 +13,6 @@ import Gallery from "./pages/Gallery";
 import MovieDetails from "./pages/MovieDetails";
 import Dashboard from "./pages/Dashboard";
 import TestCountdown from "./pages/TestCountdown";
-import FilmDetails from "./pages/FilmDetails";
 
 export default function App() {
   const location = useLocation();
@@ -43,8 +42,6 @@ export default function App() {
           <Route path="/partners" element={<Partenaires />} />
           <Route path="/films" element={<Gallery />} />
           <Route path="/movies" element={<Gallery />} />
-          <Route path="/films/:slug" element={<FilmDetails />} />
-          <Route path="/movies/:slug" element={<FilmDetails />} />
           <Route path="/movie/:id" element={<MovieDetails />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/testcountdown" element={<TestCountdown />} />
