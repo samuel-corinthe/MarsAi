@@ -1,4 +1,4 @@
-const { transporter } = require("../config/mail");
+const { transporter } = require("../config_file/mail");
 const { validate } = require("deep-email-validator"); // Import de la validation
 
 const Mail = {
