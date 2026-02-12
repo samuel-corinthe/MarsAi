@@ -1,8 +1,11 @@
 import { Link, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
 
 export default function FilmDetails() {
   const { slug } = useParams();
+  const { i18n } = useTranslation();
+  const homePath = i18n.language === "en" ? "/home" : "/accueil";
 
   return (
     <>
@@ -21,7 +24,7 @@ export default function FilmDetails() {
             <Link className="btn-primary" to="/dashboard">
               Retour dashboard
             </Link>
-            <Link className="btn-ghost" to="/">
+            <Link className="btn-ghost" to={homePath}>
               Accueil
             </Link>
           </div>

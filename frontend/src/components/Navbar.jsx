@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 const Navbar = () => {
   const { t, i18n } = useTranslation();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -22,28 +23,150 @@ const Navbar = () => {
     setActiveDropdown(null);
   }, [location]);
 
-  const isActive = (path) => location.pathname === path;
+  const routeAliases = {
+    "/accueil": "/home",
+    "/home": "/accueil",
+    "/a-propos": "/about",
+    "/about": "/a-propos",
+    "/films": "/movies",
+    "/movies": "/films",
+    "/agenda": "/schedule",
+    "/schedule": "/agenda",
+    "/jury": "/jury-eng",
+    "/jury-eng": "/jury",
+    "/partenaires": "/partners",
+    "/partners": "/partenaires",
+    "/appel-a-projet": "/call-for-project",
+    "/call-for-project": "/appel-a-projet",
+    "/call-for-projects": "/appel-a-projet",
+    "/en/call-for-project": "/call-for-project",
+    "/en/call-for-projects": "/call-for-project",
+    "/deposer-un-film": "/submit-film",
+    "/submit-film": "/deposer-un-film",
+    "/submit-a-film": "/deposer-un-film",
+    "/cgv": "/tos",
+    "/tos": "/cgv",
+    "/cgu": "/gcu",
+    "/gcu": "/cgu",
+    "/mentions-legales": "/legal-notice",
+    "/legal-notice": "/mentions-legales",
+  };
+
+  const isActive = (path) =>
+    location.pathname === path || routeAliases[location.pathname] === path;
+
+  const handleLanguageChange = (nextLanguage) => {
+    if (nextLanguage === i18n.language) return;
+
+    const pathMappings = {
+      fr: {
+        "/home": "/accueil",
+        "/about": "/a-propos",
+        "/movies": "/films",
+        "/schedule": "/agenda",
+        "/jury-eng": "/jury",
+        "/partners": "/partenaires",
+        "/call-for-project": "/appel-a-projet",
+        "/call-for-projects": "/appel-a-projet",
+        "/en/call-for-project": "/appel-a-projet",
+        "/en/call-for-projects": "/appel-a-projet",
+        "/submit-film": "/deposer-un-film",
+        "/submit-a-film": "/deposer-un-film",
+        "/tos": "/cgv",
+        "/gcu": "/cgu",
+        "/legal-notice": "/mentions-legales",
+      },
+      en: {
+        "/accueil": "/home",
+        "/a-propos": "/about",
+        "/films": "/movies",
+        "/agenda": "/schedule",
+        "/jury": "/jury-eng",
+        "/partenaires": "/partners",
+        "/appel-a-projet": "/call-for-project",
+        "/en/call-for-project": "/call-for-project",
+        "/en/call-for-projects": "/call-for-project",
+        "/deposer-un-film": "/submit-film",
+        "/submit-a-film": "/submit-film",
+        "/cgv": "/tos",
+        "/cgu": "/gcu",
+        "/mentions-legales": "/legal-notice",
+      },
+    };
+
+    const nextPath =
+      pathMappings[nextLanguage]?.[location.pathname] || location.pathname;
+
+    i18n.changeLanguage(nextLanguage);
+    if (nextPath !== location.pathname) {
+      navigate(nextPath, { replace: true });
+    }
+  };
 
   const toggleDropdown = (name) => {
     setActiveDropdown(activeDropdown === name ? null : name);
   };
 
   const mainNav = [
-    { name: t("nav.home"), path: "/accueil", id: "home" },
-    { name: t("nav.about"), path: "/a-propos", id: "about" },
-    { name: t("nav.films"), path: "/films", id: "films" },
-    { name: t("nav.agenda"), path: "/agenda", id: "agenda" },
-    { name: t("nav.callForProjects"), path: "/appel-a-projet", id: "call" },
-    { name: t("nav.jury"), path: "/jury", id: "jury" },
-    { name: t("nav.partners"), path: "/partenaires", id: "partners" },
+    {
+      name: t("nav.home"),
+      path: i18n.language === "en" ? "/home" : "/accueil",
+      id: "home",
+    },
+    {
+      name: t("nav.about"),
+      path: i18n.language === "en" ? "/about" : "/a-propos",
+      id: "about",
+    },
+    {
+      name: t("nav.films"),
+      path: i18n.language === "en" ? "/movies" : "/films",
+      id: "films",
+    },
+    {
+      name: t("nav.agenda"),
+      path: i18n.language === "en" ? "/schedule" : "/agenda",
+      id: "agenda",
+    },
+    {
+      name: t("nav.callForProjects"),
+      path: i18n.language === "en" ? "/call-for-project" : "/appel-a-projet",
+      id: "call",
+    },
+    {
+      name: t("nav.jury"),
+      path: i18n.language === "en" ? "/jury-eng" : "/jury",
+      id: "jury",
+    },
+    {
+      name: t("nav.partners"),
+      path: i18n.language === "en" ? "/partners" : "/partenaires",
+      id: "partners",
+    },
   ];
 
   const moreNav = [
-    { name: t("nav.terms_gv"), path: "/cgv", id: "terms_gv" },
-    { name: t("nav.terms_gu"), path: "/cgu", id: "terms_gu" },
-    { name: t("nav.legal"), path: "/mentions-legales", id: "legal" },
+    {
+      name: t("nav.terms_gv"),
+      path: i18n.language === "en" ? "/tos" : "/cgv",
+      id: "terms_gv",
+    },
+    {
+      name: t("nav.terms_gu"),
+      path: i18n.language === "en" ? "/gcu" : "/cgu",
+      id: "terms_gu",
+    },
+    {
+      name: t("nav.legal"),
+      path: i18n.language === "en" ? "/legal-notice" : "/mentions-legales",
+      id: "legal",
+    },
     { name: t("nav.contact"), path: "/contact", id: "contact" },
   ];
+
+  const homePath = i18n.language === "en" ? "/home" : "/accueil";
+  const submitFilmPath =
+    i18n.language === "en" ? "/submit-film" : "/deposer-un-film";
 
   return (
     <>
@@ -56,7 +179,7 @@ const Navbar = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
-            <Link to="/accueil" className="flex items-center space-x-3 group">
+            <Link to={homePath} className="flex items-center space-x-3 group">
               <div className="relative">
                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-400 to-pink-500 flex items-center justify-center transform group-hover:scale-110 transition-transform duration-300">
                   <svg
@@ -143,14 +266,14 @@ const Navbar = () => {
             <div className="hidden lg:flex items-center space-x-4">
               <div className="flex items-center border-r border-gray-800 pr-4 space-x-2 text-[10px] font-bold">
                 <button
-                  onClick={() => i18n.changeLanguage("fr")}
+                  onClick={() => handleLanguageChange("fr")}
                   className={`hover:text-cyan-400 transition-colors ${i18n.language === "fr" ? "text-cyan-400" : "text-gray-500"}`}
                 >
                   FR
                 </button>
                 <span className="text-gray-700">|</span>
                 <button
-                  onClick={() => i18n.changeLanguage("en")}
+                  onClick={() => handleLanguageChange("en")}
                   className={`hover:text-cyan-400 transition-colors ${i18n.language === "en" ? "text-cyan-400" : "text-gray-500"}`}
                 >
                   EN
@@ -158,7 +281,7 @@ const Navbar = () => {
               </div>
 
               <Link
-                to="/deposer-un-film"
+                to={submitFilmPath}
                 className="group relative px-6 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-sm rounded-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-green-500/50 hover:scale-105"
                 style={{ fontFamily: "'Inter', sans-serif" }}
               >
@@ -225,13 +348,13 @@ const Navbar = () => {
             <div className="px-4 py-6 space-y-1">
               <div className="flex space-x-4 px-4 mb-4">
                 <button
-                  onClick={() => i18n.changeLanguage("fr")}
+                  onClick={() => handleLanguageChange("fr")}
                   className={`text-sm ${i18n.language === "fr" ? "text-cyan-400" : "text-gray-500"}`}
                 >
                   Français
                 </button>
                 <button
-                  onClick={() => i18n.changeLanguage("en")}
+                  onClick={() => handleLanguageChange("en")}
                   className={`text-sm ${i18n.language === "en" ? "text-cyan-400" : "text-gray-500"}`}
                 >
                   English
@@ -274,7 +397,7 @@ const Navbar = () => {
 
               <div className="px-4 space-y-3">
                 <Link
-                  to="/deposer-un-film"
+                  to={submitFilmPath}
                   className="flex items-center justify-center space-x-2 w-full px-4 py-3 text-base font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg hover:shadow-lg hover:shadow-green-500/50 transition-all duration-300"
                   style={{ fontFamily: "'Inter', sans-serif" }}
                 >

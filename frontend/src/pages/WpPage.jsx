@@ -18,10 +18,14 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   const slugMapping = {
     agenda: "schedule",
     accueil: "home",
+    "appel-a-projet": "call-for-project",
     jury: "jury-eng",
     "mentions-legales": "legal-notice",
     cgu: "gcu",
     cgv: "tos",
+  };
+  const slugAliases = {
+    "call-for-projects": "call-for-project",
   };
   const legalVariantBySlug = {
     cgv: "cgv",
@@ -35,11 +39,12 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   const getActiveSlug = () => {
     if (fixedSlug) return fixedSlug;
     if (isHome) return i18n.language === "en" ? "home" : "accueil";
+    const normalizedRouteSlug = slugAliases[routeSlug] || routeSlug;
     const entry = Object.entries(slugMapping).find(
-      ([fr, en]) => fr === routeSlug || en === routeSlug,
+      ([fr, en]) => fr === normalizedRouteSlug || en === normalizedRouteSlug,
     );
     if (entry) return i18n.language === "en" ? entry[1] : entry[0];
-    return routeSlug;
+    return normalizedRouteSlug;
   };
 
   const slug = getActiveSlug();
@@ -122,7 +127,22 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
       setLoading(true);
       setError(false);
       try {
-        const pageData = await getPageBySlug(slug, i18n.language);
+        const isCallForProjectSlug = slug === "call-for-project";
+        const slugCandidates = isCallForProjectSlug
+          ? ["call-for-project", "call-for-projects", "appel-a-projet"]
+          : [slug];
+        const languageCandidates = isCallForProjectSlug
+          ? ["en", "fr"]
+          : [i18n.language];
+        let pageData = null;
+
+        for (const candidate of slugCandidates) {
+          for (const langCandidate of languageCandidates) {
+            pageData = await getPageBySlug(candidate, langCandidate);
+            if (pageData) break;
+          }
+          if (pageData) break;
+        }
         if (cancelled) return;
 
         if (!pageData) {
@@ -294,7 +314,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   const seoDescription = page?.excerpt?.rendered || page?.content?.rendered || "";
   const seoLang = i18n.language;
 
-  if (slug === "appel-a-projet") {
+  if (slug === "appel-a-projet" || slug === "call-for-project") {
     return <CallForProject page={page} />;
   }
 

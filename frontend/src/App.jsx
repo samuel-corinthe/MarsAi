@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CookieModal from "./components/CookieModal";
@@ -39,12 +39,33 @@ export default function App() {
           <Route path="/a-propos" element={<About />} />
           <Route path="/about" element={<About />} />
           <Route path="/partenaires" element={<Partenaires />} />
+          <Route path="/partner" element={<Partenaires />} />
+          <Route path="/partners" element={<Partenaires />} />
           <Route path="/films" element={<Gallery />} />
+          <Route path="/movies" element={<Gallery />} />
           <Route path="/films/:slug" element={<FilmDetails />} />
+          <Route path="/movies/:slug" element={<FilmDetails />} />
           <Route path="/movie/:id" element={<MovieDetails />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/testcountdown" element={<TestCountdown />} />
+          <Route
+            path="/en/call-for-project"
+            element={<Navigate to="/call-for-project" replace />}
+          />
+          <Route
+            path="/en/call-for-projects"
+            element={<Navigate to="/call-for-project" replace />}
+          />
+          <Route
+            path="/call-for-project"
+            element={<WpPage fixedSlug="call-for-project" />}
+          />
+          <Route
+            path="/call-for-projects"
+            element={<WpPage fixedSlug="call-for-project" />}
+          />
           <Route path="/deposer-un-film" element={<YoutubeUpload />} />
+          <Route path="/submit-a-film" element={<YoutubeUpload />} />
           <Route path="/submit-film" element={<YoutubeUpload />} />
           <Route path="/concours" element={<YoutubeUpload />} />
           <Route path="/:slug" element={<WpPage />} />

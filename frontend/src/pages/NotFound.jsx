@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next"; // 1. Import
 import Seo from "../components/Seo";
 
 const NotFound = () => {
-  const { t } = useTranslation(); // 2. Initialisation
+  const { t, i18n } = useTranslation(); // 2. Initialisation
+  const homePath = i18n.language === "en" ? "/home" : "/accueil";
+  const moviesPath = i18n.language === "en" ? "/movies" : "/films";
 
   return (
     <>
@@ -62,7 +64,7 @@ const NotFound = () => {
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-8">
           <Link
-            to="/"
+            to={homePath}
             className="group relative px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-lg rounded-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/50 hover:scale-105 w-full sm:w-auto"
             style={{ fontFamily: "'Inter', sans-serif" }}
           >
@@ -86,7 +88,7 @@ const NotFound = () => {
           </Link>
 
           <Link
-            to="/films"
+            to={moviesPath}
             className="px-8 py-4 bg-white/5 backdrop-blur-sm border border-white/10 text-white font-semibold text-lg rounded-full hover:bg-white/10 transition-all duration-300 w-full sm:w-auto"
             style={{ fontFamily: "'Inter', sans-serif" }}
           >

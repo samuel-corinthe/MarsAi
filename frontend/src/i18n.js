@@ -89,7 +89,7 @@ i18n.use(initReactI18next).init({
             "MarsAi est une plateforme dédiée aux créateurs de vidéo réalisée par intelligence artificielle. Nous soutenons les esprits passionnés par les vidéos IA et l'innovation.",
           community:
             "Rejoignez une communauté créative, audacieuse et tournée vers l'exploration d'un avenir où l'intelligence artificielle transforme la création vidéo.",
-          cta_join: "Rejoindre MarsAi",
+          cta_join: "Participer",
           cta_more: "En savoir plus",
           cta_contact: "Contactez-nous",
           features: {
@@ -341,7 +341,7 @@ i18n.use(initReactI18next).init({
             "is a platform dedicated to creators of AI-generated video. We support minds passionate about AI cinematography and innovation.",
           community:
             "Join a creative and bold community, focused on exploring a future where artificial intelligence transforms video creation.",
-          cta_join: "Join MarsAi",
+          cta_join: "Participate",
           cta_more: "Learn more",
           cta_contact: "Contact us",
           features: {

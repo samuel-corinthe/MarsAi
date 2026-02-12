@@ -156,6 +156,18 @@ export default function LegalPage({ page, variant = "cgv" }) {
   );
   const locale = i18n.language === "fr" ? "fr-FR" : "en-GB";
   const lastUpdated = formatDate(page?.modified || page?.date, locale);
+  const homePath = i18n.language === "en" ? "/home" : "/accueil";
+  const localizedRouteMap = {
+    "/cgu": "/gcu",
+    "/cgv": "/tos",
+    "/mentions-legales": "/legal-notice",
+    "/agenda": "/schedule",
+    "/jury": "/jury-eng",
+  };
+  const otherLinkPath =
+    i18n.language === "en"
+      ? (localizedRouteMap[config.otherLink.path] || config.otherLink.path)
+      : config.otherLink.path;
 
   return (
     <>
@@ -250,7 +262,7 @@ export default function LegalPage({ page, variant = "cgv" }) {
         <div className="mt-16 pt-8 border-t border-gray-800">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <Link
-              to="/"
+              to={homePath}
               className={`flex items-center space-x-2 text-gray-400 transition-colors duration-300 ${config.linkHover}`}
               style={{ fontFamily: "'Inter', sans-serif" }}
             >
@@ -271,7 +283,7 @@ export default function LegalPage({ page, variant = "cgv" }) {
             </Link>
 
             <Link
-              to={config.otherLink.path}
+              to={otherLinkPath}
               className={config.buttonClass}
               style={{ fontFamily: "'Inter', sans-serif" }}
             >
@@ -297,7 +309,7 @@ export default function LegalPage({ page, variant = "cgv" }) {
           padding-left: 1.25rem;
         }
         .legal-content li::before {
-          content: "•";
+          content: "\\2022";
           position: absolute;
           left: 0;
           color: var(--accent-color);

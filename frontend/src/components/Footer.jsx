@@ -2,36 +2,50 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 const Footer = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const currentYear = new Date().getFullYear();
+  const homePath = i18n.language === "en" ? "/home" : "/accueil";
+  const aboutPath = i18n.language === "en" ? "/about" : "/a-propos";
+  const filmsPath = i18n.language === "en" ? "/movies" : "/films";
+  const agendaPath = i18n.language === "en" ? "/schedule" : "/agenda";
+  const juryPath = i18n.language === "en" ? "/jury-eng" : "/jury";
+  const partnersPath = i18n.language === "en" ? "/partners" : "/partenaires";
+  const callForProjectsPath =
+    i18n.language === "en" ? "/call-for-project" : "/appel-a-projet";
+  const submitFilmPath =
+    i18n.language === "en" ? "/submit-film" : "/deposer-un-film";
+  const cgvPath = i18n.language === "en" ? "/tos" : "/cgv";
+  const cguPath = i18n.language === "en" ? "/gcu" : "/cgu";
+  const legalPath =
+    i18n.language === "en" ? "/legal-notice" : "/mentions-legales";
 
   const footerLinks = {
     festival: {
       title: t("footer.festival"),
       links: [
-        { name: t("nav.about"), path: "/a-propos" },
-        { name: t("footer.competition"), path: "/films" },
-        { name: t("nav.agenda"), path: "/agenda" },
+        { name: t("nav.about"), path: aboutPath },
+        { name: t("footer.competition"), path: filmsPath },
+        { name: t("nav.agenda"), path: agendaPath },
         { name: t("footer.newsletter"), path: "/newsletter" },
-        { name: t("nav.jury"), path: "/jury" },
-        { name: t("nav.partners"), path: "/partenaires" },
+        { name: t("nav.jury"), path: juryPath },
+        { name: t("nav.partners"), path: partnersPath },
       ],
     },
     participer: {
       title: t("footer.participate"),
       links: [
-        { name: t("nav.submitFilm"), path: "/deposer-un-film" },
-        { name: t("nav.callForProjects"), path: "/appel-a-projet" },
-        { name: t("nav.agenda"), path: "/agenda" },
+        { name: t("nav.submitFilm"), path: submitFilmPath },
+        { name: t("nav.callForProjects"), path: callForProjectsPath },
+        { name: t("nav.agenda"), path: agendaPath },
       ],
     },
     legal: {
       title: t("footer.legal_title"),
       links: [
-        { name: t("nav.terms_gv"), path: "/cgv" },
-        { name: t("nav.terms_gu"), path: "/cgu" },
+        { name: t("nav.terms_gv"), path: cgvPath },
+        { name: t("nav.terms_gu"), path: cguPath },
         { name: t("footer.privacy"), path: "/politique-de-confidentialite" },
-        { name: t("nav.legal"), path: "/mentions-legales" },
+        { name: t("nav.legal"), path: legalPath },
         { name: t("nav.contact"), path: "/contact" },
       ],
     },
@@ -94,7 +108,7 @@ const Footer = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
             <div className="lg:col-span-2">
               <Link
-                to="/"
+                to={homePath}
                 className="inline-flex items-center space-x-3 group mb-6"
               >
                 <div className="relative">

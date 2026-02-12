@@ -6,7 +6,8 @@ import Seo from "../components/Seo";
 
 const MovieDetails = () => {
   const { id } = useParams();
-  const { t } = useTranslation(); // 2. Initialisation
+  const { t, i18n } = useTranslation(); // 2. Initialisation
+  const galleryPath = i18n.language === "en" ? "/movies" : "/films";
 
   // --- ÉTATS ---
   const [isAdmin] = useState(true);
@@ -31,7 +32,7 @@ const MovieDetails = () => {
             {t("movie_details.not_found")}
           </h1>
           <Link
-            to="/films"
+            to={galleryPath}
             className="bg-cyan-500 text-blue-950 px-8 py-3 rounded-full font-bold uppercase tracking-widest hover:bg-cyan-400 transition-all"
           >
             {t("movie_details.back_to_gallery")}
@@ -60,7 +61,7 @@ const MovieDetails = () => {
       <div className="min-h-screen bg-blue-950 text-white font-sans relative">
       {/* BOUTON RETOUR */}
       <Link
-        to="/films"
+        to={galleryPath}
         className="fixed top-25 left-6 z-50 bg-white/10 backdrop-blur-md p-4 rounded-full text-white hover:bg-cyan-500 transition-all shadow-xl border border-white/10"
       >
         <svg

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Seo from "../components/Seo";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { getAdminDashboardData } from "../api";
 
 function toSlug(value) {
@@ -92,7 +93,7 @@ function Pill({ children, tone = "pink", active = false, onClick }) {
   );
 }
 
-function FilmRow({ film }) {
+function FilmRow({ film, filmsBasePath }) {
   const badgeColor =
     film.status === "accepté" || film.status === "sélectionné"
       ? "bg-emerald-500/20 text-emerald-200"
@@ -126,7 +127,7 @@ function FilmRow({ film }) {
           <div className="flex gap-2">
             <Link
               className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10"
-              to={`/films/${filmSlug}`}
+              to={`${filmsBasePath}/${filmSlug}`}
             >
               Visionner
             </Link>
@@ -141,6 +142,9 @@ function FilmRow({ film }) {
 }
 
 export default function Dashboard() {
+  const { i18n } = useTranslation();
+  const homePath = i18n.language === "en" ? "/home" : "/accueil";
+  const filmsBasePath = i18n.language === "en" ? "/movies" : "/films";
   const [adminData, setAdminData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -328,7 +332,7 @@ export default function Dashboard() {
         <div className="flex gap-5 items-start">
           {/* Sidebar desktop */}
           <aside className="dash-sidenav">
-            <Link to="/" className="flex items-center gap-2 px-4 py-2">
+            <Link to={homePath} className="flex items-center gap-2 px-4 py-2">
               <span className="w-2 h-2 rounded-full bg-emerald-300" />
               Home
             </Link>
@@ -631,7 +635,7 @@ export default function Dashboard() {
                 <span>Tri : par défaut</span>
               </div>
               {filteredFilms.map((film) => (
-                <FilmRow key={film.title} film={film} />
+                <FilmRow key={film.title} film={film} filmsBasePath={filmsBasePath} />
               ))}
               {filteredFilms.length === 0 && (
                 <div className="py-6 text-sm text-slate-300">Aucun film ne correspond aux filtres.</div>
@@ -849,7 +853,7 @@ export default function Dashboard() {
           >
             Logs
           </button>
-          <button onClick={() => (window.location.href = "/")}>Home</button>
+          <button onClick={() => (window.location.href = homePath)}>Home</button>
         </div>
 
       </div>

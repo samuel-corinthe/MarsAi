@@ -1,13 +1,24 @@
 import React, { useMemo } from "react";
+import { Link } from "react-router-dom";
 import HomeModelViewer from "../components/HomeModelViewer";
 import Seo from "../components/Seo";
 import { OrganizationSchema, EventSchema } from "../components/Schema";
+import { useTranslation } from "react-i18next";
 
 export default function Home({ page }) {
+  const { i18n } = useTranslation();
   const modelSrc =
     import.meta.env.VITE_HOME_MODEL_URL ||
     `${import.meta.env.BASE_URL}models/walking_robot_mr.glb`;
   const modelPoster = import.meta.env.VITE_HOME_MODEL_POSTER_URL || "";
+  const submitFilmPath =
+    i18n.language === "en" ? "/submit-film" : "/deposer-un-film";
+  const agendaPath = i18n.language === "en" ? "/schedule" : "/agenda";
+  const callForProjectsPath =
+    i18n.language === "en" ? "/call-for-project" : "/appel-a-projet";
+  const partnersPath = i18n.language === "en" ? "/partners" : "/partenaires";
+  const aboutPath = i18n.language === "en" ? "/about" : "/a-propos";
+  const moviesPath = i18n.language === "en" ? "/movies" : "/films";
   const parsed = useMemo(() => {
     const html = page?.content?.rendered || "";
 
@@ -34,20 +45,64 @@ export default function Home({ page }) {
         .replace(/\s+/g, " ")
         .trim();
     const linkOverrides = {
-      "participer au festival": "/upload",
-      "voir le programme": "/agenda",
-      "deposer un film": "/upload",
-      "take part in the festival": "/upload",
-      "see the program": "/agenda",
-      "submit a film": "/upload",
+      "participer au festival": submitFilmPath,
+      "voir le programme": agendaPath,
+      "deposer un film": submitFilmPath,
+      "take part in the festival": submitFilmPath,
+      "see the program": agendaPath,
+      "submit a film": submitFilmPath,
+      "see the call for projects": callForProjectsPath,
+      "voir l'appel a projet": callForProjectsPath,
+      "voir l'appel a projets": callForProjectsPath,
+    };
+    const normalizeHrefToPath = (href) => {
+      const raw = String(href || "").trim();
+      if (!raw) return "";
+      if (raw === "#participer") return submitFilmPath;
+      if (raw === "#programme") return agendaPath;
+
+      let pathname = raw;
+      try {
+        pathname = new URL(raw, window.location.origin).pathname || raw;
+      } catch {
+        pathname = raw;
+      }
+
+      let path = pathname.replace(/\/+$/, "");
+      if (!path) path = "/";
+      path = path
+        .replace(/^\/MarsAi\/en\//i, "/")
+        .replace(/^\/MarsAi\/fr\//i, "/")
+        .replace(/^\/MarsAi\//i, "/");
+
+      const mappedPaths = {
+        "/submit-film": submitFilmPath,
+        "/deposer-un-film": submitFilmPath,
+        "/concours": submitFilmPath,
+        "/agenda": agendaPath,
+        "/schedule": agendaPath,
+        "/appel-a-projet": callForProjectsPath,
+        "/appel-a-projets": callForProjectsPath,
+        "/call-for-project": callForProjectsPath,
+        "/call-for-projects": callForProjectsPath,
+        "/partenaires": partnersPath,
+        "/partners": partnersPath,
+        "/a-propos": aboutPath,
+        "/about": aboutPath,
+        "/films": moviesPath,
+        "/movies": moviesPath,
+      };
+
+      return mappedPaths[path] || (path.startsWith("/") ? path : raw);
     };
     const rawHeroLinks = Array.from(doc.querySelectorAll("p:first-of-type a")).map(
       (a) => ({ href: a.href || "", text: a.textContent?.trim() || "" })
     );
     const heroLinks = rawHeroLinks.map((link) => {
       const key = normalizeText(link.text);
-      const override = linkOverrides[key];
-      return override ? { ...link, href: override } : link;
+      const overrideByText = linkOverrides[key];
+      const overrideByHref = normalizeHrefToPath(link.href);
+      return { ...link, href: overrideByText || overrideByHref || link.href };
     });
 
     // --- 2. ABOUT ---
@@ -88,7 +143,15 @@ export default function Home({ page }) {
     });
 
     return { title: page?.title?.rendered || "", heroLead, heroLinks, aboutTitle, aboutText, articles };
-  }, [page]);
+  }, [
+    aboutPath,
+    agendaPath,
+    callForProjectsPath,
+    moviesPath,
+    page,
+    partnersPath,
+    submitFilmPath,
+  ]);
 
   const seoTitle = page?.title?.rendered || parsed.title || "Accueil";
   const seoDescription =
@@ -101,10 +164,10 @@ export default function Home({ page }) {
       <EventSchema />
       <main className="w-full overflow-hidden bg-[#0f172a] text-white font-['Montserrat']">
 
-      {/* Texture Grain - Opacité réduite pour ne pas géner la lecture */}
+      {/* Texture Grain - opacite reduite pour ne pas gener la lecture */}
       <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 mix-blend-overlay pointer-events-none z-[60]"></div>
 
-      {/* --- HERO (Accessibilité : Contraste élevé) --- */}
+      {/* --- HERO (Accessibilite : contraste eleve) --- */}
       <section className="relative min-h-[85vh] flex items-center justify-center text-center px-6 pt-16 md:pt-20 pb-20">
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-[#1e293b] via-[#0f172a] to-[#0f172a] z-0" />
         <div className="relative z-20 max-w-4xl mx-auto">
@@ -118,13 +181,27 @@ export default function Home({ page }) {
           )}
 
           <div className="mt-12 flex flex-col sm:flex-row gap-6 justify-center">
-            {parsed.heroLinks.map((l, i) => (
-              <a key={i} href={l.href}
-                 aria-label={`Accéder à ${l.text}`}
-                 className="px-12 py-5 rounded-full bg-[#38bdf8] text-[#0f172a] font-black uppercase tracking-widest text-[12px] hover:bg-white transition-colors shadow-lg">
-                {l.text}
-              </a>
-            ))}
+            {parsed.heroLinks.map((l, i) =>
+              l.href.startsWith("/") ? (
+                <Link
+                  key={i}
+                  to={l.href}
+                  aria-label={`Acceder a ${l.text}`}
+                  className="px-12 py-5 rounded-full bg-[#38bdf8] text-[#0f172a] font-black uppercase tracking-widest text-[12px] hover:bg-white transition-colors shadow-lg"
+                >
+                  {l.text}
+                </Link>
+              ) : (
+                <a
+                  key={i}
+                  href={l.href}
+                  aria-label={`Acceder a ${l.text}`}
+                  className="px-12 py-5 rounded-full bg-[#38bdf8] text-[#0f172a] font-black uppercase tracking-widest text-[12px] hover:bg-white transition-colors shadow-lg"
+                >
+                  {l.text}
+                </a>
+              )
+            )}
           </div>
 
           <HomeModelViewer
@@ -145,7 +222,7 @@ export default function Home({ page }) {
         />
       </section>
 
-      {/* --- ABOUT (Plus clair pour la lecture prolongée) --- */}
+      {/* --- ABOUT (Plus clair pour la lecture prolongee) --- */}
       {(parsed.aboutTitle || parsed.aboutText) && (
         <section className="relative py-24 md:py-40 bg-[#0f172a]">
           <div className="max-w-5xl mx-auto px-10">
@@ -162,7 +239,7 @@ export default function Home({ page }) {
                 <div className="aspect-square rounded-3xl bg-[#0f172a] border border-[#334155] overflow-hidden shadow-inner">
                    <img src="https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=2059"
                         className="w-full h-full object-cover filter contrast-[1.1]"
-                        alt="Illustration de la section à propos" />
+                        alt="Illustration de la section a propos" />
                 </div>
               </div>
             </div>
@@ -170,12 +247,12 @@ export default function Home({ page }) {
         </section>
       )}
 
-      {/* --- NEWS (Cartes plus contrastées et aérées) --- */}
+      {/* --- NEWS (Cartes plus contrastees et aeres) --- */}
       {parsed.articles.length > 0 && (
         <section className="relative py-20 md:py-32 bg-[#0f172a]">
           <div className="max-w-4xl mx-auto px-10 md:px-4">
             <h3 className="text-2xl md:text-4xl font-black uppercase tracking-[0.4em] text-[#38bdf8] mb-24 text-center">
-              Actualités
+              Actualites
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16 md:gap-12 justify-items-center">
               {parsed.articles.slice(0, 6).map((a, i) => (
@@ -205,10 +282,11 @@ export default function Home({ page }) {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;900&display=swap');
         body { background-color: #0f172a; color: #ffffff; }
-        /* Focus visible pour l'accessibilité clavier */
+        /* Focus visible pour l'accessibilite clavier */
         a:focus { outline: 3px solid #38bdf8; outline-offset: 4px; border-radius: 4px; }
       `}</style>
       </main>
     </>
   );
 }
+

@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { getPageBySlug } from "../api";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import Seo from "../components/Seo";
 
 const About = () => {
   const { t, i18n } = useTranslation();
   const [wpContent, setWpContent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const submitFilmPath =
+    i18n.language === "en" ? "/submit-film" : "/deposer-un-film";
+  const contactPath = "/contact";
 
   useEffect(() => {
     const loadContent = async () => {
@@ -14,7 +18,7 @@ const About = () => {
         setLoading(true);
         // On adapte le slug WP selon la langue active
         const slug = i18n.language === "fr" ? "a-propos" : "about";
-        const data = await getPageBySlug(slug);
+        const data = await getPageBySlug(slug, i18n.language);
         setWpContent(data);
       } catch (error) {
         console.error("Erreur chargement WordPress:", error);
@@ -111,12 +115,12 @@ const About = () => {
               )}
 
               <div className="pt-4 flex flex-col sm:flex-row gap-4">
-                <a
-                  href="/join"
+                <Link
+                  to={submitFilmPath}
                   className="text-center bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-8 py-3 rounded-full hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-300 font-bold uppercase text-sm tracking-widest transform hover:-translate-y-1"
                 >
                   {t("about.cta_join")}
-                </a>
+                </Link>
                 <button className="px-8 py-3 rounded-full border border-white/20 hover:bg-white/5 transition font-bold text-gray-300 hover:text-white uppercase text-sm tracking-widest">
                   {t("about.cta_more")}
                 </button>
@@ -155,12 +159,12 @@ const About = () => {
             </p>
           </div>
 
-          <a
-            href="/contact"
+          <Link
+            to={contactPath}
             className="mt-10 bg-white text-blue-950 px-8 py-3 rounded-full hover:bg-cyan-400 hover:text-white transition-all duration-300 font-black uppercase text-sm tracking-widest shadow-lg hover:shadow-cyan-500/50"
           >
             {t("about.cta_contact")}
-          </a>
+          </Link>
         </div>
       </section>
       </div>
