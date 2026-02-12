@@ -100,6 +100,160 @@ i18n.use(initReactI18next).init({
             tech: "Technologie Avancée",
           },
         },
+        contact: {
+          badge: "Contact",
+          form: {
+            label_name: "Nom complet",
+            placeholder_name: "Votre nom",
+            label_email: "Adresse e-mail",
+            placeholder_email: "vous@email.com",
+            label_subject: "Objet",
+            placeholder_subject: "Sujet de votre message",
+            label_message: "Votre message",
+            placeholder_message: "Dites-nous ce dont vous avez besoin.",
+            button_idle: "Envoyer le message",
+            button_loading: "Envoi en cours...",
+          },
+          info: {
+            location_title: "Localisation",
+            address: "école La Plateforme_, Marseille",
+          },
+        },
+
+        upload: {
+          title: "Téléchargez votre vidéo",
+          subtitle: "Partagez votre création avec nous en quelques clics.",
+          status: {
+            video_validated: "Vidéo validée et prête pour l'envoi.",
+            upload_success: "Vidéo mise en ligne avec succès ! Merci.",
+          },
+          form: {
+            required: "requis",
+            optional: "optionnel",
+            email_label: "Adresse e-mail",
+            email_placeholder: "exemple@domaine.com",
+            email_hint:
+              "Nous utiliserons cette adresse pour vous contacter si besoin.",
+            first_name_label: "Prénom",
+            first_name_placeholder: "Jean",
+            last_name_label: "Nom",
+            last_name_placeholder: "Dupont",
+            age_label: "Âge",
+            age_placeholder: "Votre âge",
+            age_hint: "Vous devez avoir au moins 18 ans.",
+            title_label: "Titre de la vidéo",
+            title_placeholder: "Donnez un titre accrocheur à votre vidéo",
+            description_label: "Description",
+            description_placeholder: "Dites-nous en plus sur cette vidéo...",
+            description_hint:
+              "Une courte description nous aide à comprendre le contexte.",
+            video_label: "Fichier vidéo (MP4)",
+            video_requirements:
+              "MP4 uniquement, Max 100Mo, ratio 16:9, 720p ou 1080p.",
+            antispam_label: "Vérification de sécurité",
+          },
+          button: {
+            choose_video: "Choisir une vidéo",
+            analyzing: "Analyse de la vidéo...",
+            uploading: "Envoi en cours...",
+            submit: "Envoyer vers YouTube",
+          },
+          errors: {
+            format_mp4: "Seuls les fichiers MP4 sont acceptés.",
+            file_size: "Le fichier est trop volumineux (max {{size}}Mo).",
+            not_compliant: "La vidéo ne respecte pas les critères techniques",
+            analysis_failed: "Échec de l'analyse vidéo. Veuillez réessayer.",
+            form_invalid: "Veuillez corriger les erreurs dans le formulaire.",
+            select_video: "Veuillez sélectionner une vidéo valide.",
+            altcha_missing: "Veuillez compléter la vérification de sécurité.",
+            upload_failed:
+              "Une erreur est survenue lors de l'envoi. Veuillez réessayer.",
+          },
+        },
+        altcha: {
+          label: "Je ne suis pas un robot",
+          verifying: "Vérification...",
+          verified: "Vérifié",
+          error: "Échec de la vérification",
+          expired: "Délai expiré, veuillez réessayer",
+        },
+
+        projects: {
+          main_title: "Appel à projets",
+          view_call: "Voir l'appel à projet",
+          not_found: "Article introuvable",
+        },
+        common: {
+          loading: "Chargement...",
+        },
+
+        newsletter: {
+          hero: {
+            badge: "Newsletter marsAI",
+            title_main: "Restez dans",
+            title_accent: "la boucle",
+            description:
+              "Recevez les dernières actualités, les films sélectionnés et les offres exclusives du festival directement dans votre boîte mail.",
+          },
+          stats: {
+            subscribers: "Abonnés",
+            frequency: "Fréquence",
+            open_rate: "Taux d'ouverture",
+            freq_value: "2x/mois",
+          },
+          form: {
+            title: "Inscrivez-vous",
+            subtitle: "Gratuit • Sans spam • Désabonnement facile",
+            label_name: "Prénom",
+            placeholder_name: "Votre prénom",
+            label_email: "Email",
+            placeholder_email: "votre@email.com",
+            label_preferences: "Je souhaite recevoir :",
+            submit: "S'inscrire à la newsletter",
+            loading: "Inscription en cours...",
+            rgpd: "En vous inscrivant, vous acceptez de recevoir des emails de marsAI Festival. Vous pouvez vous désabonner à tout moment.",
+            privacy_link: "Politique de confidentialité",
+            success_title: "Inscription confirmée !",
+            success_msg:
+              "Bienvenue dans la communauté marsAI ! Vous recevrez bientôt votre première newsletter.",
+            success_hint:
+              "Vérifiez votre boîte mail (et vos spams) pour confirmer votre inscription.",
+          },
+          preferences: {
+            news: "Actualités du festival",
+            films: "Nouveaux films sélectionnés",
+            events: "Événements et projections",
+            partners: "Offres partenaires",
+          },
+          benefits: {
+            title: "Pourquoi s'abonner ?",
+            subtitle: "Des avantages exclusifs pour nos abonnés",
+            preview: {
+              title: "En avant-première",
+              desc: "Soyez les premiers informés des annonces et sélections officielles",
+            },
+            offers: {
+              title: "Offres exclusives",
+              desc: "Accédez à des réductions sur les billets et pass VIP",
+            },
+            content: {
+              title: "Contenus exclusifs",
+              desc: "Interviews, making-of et coulisses du festival",
+            },
+          },
+          faq: {
+            title: "Questions fréquentes",
+            q1: "À quelle fréquence recevrai-je la newsletter ?",
+            a1: "Nous envoyons 2 newsletters par mois : une en début de mois avec les actualités, et une en milieu de mois avec les contenus exclusifs.",
+            q2: "Puis-je me désabonner à tout moment ?",
+            a2: "Oui, absolument. Chaque email contient un lien de désinscription en bas de page. Vous pouvez aussi gérer vos préférences à tout moment.",
+            q3: "Mes données sont-elles sécurisées ?",
+            a3: "Nous prenons la confidentialité très au sérieux. Vos données ne sont jamais vendues ou partagées avec des tiers.",
+          },
+          errors: {
+            server: "Le serveur ne répond pas.",
+          },
+        },
       },
     },
     en: {
@@ -198,9 +352,162 @@ i18n.use(initReactI18next).init({
             tech: "Advanced Technology",
           },
         },
+        contact: {
+          badge: "Contact",
+          form: {
+            label_name: "Full Name",
+            placeholder_name: "Your name",
+            label_email: "Email Address",
+            placeholder_email: "you@email.com",
+            label_subject: "Subject",
+            placeholder_subject: "Message subject",
+            label_message: "Your message",
+            placeholder_message: "Tell us what you need.",
+            button_idle: "Send Message",
+            button_loading: "Sending...",
+          },
+          info: {
+            location_title: "Location",
+            address: "La Plateforme_ school, Marseille",
+          },
+        },
+
+        upload: {
+          title: "Upload your video",
+          subtitle: "Share your creation with us in a few clicks.",
+          status: {
+            video_validated: "Video validated and ready to upload.",
+            upload_success: "Video successfully uploaded! Thank you.",
+          },
+          form: {
+            required: "required",
+            optional: "optional",
+            email_label: "Email address",
+            email_placeholder: "example@domain.com",
+            email_hint: "We will use this address to contact you if needed.",
+            first_name_label: "First name",
+            first_name_placeholder: "John",
+            last_name_label: "Last name",
+            last_name_placeholder: "Doe",
+            age_label: "Age",
+            age_placeholder: "Your age",
+            age_hint: "You must be at least 18 years old.",
+            title_label: "Video title",
+            title_placeholder: "Give a catchy title to your video",
+            description_label: "Description",
+            description_placeholder: "Tell us more about this video...",
+            description_hint:
+              "A short description helps us understand the context.",
+            video_label: "Video file (MP4)",
+            video_requirements:
+              "MP4 only, Max 100MB, 16:9 ratio, 720p or 1080p.",
+            antispam_label: "Security check",
+          },
+          button: {
+            choose_video: "Choose a video",
+            analyzing: "Analyzing video...",
+            uploading: "Uploading...",
+            submit: "Send to YouTube",
+          },
+          errors: {
+            format_mp4: "Only MP4 files are accepted.",
+            file_size: "The file is too large (max {{size}}MB).",
+            not_compliant: "The video does not meet the technical requirements",
+            analysis_failed: "Failed to analyze the video. Please try again.",
+            form_invalid: "Please correct the errors in the form.",
+            select_video: "Please select a valid video.",
+            altcha_missing: "Please complete the security check.",
+            upload_failed: "An error occurred during upload. Please try again.",
+          },
+        },
+        altcha: {
+          label: "I'm not a robot",
+          verifying: "Verifying...",
+          verified: "Verified",
+          error: "Verification failed",
+          expired: "Challenge expired, please try again",
+        },
+
+        projects: {
+          main_title: "Call for projects",
+          view_call: "View call for projects",
+          not_found: "Article not found",
+        },
+        common: {
+          loading: "Loading...",
+        },
+
+        newsletter: {
+          hero: {
+            badge: "marsAI Newsletter",
+            title_main: "Stay in",
+            title_accent: "the loop",
+            description:
+              "Get the latest news, selected films, and exclusive festival offers delivered directly to your inbox.",
+          },
+          stats: {
+            subscribers: "Subscribers",
+            frequency: "Frequency",
+            open_rate: "Open Rate",
+            freq_value: "2x/month",
+          },
+          form: {
+            title: "Sign Up",
+            subtitle: "Free • No spam • Easy unsubscribe",
+            label_name: "First Name",
+            placeholder_name: "Your first name",
+            label_email: "Email",
+            placeholder_email: "your@email.com",
+            label_preferences: "I want to receive:",
+            submit: "Subscribe to newsletter",
+            loading: "Subscribing...",
+            rgpd: "By signing up, you agree to receive emails from marsAI Festival. You can unsubscribe at any time.",
+            privacy_link: "Privacy Policy",
+            success_title: "Subscription confirmed!",
+            success_msg:
+              "Welcome to the marsAI community! You will receive your first newsletter soon.",
+            success_hint:
+              "Check your inbox (and spam folder) to confirm your subscription.",
+          },
+          preferences: {
+            news: "Festival news",
+            films: "New film selections",
+            events: "Events and screenings",
+            partners: "Partner offers",
+          },
+          benefits: {
+            title: "Why subscribe?",
+            subtitle: "Exclusive benefits for our subscribers",
+            preview: {
+              title: "Be the first to know",
+              desc: "Stay ahead with official announcements and selections",
+            },
+            offers: {
+              title: "Exclusive offers",
+              desc: "Access discounts on tickets and VIP passes",
+            },
+            content: {
+              title: "Exclusive content",
+              desc: "Interviews, making-of footage, and festival behind-the-scenes",
+            },
+          },
+          faq: {
+            title: "Frequently Asked Questions",
+            q1: "How often will I receive the newsletter?",
+            a1: "We send 2 newsletters per month: one at the beginning of the month with news, and one mid-month with exclusive content.",
+            q2: "Can I unsubscribe at any time?",
+            a2: "Yes, absolutely. Every email contains an unsubscribe link at the bottom. You can also manage your preferences at any time.",
+            q3: "Is my data secure?",
+            a3: "We take privacy very seriously. Your data is never sold or shared with third parties.",
+          },
+          errors: {
+            server: "The server is not responding.",
+          },
+        },
       },
     },
   },
+
   lng: "fr",
   fallbackLng: "fr",
   interpolation: { escapeValue: false },

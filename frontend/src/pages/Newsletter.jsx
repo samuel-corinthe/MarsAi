@@ -1,7 +1,10 @@
 import { useState } from "react";
 import Seo from "../components/Seo";
+import { useTranslation } from "react-i18next";
 
 const Newsletter = () => {
+  const { t } = useTranslation();
+
   const [formData, setFormData] = useState({
     firstName: "",
     email: "",
@@ -12,10 +15,7 @@ const Newsletter = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleCheckboxChange = (preference) => {
@@ -37,7 +37,7 @@ const Newsletter = () => {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData), // Envoie firstName, email et preferences
+          body: JSON.stringify(formData),
         },
       );
 
@@ -45,7 +45,6 @@ const Newsletter = () => {
 
       if (response.ok) {
         setIsSubmitted(true);
-        // Reset après 5 sec
         setTimeout(() => {
           setIsSubmitted(false);
           setFormData({ firstName: "", email: "", preferences: [] });
@@ -54,22 +53,26 @@ const Newsletter = () => {
         alert(data.message);
       }
     } catch (error) {
-      alert("Le serveur ne répond pas.");
+      alert(t("newsletter.errors.server"));
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Stats de la newsletter
+  // Mappage des stats selon ton JSON
   const stats = [
-    { number: "15K+", label: "Abonnés" },
-    { number: "2x/mois", label: "Fréquence" },
-    { number: "95%", label: "Taux d'ouverture" },
+    { number: "15K+", label: t("newsletter.stats.subscribers") },
+    {
+      number: t("newsletter.stats.freq_value"),
+      label: t("newsletter.stats.frequency"),
+    },
+    { number: "95%", label: t("newsletter.stats.open_rate") },
   ];
 
-  // Avantages de s'inscrire
-  const benefits = [
+  // Mappage des avantages (Benefits)
+  const benefitCards = [
     {
+      id: "preview",
       icon: (
         <svg
           className="w-8 h-8"
@@ -85,11 +88,9 @@ const Newsletter = () => {
           />
         </svg>
       ),
-      title: "En avant-première",
-      description:
-        "Soyez les premiers informés des annonces et sélections officielles",
     },
     {
+      id: "offers",
       icon: (
         <svg
           className="w-8 h-8"
@@ -105,10 +106,9 @@ const Newsletter = () => {
           />
         </svg>
       ),
-      title: "Offres exclusives",
-      description: "Accédez à des réductions sur les billets et pass VIP",
     },
     {
+      id: "content",
       icon: (
         <svg
           className="w-8 h-8"
@@ -124,91 +124,64 @@ const Newsletter = () => {
           />
         </svg>
       ),
-      title: "Contenus exclusifs",
-      description: "Interviews, making-of et coulisses du festival",
     },
-  ];
-
-  // Préférences de contenu
-  const contentPreferences = [
-    { id: "news", label: "Actualités du festival" },
-    { id: "films", label: "Nouveaux films sélectionnés" },
-    { id: "events", label: "Événements et projections" },
-    { id: "partners", label: "Offres partenaires" },
   ];
 
   return (
     <>
       <Seo
-        title="Newsletter"
-        description="Inscription a la newsletter marsAI et mises a jour du festival."
+        title={t("newsletter.hero.badge")}
+        description={t("newsletter.hero.description")}
       />
       <div className="min-h-screen bg-black">
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 px-4 overflow-hidden">
-        {/* Gradient Background */}
         <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/10 via-transparent to-transparent"></div>
-
-        <div className="max-w-4xl mx-auto relative z-10">
-          <div className="text-center space-y-6">
-            {/* Badge */}
-            <div className="inline-flex items-center space-x-2 px-4 py-2 bg-cyan-400/10 border border-cyan-400/30 rounded-full text-cyan-400 text-sm font-medium">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-              </svg>
-              <span>Newsletter marsAI</span>
-            </div>
-
-            {/* Title */}
-            <h1
-              className="text-4xl md:text-6xl lg:text-7xl font-black text-white leading-tight"
-              style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-            >
-              Restez dans
-              <br />
-              <span className="bg-gradient-to-r from-cyan-400 via-pink-500 to-purple-600 bg-clip-text text-transparent">
-                la boucle
-              </span>
-            </h1>
-
-            {/* Description */}
-            <p
-              className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed"
-              style={{ fontFamily: "'Inter', sans-serif" }}
-            >
-              Recevez les dernières actualités, les films sélectionnés et les
-              offres exclusives du festival directement dans votre boîte mail.
-            </p>
+        <div className="max-w-4xl mx-auto relative z-10 text-center space-y-6">
+          <div className="inline-flex items-center space-x-2 px-4 py-2 bg-cyan-400/10 border border-cyan-400/30 rounded-full text-cyan-400 text-sm font-medium">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+            </svg>
+            <span>{t("newsletter.hero.badge")}</span>
           </div>
-        </div>
 
-        {/* Decorative Elements */}
-        <div className="absolute top-1/4 left-10 w-72 h-72 bg-cyan-500/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-1/4 right-10 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl"></div>
+          <h1
+            className="text-4xl md:text-6xl lg:text-7xl font-black text-white leading-tight uppercase"
+            style={{ fontFamily: "'Bebas Neue', sans-serif" }}
+          >
+            {t("newsletter.hero.title_main")}
+            <br />
+            <span className="bg-gradient-to-r from-cyan-400 via-pink-500 to-purple-600 bg-clip-text text-transparent">
+              {t("newsletter.hero.title_accent")}
+            </span>
+          </h1>
+
+          <p
+            className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed"
+            style={{ fontFamily: "'Inter', sans-serif" }}
+          >
+            {t("newsletter.hero.description")}
+          </p>
+        </div>
       </section>
 
       {/* Stats Section */}
       <section className="py-12 px-4 border-y border-gray-900">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-3 gap-4 md:gap-8">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center space-y-2">
-                <div
-                  className="text-3xl md:text-5xl font-black text-transparent bg-gradient-to-r from-cyan-400 to-pink-500 bg-clip-text"
-                  style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-                >
-                  {stat.number}
-                </div>
-                <div
-                  className="text-gray-400 text-xs md:text-base"
-                  style={{ fontFamily: "'Inter', sans-serif" }}
-                >
-                  {stat.label}
-                </div>
+        <div className="max-w-4xl mx-auto grid grid-cols-3 gap-4 md:gap-8">
+          {stats.map((stat, index) => (
+            <div key={index} className="text-center space-y-2">
+              <div
+                className="text-3xl md:text-5xl font-black text-transparent bg-gradient-to-r from-cyan-400 to-pink-500 bg-clip-text"
+                style={{ fontFamily: "'Bebas Neue', sans-serif" }}
+              >
+                {stat.number}
               </div>
-            ))}
-          </div>
+              <div className="text-gray-400 text-xs md:text-base">
+                {stat.label}
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -222,138 +195,82 @@ const Newsletter = () => {
                   className="text-3xl md:text-4xl font-black text-white mb-3"
                   style={{ fontFamily: "'Bebas Neue', sans-serif" }}
                 >
-                  Inscrivez-vous
+                  {t("newsletter.form.title")}
                 </h2>
-                <p
-                  className="text-gray-400"
-                  style={{ fontFamily: "'Inter', sans-serif" }}
-                >
-                  Gratuit • Sans spam • Désabonnement facile
-                </p>
+                <p className="text-gray-400">{t("newsletter.form.subtitle")}</p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Prénom */}
                 <div>
-                  <label
-                    htmlFor="firstName"
-                    className="block text-sm font-medium text-gray-300 mb-2"
-                    style={{ fontFamily: "'Inter', sans-serif" }}
-                  >
-                    Prénom
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    {t("newsletter.form.label_name")}
                   </label>
                   <input
                     type="text"
-                    id="firstName"
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400 transition-all duration-200"
-                    placeholder="Votre prénom"
-                    style={{ fontFamily: "'Inter', sans-serif" }}
+                    className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-lg text-white outline-none focus:border-cyan-400 transition-all"
+                    placeholder={t("newsletter.form.placeholder_name")}
                   />
                 </div>
 
-                {/* Email */}
                 <div>
-                  <label
-                    htmlFor="email"
-                    className="block text-sm font-medium text-gray-300 mb-2"
-                    style={{ fontFamily: "'Inter', sans-serif" }}
-                  >
-                    Email
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    {t("newsletter.form.label_email")}
                   </label>
                   <input
                     type="email"
-                    id="email"
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400 transition-all duration-200"
-                    placeholder="votre@email.com"
-                    style={{ fontFamily: "'Inter', sans-serif" }}
+                    className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-lg text-white outline-none focus:border-cyan-400 transition-all"
+                    placeholder={t("newsletter.form.placeholder_email")}
                   />
                 </div>
 
-                {/* Préférences */}
-                <div>
-                  <label
-                    className="block text-sm font-medium text-gray-300 mb-3"
-                    style={{ fontFamily: "'Inter', sans-serif" }}
-                  >
-                    Je souhaite recevoir :
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-300 mb-3">
+                    {t("newsletter.form.label_preferences")}
                   </label>
-                  <div className="space-y-3">
-                    {contentPreferences.map((pref) => (
-                      <label
-                        key={pref.id}
-                        className="flex items-center space-x-3 cursor-pointer group"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={formData.preferences.includes(pref.id)}
-                          onChange={() => handleCheckboxChange(pref.id)}
-                          className="w-5 h-5 rounded border-gray-700 text-cyan-400 focus:ring-2 focus:ring-cyan-400/50 focus:ring-offset-0 bg-gray-900 cursor-pointer"
-                        />
-                        <span
-                          className="text-gray-400 group-hover:text-gray-300 transition-colors"
-                          style={{ fontFamily: "'Inter', sans-serif" }}
-                        >
-                          {pref.label}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
+                  {["news", "films", "events", "partners"].map((id) => (
+                    <label
+                      key={id}
+                      className="flex items-center space-x-3 cursor-pointer group"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.preferences.includes(id)}
+                        onChange={() => handleCheckboxChange(id)}
+                        className="w-5 h-5 rounded border-gray-700 text-cyan-400 bg-gray-900 cursor-pointer"
+                      />
+                      <span className="text-gray-400 group-hover:text-gray-300 transition-colors">
+                        {t(`newsletter.preferences.${id}`)}
+                      </span>
+                    </label>
+                  ))}
                 </div>
 
-                {/* RGPD */}
-                <p
-                  className="text-xs text-gray-500 leading-relaxed"
-                  style={{ fontFamily: "'Inter', sans-serif" }}
-                >
-                  En vous inscrivant, vous acceptez de recevoir des emails de
-                  marsAI Festival. Vous pouvez vous désabonner à tout moment.
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  {t("newsletter.form.rgpd")}
                   <a
-                    href="/politique-de-confidentialite"
+                    href="/privacy"
                     className="text-cyan-400 hover:underline ml-1"
                   >
-                    Politique de confidentialité
+                    {t("newsletter.form.privacy_link")}
                   </a>
                 </p>
 
-                {/* Submit Button */}
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full group relative px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-lg rounded-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/50 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                  style={{ fontFamily: "'Inter', sans-serif" }}
+                  className="w-full group relative px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-lg rounded-full overflow-hidden transition-all duration-300 hover:scale-105 disabled:opacity-50"
                 >
                   <span className="relative z-10 flex items-center justify-center space-x-2">
                     {isLoading ? (
-                      <>
-                        <svg
-                          className="animate-spin w-5 h-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
-                        </svg>
-                        <span>Inscription en cours...</span>
-                      </>
+                      <span>{t("newsletter.form.loading")}</span>
                     ) : (
                       <>
                         <svg
@@ -369,51 +286,26 @@ const Newsletter = () => {
                             d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                           />
                         </svg>
-                        <span>S'inscrire à la newsletter</span>
+                        <span>{t("newsletter.form.submit")}</span>
                       </>
                     )}
                   </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </button>
               </form>
             </div>
           ) : (
-            // Success Message
             <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-3xl p-6 md:p-12 text-center animate-fadeIn">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center mx-auto mb-6">
-                <svg
-                  className="w-10 h-10 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </div>
               <h3
-                className="text-3xl md:text-4xl font-black text-white mb-4"
+                className="text-3xl md:text-4xl font-black text-white mb-4 uppercase"
                 style={{ fontFamily: "'Bebas Neue', sans-serif" }}
               >
-                Inscription confirmée !
+                {t("newsletter.form.success_title")}
               </h3>
-              <p
-                className="text-lg text-gray-300 mb-6"
-                style={{ fontFamily: "'Inter', sans-serif" }}
-              >
-                Bienvenue dans la communauté marsAI ! Vous recevrez bientôt
-                votre première newsletter.
+              <p className="text-lg text-gray-300 mb-6">
+                {t("newsletter.form.success_msg")}
               </p>
-              <p
-                className="text-sm text-gray-400"
-                style={{ fontFamily: "'Inter', sans-serif" }}
-              >
-                Vérifiez votre boîte mail (et vos spams) pour confirmer votre
-                inscription.
+              <p className="text-sm text-gray-400">
+                {t("newsletter.form.success_hint")}
               </p>
             </div>
           )}
@@ -425,39 +317,29 @@ const Newsletter = () => {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2
-              className="text-3xl md:text-5xl font-black text-white mb-4"
+              className="text-3xl md:text-5xl font-black text-white mb-4 uppercase"
               style={{ fontFamily: "'Bebas Neue', sans-serif" }}
             >
-              Pourquoi s'abonner ?
+              {t("newsletter.benefits.title")}
             </h2>
-            <p
-              className="text-xl text-gray-400"
-              style={{ fontFamily: "'Inter', sans-serif" }}
-            >
-              Des avantages exclusifs pour nos abonnés
+            <p className="text-xl text-gray-400">
+              {t("newsletter.benefits.subtitle")}
             </p>
           </div>
-
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-            {benefits.map((benefit, index) => (
+            {benefitCards.map((benefit) => (
               <div
-                key={index}
-                className="group p-6 md:p-8 bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-2xl hover:border-cyan-400/50 transition-all duration-300"
+                key={benefit.id}
+                className="group p-6 md:p-8 bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-2xl hover:border-cyan-400/50 transition-all"
               >
-                <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-gradient-to-br from-cyan-400 to-pink-500 flex items-center justify-center text-black mb-6 group-hover:scale-110 transition-transform duration-300">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-400 to-pink-500 flex items-center justify-center text-black mb-6 group-hover:scale-110 transition-transform">
                   {benefit.icon}
                 </div>
-                <h3
-                  className="text-xl md:text-2xl font-bold text-white mb-3"
-                  style={{ fontFamily: "'Inter', sans-serif" }}
-                >
-                  {benefit.title}
+                <h3 className="text-xl md:text-2xl font-bold text-white mb-3">
+                  {t(`newsletter.benefits.${benefit.id}.title`)}
                 </h3>
-                <p
-                  className="text-gray-400 leading-relaxed text-sm md:text-base"
-                  style={{ fontFamily: "'Inter', sans-serif" }}
-                >
-                  {benefit.description}
+                <p className="text-gray-400 leading-relaxed">
+                  {t(`newsletter.benefits.${benefit.id}.desc`)}
                 </p>
               </div>
             ))}
@@ -469,42 +351,22 @@ const Newsletter = () => {
       <section className="py-20 px-4">
         <div className="max-w-3xl mx-auto">
           <h2
-            className="text-3xl md:text-4xl font-black text-white text-center mb-12"
+            className="text-3xl md:text-4xl font-black text-white text-center mb-12 uppercase"
             style={{ fontFamily: "'Bebas Neue', sans-serif" }}
           >
-            Questions fréquentes
+            {t("newsletter.faq.title")}
           </h2>
-
           <div className="space-y-4">
-            {[
-              {
-                q: "À quelle fréquence recevrai-je la newsletter ?",
-                a: "Nous envoyons 2 newsletters par mois : une en début de mois avec les actualités, et une en milieu de mois avec les contenus exclusifs.",
-              },
-              {
-                q: "Puis-je me désabonner à tout moment ?",
-                a: "Oui, absolument. Chaque email contient un lien de désinscription en bas de page. Vous pouvez aussi gérer vos préférences à tout moment.",
-              },
-              {
-                q: "Mes données sont-elles sécurisées ?",
-                a: "Nous prenons la confidentialité très au sérieux. Vos données ne sont jamais vendues ou partagées avec des tiers. Consultez notre politique de confidentialité pour plus de détails.",
-              },
-            ].map((faq, index) => (
+            {["q1", "q2", "q3"].map((key) => (
               <div
-                key={index}
+                key={key}
                 className="p-6 bg-gray-900 border border-gray-800 rounded-xl"
               >
-                <h3
-                  className="text-lg font-bold text-white mb-2"
-                  style={{ fontFamily: "'Inter', sans-serif" }}
-                >
-                  {faq.q}
+                <h3 className="text-lg font-bold text-white mb-2">
+                  {t(`newsletter.faq.${key}`)}
                 </h3>
-                <p
-                  className="text-gray-400 leading-relaxed"
-                  style={{ fontFamily: "'Inter', sans-serif" }}
-                >
-                  {faq.a}
+                <p className="text-gray-400 leading-relaxed">
+                  {t(`newsletter.faq.${key.replace("q", "a")}`)}
                 </p>
               </div>
             ))}
@@ -512,22 +374,9 @@ const Newsletter = () => {
         </div>
       </section>
 
-      {/* Styles */}
       <style>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-
-        .animate-fadeIn {
-          animation: fadeIn 0.5s ease-out forwards;
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
       `}</style>
       </div>
     </>

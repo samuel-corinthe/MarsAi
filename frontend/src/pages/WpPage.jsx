@@ -11,7 +11,7 @@ import CallForProject from "./Appel a projet";
 
 export default function WpPage({ isHome = false, fixedSlug = null }) {
   const { slug: routeSlug } = useParams();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -102,7 +102,6 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     return `${year}-${month}-${day}`;
   };
 
-
   const formatDateParts = (dateStr) => {
     const d = parseDate(dateStr);
     const locale = i18n.language === "fr" ? "fr-FR" : "en-GB";
@@ -160,7 +159,9 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                       minute: "2-digit",
                     }),
                     lieu: "Marseille",
-                    subCategories: categoriesData.filter((cat) => cat.id !== agendaCategoryId),
+                    subCategories: categoriesData.filter(
+                      (cat) => cat.id !== agendaCategoryId,
+                    ),
                   };
                 });
                 setAgendaItems(formattedEvents);
@@ -246,13 +247,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
         if (nextPage !== datePage) setDatePage(nextPage);
       }
     }
-  }, [
-    canPaginateDates,
-    datePage,
-    datePageCount,
-    dateOptions,
-    selectedDate,
-  ]);
+  }, [canPaginateDates, datePage, datePageCount, dateOptions, selectedDate]);
 
   const activeEvents = agendaItems.filter((item) => item.date === selectedDate);
 
@@ -298,7 +293,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   const seoTitle = page?.title?.rendered || slug;
   const seoDescription = page?.excerpt?.rendered || page?.content?.rendered || "";
   const seoLang = i18n.language;
-  
+
   if (slug === "appel-a-projet") {
     return <CallForProject page={page} />;
   }
@@ -351,7 +346,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               className="text-xs uppercase tracking-[0.4em] text-cyan-200 mt-2"
               style={{ fontFamily: "'Space Mono', monospace" }}
             >
-              Contact
+              {t("contact.badge")}
             </p>
           </div>
 
@@ -367,13 +362,13 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                     className="text-[10px] uppercase tracking-[0.3em] text-white/70"
                     style={{ fontFamily: "'Space Mono', monospace" }}
                   >
-                    Nom complet
+                    {t("contact.form.label_name")}
                   </label>
                   <input
                     type="text"
                     id="name"
                     name="name"
-                    placeholder="Votre nom"
+                    placeholder={t("contact.form.placeholder_name")}
                     autoComplete="name"
                     className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder:text-white/40 focus:ring-2 focus:ring-cyan-400/70 focus:border-cyan-300 outline-none transition"
                     required
@@ -386,13 +381,13 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                     className="text-[10px] uppercase tracking-[0.3em] text-white/70"
                     style={{ fontFamily: "'Space Mono', monospace" }}
                   >
-                    Adresse e-mail
+                    {t("contact.form.label_email")}
                   </label>
                   <input
                     type="email"
                     id="email"
                     name="email"
-                    placeholder="vous@email.com"
+                    placeholder={t("contact.form.placeholder_email")}
                     autoComplete="email"
                     className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder:text-white/40 focus:ring-2 focus:ring-cyan-400/70 focus:border-cyan-300 outline-none transition"
                     required
@@ -406,13 +401,13 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                   className="text-[10px] uppercase tracking-[0.3em] text-white/70"
                   style={{ fontFamily: "'Space Mono', monospace" }}
                 >
-                  Objet
+                  {t("contact.form.label_subject")}
                 </label>
                 <input
                   type="text"
                   id="subject"
                   name="subject"
-                  placeholder="Sujet de votre message"
+                  placeholder={t("contact.form.placeholder_subject")}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder:text-white/40 focus:ring-2 focus:ring-cyan-400/70 focus:border-cyan-300 outline-none transition"
                   required
                 />
@@ -424,13 +419,13 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                   className="text-[10px] uppercase tracking-[0.3em] text-white/70"
                   style={{ fontFamily: "'Space Mono', monospace" }}
                 >
-                  Votre message
+                  {t("contact.form.label_message")}
                 </label>
                 <textarea
                   id="message"
                   name="message"
                   rows="6"
-                  placeholder="Dites-nous ce dont vous avez besoin."
+                  placeholder={t("contact.form.placeholder_message")}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder:text-white/40 focus:ring-2 focus:ring-cyan-400/70 focus:border-cyan-300 outline-none transition resize-none"
                   required
                 ></textarea>
@@ -442,7 +437,9 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                 className="w-full bg-gradient-to-r from-cyan-400 to-blue-600 text-black font-bold uppercase tracking-[0.25em] text-[11px] py-3.5 rounded-2xl transition hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{ fontFamily: "'Space Mono', monospace" }}
               >
-                {isSending ? "Envoi en cours..." : "Envoyer le message"}
+                {isSending
+                  ? t("contact.form.button_loading")
+                  : t("contact.form.button_idle")}
               </button>
             </form>
 
@@ -481,10 +478,10 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                       className="text-[10px] uppercase tracking-[0.3em] text-cyan-200"
                       style={{ fontFamily: "'Space Mono', monospace" }}
                     >
-                      Localisation
+                      {t("contact.info.location_title")}
                     </p>
                     <p className="text-white/80 text-sm">
-                      école La Plateforme_, Marseille
+                      {t("contact.info.address")}
                     </p>
                   </div>
                 </div>
@@ -503,11 +500,11 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               </div>
             </div>
           </div>
-        </div>
 
-        <style>{`
+          <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
         `}</style>
+        </div>
       </main>
     );
   }
@@ -611,7 +608,9 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                       <h2
                         className="text-2xl md:text-4xl font-black text-white mb-6 leading-tight"
                         style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-                        dangerouslySetInnerHTML={{ __html: selectedArticle.titre }}
+                        dangerouslySetInnerHTML={{
+                          __html: selectedArticle.titre,
+                        }}
                       />
                     )}
 
@@ -658,7 +657,9 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                     >
                       <button
                         type="button"
-                        onClick={() => setDatePage((prev) => Math.max(0, prev - 1))}
+                        onClick={() =>
+                          setDatePage((prev) => Math.max(0, prev - 1))
+                        }
                         disabled={datePage === 0}
                         className="px-3 py-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20 transition disabled:opacity-40 disabled:cursor-not-allowed"
                         aria-label="Dates précédentes"
@@ -867,5 +868,3 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     </main>
   );
 }
-
-
