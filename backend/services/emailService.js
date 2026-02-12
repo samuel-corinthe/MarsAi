@@ -1,5 +1,9 @@
 const { validate } = require("deep-email-validator");
-const { transporter, apiInstance, SibApiV3Sdk } = require("../config/mail.js");
+const {
+  transporter,
+  apiInstance,
+  SibApiV3Sdk,
+} = require("../config_file/mail.js");
 
 const emailService = {
   async validateEmail(email) {
