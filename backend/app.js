@@ -5,6 +5,7 @@ import multer from "multer";
 import { createRequire } from "node:module";
 import uploadRoutes from "./routes/upload.js";
 import altchaRoutes from "./routes/altcha.js";
+import moviesRoutes from "./routes/movies.js";
 
 const require = createRequire(import.meta.url);
 const { validate } = require("deep-email-validator");
@@ -182,6 +183,7 @@ app.post("/subscribe-newsletter", async (req, res) => {
 
 app.use("/api/altcha", altchaRoutes);
 app.use("/api/upload", verifyOrigin, uploadRoutes);
+app.use("/api/movies", moviesRoutes);
 
 app.get("/", (req, res) => {
   res.send("Serveur MarsAI operationnel");
