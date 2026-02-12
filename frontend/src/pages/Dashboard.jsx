@@ -46,7 +46,7 @@ function SparkLine({ data, stroke = "#f6c452" }) {
         />
       </svg>
       </div>
-    </>
+    
   );
 }
 
@@ -65,8 +65,7 @@ function DonutSplit({ accepted, pending, rejected }) {
         <div className="text-xs text-slate-100/85">Statuts</div>
         <div className="font-semibold">{accepted}/{total}</div>
       </div>
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -79,7 +78,7 @@ function ProgressBar({ label, value, color }) {
       </div>
       <div className="text-xs font-semibold">{Math.round(value)}%</div>
       </div>
-    </>
+    
   );
 }
 
@@ -95,7 +94,7 @@ function Pill({ children, tone = "pink", active = false, onClick }) {
 
 function FilmRow({ film }) {
   const badgeColor =
-    film.status === "accepté" || film.status === "sélectionné"
+    film.status === "acceptÃ©" || film.status === "sÃ©lectionnÃ©"
       ? "bg-emerald-500/20 text-emerald-200"
       : film.status === "en cours"
         ? "bg-amber-400/15 text-amber-200"
@@ -115,7 +114,7 @@ function FilmRow({ film }) {
             <span className="text-xs text-slate-300/90">{film.phase}</span>
           </div>
           <div className="mt-1 text-xs text-slate-200/90">
-            <span>{film.country}</span> · <span>{film.duration}</span> ·{" "}
+            <span>{film.country}</span> Â· <span>{film.duration}</span> Â·{" "}
             <span className="text-slate-300/90">{film.tools}</span>
           </div>
         </div>
@@ -137,8 +136,7 @@ function FilmRow({ film }) {
           </div>
         </div>
       </div>
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -212,7 +210,7 @@ export default function Dashboard() {
   }
 
   if (!adminData) {
-    return <div className="app-container page">Aucune donnée admin disponible.</div>;
+    return <div className="app-container page">Aucune donnÃ©e admin disponible.</div>;
   }
 
   const {
@@ -232,7 +230,7 @@ export default function Dashboard() {
   const quotaTarget = selectionTarget || adminKpis.quota || 0;
 
   if (!phaseTimeline?.length) {
-    return <div className="app-container page">Aucune phase configurée.</div>;
+    return <div className="app-container page">Aucune phase configurÃ©e.</div>;
   }
 
   const effectiveUser = currentUser ?? adminData.currentUser;
@@ -348,16 +346,16 @@ export default function Dashboard() {
           <div className="flex-1 space-y-8">
         <header id="admin-top" className="glass p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <div className="pill pill-pink">Festival IA · cockpit</div>
+            <div className="pill pill-pink">Festival IA Â· cockpit</div>
             <h1 className="dash-title mt-3 text-white">Dashboard Admin & Super Admin</h1>
             <p className="dash-subtitle text-slate-100/90">
-              Vue unifiée : juger les films, piloter les règles et la gouvernance du festival.
+              Vue unifiÃ©e : juger les films, piloter les rÃ¨gles et la gouvernance du festival.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Pill tone="cyan">Quota {quotaTarget}</Pill>
             <Pill tone="amber">Phase : {currentPhase.label}</Pill>
-            <Pill>Traçabilité active</Pill>
+            <Pill>TraÃ§abilitÃ© active</Pill>
           </div>
         </header>
 
@@ -369,7 +367,7 @@ export default function Dashboard() {
                 <div className="pill pill-cyan">Profil admin</div>
                 <h2 className="text-xl font-semibold mt-2 text-white">{profilePreview.name}</h2>
                 <p className="text-sm text-slate-100/80">
-                  Rôle actuel : {profilePreview.role === "superadmin" ? "Super admin" : "Admin"} — statut {profilePreview.status}.
+                  RÃ´le actuel : {profilePreview.role === "superadmin" ? "Super admin" : "Admin"} â€” statut {profilePreview.status}.
                 </p>
               </div>
               <span
@@ -411,7 +409,7 @@ export default function Dashboard() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-slate-100/90">
-                Téléphone
+                TÃ©lÃ©phone
                 <input
                   className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-300"
                   value={effectiveProfile.phone}
@@ -437,7 +435,7 @@ export default function Dashboard() {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm text-slate-100/90">
-                Rôle
+                RÃ´le
                 <select
                   className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white focus:outline-none focus:border-cyan-300"
                   value={effectiveProfile.role}
@@ -453,7 +451,7 @@ export default function Dashboard() {
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-sm text-slate-100/90">
-                Région
+                RÃ©gion
                 <input
                   className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-300"
                   value={effectiveProfile.region}
@@ -475,7 +473,7 @@ export default function Dashboard() {
                   className="btn-ghost px-4 py-2 rounded-lg border border-white/10"
                   onClick={() => setProfileForm(effectiveUser)}
                 >
-                  Réinitialiser
+                  RÃ©initialiser
                 </button>
               {isSuperAdmin && <span className="pill pill-amber">Super admin : peut changer de phase</span>}
             </div>
@@ -500,7 +498,7 @@ export default function Dashboard() {
               <div className="bar-fill" style={{ width: `${phaseProgress}%` }} />
             </div>
             <div className="text-xs text-slate-100/85">
-              Sélection : {currentPhase.selected}/{quotaTarget} visés · Films déposés : {currentPhase.submitted}
+              SÃ©lection : {currentPhase.selected}/{quotaTarget} visÃ©s Â· Films dÃ©posÃ©s : {currentPhase.submitted}
             </div>
             <div className="bar-track h-2">
               <div
@@ -512,7 +510,7 @@ export default function Dashboard() {
               />
             </div>
             <div className="text-xs text-slate-100/75">
-              Progression sélection : {Math.round(selectionProgress)}%
+              Progression sÃ©lection : {Math.round(selectionProgress)}%
             </div>
             <div className="flex gap-2 flex-wrap">
               <button
@@ -520,13 +518,13 @@ export default function Dashboard() {
                 disabled={!isSuperAdmin || !nextPhase}
                 onClick={handleNextPhase}
               >
-                Passer à {nextPhase ? nextPhase.label : "la dernière phase"}
+                Passer Ã  {nextPhase ? nextPhase.label : "la derniÃ¨re phase"}
               </button>
               <button
                 className="btn-ghost px-4 py-2 rounded-lg border border-white/10"
                 onClick={() => setCurrentPhaseIndex(0)}
               >
-                Revenir au dépôt
+                Revenir au dÃ©pÃ´t
               </button>
             </div>
             {!isSuperAdmin && (
@@ -552,25 +550,25 @@ export default function Dashboard() {
                   cursor: adminKpis.selected >= adminKpis.quota ? "not-allowed" : "pointer",
                 }}
               >
-                Ajouter à la sélection ({adminKpis.selected}/{adminKpis.quota})
+                Ajouter Ã  la sÃ©lection ({adminKpis.selected}/{adminKpis.quota})
               </button>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="stat-card glass-strong">
-                <div className="kpi-label text-slate-100">Films notés par vous</div>
+                <div className="kpi-label text-slate-100">Films notÃ©s par vous</div>
                 <div className="kpi-value">{adminKpis.noted}</div>
                 <div className="kpi-trend text-emerald-300">+4 cette semaine</div>
                 <SparkLine data={[2, 5, 4, 7, 6, 9, 8]} stroke="#25d0ff" />
               </div>
               <div className="stat-card">
-                <div className="kpi-label text-slate-100">Restants à voir</div>
+                <div className="kpi-label text-slate-100">Restants Ã  voir</div>
                 <div className="kpi-value">{adminKpis.remaining}</div>
                 <div className="kpi-trend text-amber-200">Prioriser aujourd'hui</div>
                 <SparkLine data={[9, 8, 7, 6, 5, 4, 4]} stroke="#f6c452" />
               </div>
               <div className="stat-card">
-                <div className="kpi-label text-slate-100">Sélection officielle</div>
+                <div className="kpi-label text-slate-100">SÃ©lection officielle</div>
                 <div className="kpi-value">
                   {adminKpis.selected}/{adminKpis.quota}
                 </div>
@@ -629,8 +627,8 @@ export default function Dashboard() {
             {/* Film list */}
             <div className="list-card space-y-3" data-testid="films-list">
               <div className="flex items-center justify-between text-xs text-slate-300/80">
-                <span>Films affichés : {filteredFilms.length}</span>
-                <span>Tri : par défaut</span>
+                <span>Films affichÃ©s : {filteredFilms.length}</span>
+                <span>Tri : par dÃ©faut</span>
               </div>
               {filteredFilms.map((film) => (
                 <FilmRow key={film.title} film={film} />
@@ -647,16 +645,16 @@ export default function Dashboard() {
               <DonutSplit accepted={2} pending={2} rejected={1} />
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-cyan-300" /> acceptés (2)
+                  <span className="w-3 h-3 rounded-full bg-cyan-300" /> acceptÃ©s (2)
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-full bg-amber-300" /> En cours (2)
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-rose-300" /> refusés (1)
+                  <span className="w-3 h-3 rounded-full bg-rose-300" /> refusÃ©s (1)
                 </div>
                 <p className="text-xs text-slate-100/80">
-                  Vue perso basée sur vos notations.
+                  Vue perso basÃ©e sur vos notations.
                 </p>
               </div>
             </div>
@@ -664,12 +662,12 @@ export default function Dashboard() {
             <div className="glass p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Retards de notation</h3>
-                <span className="pill pill-amber">Priorité</span>
+                <span className="pill pill-amber">PrioritÃ©</span>
               </div>
               <ul className="space-y-2 text-sm text-slate-200">
                 <li>4 films en attente depuis 72h</li>
                 <li>2 films proches de la deadline (48h)</li>
-                <li>Quota {quotaTarget} : {adminKpis.selected}/{quotaTarget} utilisés</li>
+                <li>Quota {quotaTarget} : {adminKpis.selected}/{quotaTarget} utilisÃ©s</li>
               </ul>
               <div className="bar-track">
                 <div className="bar-fill" style={{ width: `${selectionRatio}%` }} />
@@ -681,7 +679,7 @@ export default function Dashboard() {
                 <h3 className="font-semibold">Vos indicateurs</h3>
                 <span className="text-xs text-slate-100/80">Auto-refresh 5 min</span>
               </div>
-              <ProgressBar label="Notes déposées" value={68} color="linear-gradient(90deg,#25d0ff,#f6c452)" />
+              <ProgressBar label="Notes dÃ©posÃ©es" value={68} color="linear-gradient(90deg,#25d0ff,#f6c452)" />
               <ProgressBar label="Commentaires" value={54} color="linear-gradient(90deg,#f2438b,#25d0ff)" />
               <ProgressBar label="Visionnage" value={72} color="linear-gradient(90deg,#f6c452,#f2438b)" />
             </div>
@@ -695,15 +693,15 @@ export default function Dashboard() {
               <div className="pill pill-pink">Espace super admin</div>
               <h2 className="text-2xl font-semibold mt-2">Pilotage & gouvernance</h2>
               <p className="dash-subtitle text-slate-100/90">
-                Comptes, phases, règles métier, logs et newsletter — tout au même endroit.
+                Comptes, phases, rÃ¨gles mÃ©tier, logs et newsletter â€” tout au mÃªme endroit.
               </p>
             </div>
-            <button className="btn-primary rounded-full px-4 py-2">Créer un admin</button>
+            <button className="btn-primary rounded-full px-4 py-2">CrÃ©er un admin</button>
           </div>
 
           <div className="grid gap-4 md:grid-cols-4">
             <div className="stat-card glass-strong">
-              <div className="kpi-label text-slate-100">Films déposés</div>
+              <div className="kpi-label text-slate-100">Films dÃ©posÃ©s</div>
               <div className="kpi-value">{superStats.films}</div>
               <div className="kpi-trend text-cyan-200">+12 vs hier</div>
             </div>
@@ -720,7 +718,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="stat-card">
-              <div className="kpi-label text-slate-100">Compte à rebours</div>
+              <div className="kpi-label text-slate-100">Compte Ã  rebours</div>
               <div className="kpi-value text-xl">{superStats.countdown}</div>
               <SparkLine data={[5, 4, 3, 3, 2, 1, 0]} stroke="#25d0ff" />
             </div>
@@ -730,7 +728,7 @@ export default function Dashboard() {
             <div className="list-card space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Gestion des comptes</h3>
-                <span className="pill pill-cyan">Rôles</span>
+                <span className="pill pill-cyan">RÃ´les</span>
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
@@ -745,11 +743,11 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-semibold">Léa</div>
+                    <div className="font-semibold">LÃ©a</div>
                     <div className="text-xs text-slate-200/90">Admin - Europe</div>
                   </div>
                   <div className="flex gap-2">
-                    <button className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10">Désactiver</button>
+                    <button className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10">DÃ©sactiver</button>
                     <button className="btn-primary px-3 py-1.5 rounded-lg">Promouvoir</button>
                   </div>
                 </div>
@@ -759,7 +757,7 @@ export default function Dashboard() {
                     <div className="text-xs text-slate-200/90">Admin - Asie</div>
                   </div>
                   <div className="flex gap-2">
-                    <button className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10">Désactiver</button>
+                    <button className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10">DÃ©sactiver</button>
                     <button className="btn-primary px-3 py-1.5 rounded-lg">Promouvoir</button>
                   </div>
                 </div>
@@ -768,26 +766,26 @@ export default function Dashboard() {
 
             <div className="list-card space-y-3" id="phases">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Phases & règles</h3>
-                <span className="pill pill-amber">Dates clés</span>
+                <h3 className="font-semibold">Phases & rÃ¨gles</h3>
+                <span className="pill pill-amber">Dates clÃ©s</span>
               </div>
               <ul className="space-y-2 text-sm">
-                <li>?? Dépôt : jusqu'au 28 fév 2026</li>
-                <li>????? Sélection : 1 mars ? 14 mars 2026</li>
+                <li>?? DÃ©pÃ´t : jusqu'au 28 fÃ©v 2026</li>
+                <li>????? SÃ©lection : 1 mars ? 14 mars 2026</li>
                 <li>?? Annonce publique : 20 mars 2026</li>
               </ul>
               <div className="bar-track">
                 <div className="bar-fill" style={{ width: `${superStats.phasesProgress}%` }} />
               </div>
-              <button className="btn-primary w-full mt-2 rounded-lg">Modifier les règles (quota {quotaTarget}, notation)</button>
+              <button className="btn-primary w-full mt-2 rounded-lg">Modifier les rÃ¨gles (quota {quotaTarget}, notation)</button>
             </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
             <div className="list-card space-y-3 md:col-span-2" id="logs">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Logs & sécurité</h3>
-                <span className="pill pill-pink">Traçabilité</span>
+                <h3 className="font-semibold">Logs & sÃ©curitÃ©</h3>
+                <span className="pill pill-pink">TraÃ§abilitÃ©</span>
               </div>
               <ul className="space-y-2 text-sm">
                 {logs.map((item) => (
@@ -809,10 +807,10 @@ export default function Dashboard() {
                 <span className="pill pill-cyan">1 423 inscrits</span>
               </div>
               <p className="text-sm text-slate-200">
-                Export rapide pour annonce finale. Validation RGPD et opt-in déjà effectués.
+                Export rapide pour annonce finale. Validation RGPD et opt-in dÃ©jÃ  effectuÃ©s.
               </p>
               <button className="btn-primary w-full rounded-lg">Exporter emails</button>
-              <button className="btn-ghost w-full rounded-lg border border-white/10">Voir abonnés</button>
+              <button className="btn-ghost w-full rounded-lg border border-white/10">Voir abonnÃ©s</button>
             </div>
           </div>
         </section>
@@ -855,13 +853,10 @@ export default function Dashboard() {
         </div>
 
       </div>
-      </div>
+    </div>
     </>
   );
 }
-
-
-
 
 
 

@@ -1,4 +1,4 @@
-import { Helmet } from 'react-helmet-async';
+import { useHead } from "@unhead/react";
 
 // Schema pour l'organisation du festival
 export const OrganizationSchema = () => {
@@ -25,13 +25,16 @@ export const OrganizationSchema = () => {
     }
   };
 
-  return (
-    <Helmet>
-      <script type="application/ld+json">
-        {JSON.stringify(schema)}
-      </script>
-    </Helmet>
-  );
+  useHead({
+    script: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify(schema),
+      },
+    ],
+  });
+
+  return null;
 };
 
 // Schema pour l'événement du festival
@@ -74,13 +77,16 @@ export const EventSchema = ({
     "image": "https://marsai-festival.com/festival-image.jpg"
   };
 
-  return (
-    <Helmet>
-      <script type="application/ld+json">
-        {JSON.stringify(schema)}
-      </script>
-    </Helmet>
-  );
+  useHead({
+    script: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify(schema),
+      },
+    ],
+  });
+
+  return null;
 };
 
 export default {

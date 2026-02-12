@@ -1,4 +1,5 @@
-import { Helmet } from "react-helmet-async";
+import { useHead } from "@unhead/react";
+import { useTranslation } from "react-i18next";
 
 const SITE_NAME = "marsAI Festival";
 const DEFAULT_TITLE = "marsAI Festival";
@@ -19,23 +20,39 @@ export default function Seo({
   noIndex = false,
   lang,
 }) {
+  const { i18n } = useTranslation();
+  const effectiveLang = lang ?? i18n?.language;
   const cleanTitle = stripHtml(title);
   const cleanDescription = stripHtml(description);
   const finalTitle = cleanTitle ? `${cleanTitle} | ${SITE_NAME}` : DEFAULT_TITLE;
   const finalDescription = cleanDescription || DEFAULT_DESCRIPTION;
   const cardType = image ? "summary_large_image" : "summary";
 
-  return (
-    <Helmet htmlAttributes={lang ? { lang } : undefined}>
-      <title>{finalTitle}</title>
-      <meta name="description" content={finalDescription} />
-      <meta property="og:title" content={finalTitle} />
-      <meta property="og:description" content={finalDescription} />
-      <meta property="og:type" content="website" />
-      {url ? <meta property="og:url" content={url} /> : null}
-      {image ? <meta property="og:image" content={image} /> : null}
-      <meta name="twitter:card" content={cardType} />
-      {noIndex ? <meta name="robots" content="noindex, nofollow" /> : null}
-    </Helmet>
-  );
+  const meta = [
+    { name: "description", content: finalDescription },
+    { property: "og:title", content: finalTitle },
+    { property: "og:description", content: finalDescription },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: cardType },
+  ];
+
+  if (url) {
+    meta.push({ property: "og:url", content: url });
+  }
+
+  if (image) {
+    meta.push({ property: "og:image", content: image });
+  }
+
+  if (noIndex) {
+    meta.push({ name: "robots", content: "noindex, nofollow" });
+  }
+
+  useHead({
+    title: finalTitle,
+    meta,
+    htmlAttrs: effectiveLang ? { lang: effectiveLang } : undefined,
+  });
+
+  return null;
 }

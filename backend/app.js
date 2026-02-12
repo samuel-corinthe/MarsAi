@@ -3,6 +3,7 @@ import cors from "cors";
 import "dotenv/config";
 import multer from "multer";
 import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import uploadRoutes from "./routes/upload.js";
 import altchaRoutes from "./routes/altcha.js";
 
@@ -207,3 +208,13 @@ app.use((err, req, res, next) => {
 });
 
 export default app;
+
+const isDirectRun =
+  process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+
+if (isDirectRun) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Serveur demarre sur http://localhost:${PORT}`);
+  });
+}
