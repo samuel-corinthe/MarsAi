@@ -48,7 +48,6 @@ export default function WpPage({ isHome = false }) {
     return `${year}-${month}-${day}`;
   };
 
-
   const formatDateParts = (dateStr) => {
     const d = parseDate(dateStr);
     const monthShort = d
@@ -102,7 +101,9 @@ export default function WpPage({ isHome = false }) {
                       minute: "2-digit",
                     }),
                     lieu: "Marseille",
-                    subCategories: categoriesData.filter((cat) => cat.id !== 14),
+                    subCategories: categoriesData.filter(
+                      (cat) => cat.id !== 14,
+                    ),
                   };
                 });
                 setAgendaItems(formattedEvents);
@@ -188,13 +189,7 @@ export default function WpPage({ isHome = false }) {
         if (nextPage !== datePage) setDatePage(nextPage);
       }
     }
-  }, [
-    canPaginateDates,
-    datePage,
-    datePageCount,
-    dateOptions,
-    selectedDate,
-  ]);
+  }, [canPaginateDates, datePage, datePageCount, dateOptions, selectedDate]);
 
   const activeEvents = agendaItems.filter((item) => item.date === selectedDate);
 
@@ -206,11 +201,14 @@ export default function WpPage({ isHome = false }) {
     const dataToSend = Object.fromEntries(formData);
 
     try {
-      const response = await fetch("http://localhost:3000/send-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dataToSend),
-      });
+      const response = await fetch(
+        "http://localhost:3000/api/mail/send-email",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dataToSend),
+        },
+      );
 
       const result = await response.json();
 
@@ -546,7 +544,9 @@ export default function WpPage({ isHome = false }) {
                       <h2
                         className="text-2xl md:text-4xl font-black text-white mb-6 leading-tight"
                         style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-                        dangerouslySetInnerHTML={{ __html: selectedArticle.titre }}
+                        dangerouslySetInnerHTML={{
+                          __html: selectedArticle.titre,
+                        }}
                       />
                     )}
 
@@ -593,7 +593,9 @@ export default function WpPage({ isHome = false }) {
                     >
                       <button
                         type="button"
-                        onClick={() => setDatePage((prev) => Math.max(0, prev - 1))}
+                        onClick={() =>
+                          setDatePage((prev) => Math.max(0, prev - 1))
+                        }
                         disabled={datePage === 0}
                         className="px-3 py-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20 transition disabled:opacity-40 disabled:cursor-not-allowed"
                         aria-label="Dates précédentes"
@@ -802,4 +804,3 @@ export default function WpPage({ isHome = false }) {
     </main>
   );
 }
-
