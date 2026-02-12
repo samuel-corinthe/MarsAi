@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { getPageBySlug } from "../api";
 import NotFound from "./NotFound";
 import Seo from "../components/Seo";
+import { BreadcrumbSchema, ArticleSchema } from "../components/Schema"; // ← AJOUT
 
 export default function Partenaires() {
   const { t, i18n } = useTranslation();
@@ -15,10 +16,7 @@ export default function Partenaires() {
     (async () => {
       setLoading(true);
       try {
-        // Détermination du slug selon la langue active
-        const slug = i18n.language.startsWith("en")
-          ? "partners"
-          : "partenaires";
+        const slug = i18n.language.startsWith("en") ? "partners" : "partenaires";
         const data = await getPageBySlug(slug);
 
         if (!cancelled) {
@@ -34,7 +32,7 @@ export default function Partenaires() {
     })();
 
     return () => (cancelled = true);
-  }, [i18n.language]); // Recharge la page dès que la langue change
+  }, [i18n.language]);
 
   if (loading) {
     return (
@@ -55,11 +53,24 @@ export default function Partenaires() {
   const seoDescription =
     page?.excerpt?.rendered || page?.content?.rendered || t("partners.subtitle");
 
+  // ← AJOUT : Breadcrumb
+  const breadcrumbItems = [
+    { name: "Accueil", url: "/" },
+    { name: t("nav.partners", "Partenaires"), url: "/partenaires" }
+  ];
+
   return (
     <>
       <Seo title={seoTitle} description={seoDescription} />
+      <BreadcrumbSchema items={breadcrumbItems} /> {/* ← AJOUT */}
+      <ArticleSchema
+        headline={page?.title?.rendered}
+        description={seoDescription}
+        datePublished={page?.date}
+        dateModified={page?.modified}
+      /> {/* ← AJOUT */}
+      
       <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* En-tête avec titre dynamique (WordPress) et labels traduits */}
       <div className="bg-gradient-to-r from-blue-600 via-blue-500 to-blue-700 py-16 shadow-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-block px-4 py-1 bg-white/20 backdrop-blur-sm rounded-full mb-4">
@@ -77,7 +88,6 @@ export default function Partenaires() {
         </div>
       </div>
 
-      {/* Contenu WordPress */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
           <div
@@ -98,7 +108,6 @@ export default function Partenaires() {
           />
         </div>
 
-        {/* Section call-to-action traduite */}
         <div className="mt-16 text-center">
           <div className="bg-gradient-to-r from-blue-500 to-blue-700 rounded-2xl shadow-xl p-10">
             <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
