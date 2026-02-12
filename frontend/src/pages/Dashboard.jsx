@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import Seo from "../components/Seo";
 import { Link } from "react-router-dom";
 import { getAdminDashboardData } from "../api";
 
@@ -321,8 +320,7 @@ export default function Dashboard() {
   };
 
   return (
-    <>
-      <Seo title="Dashboard" description="Espace administration marsAI." noIndex />
+    
       <div className="dash-page">
       <div className="dash-shell dash-layout">
         <div className="flex gap-5 items-start">
@@ -854,7 +852,6 @@ export default function Dashboard() {
 
       </div>
     </div>
-    </>
   );
 }
 
