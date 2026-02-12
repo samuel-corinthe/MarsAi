@@ -23,7 +23,7 @@ const Gallery = () => {
     const fetchMovies = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch("http://localhost:5000/movies");
+        const response = await fetch("http://localhost:3000/api/movies");
         if (!response.ok) throw new Error("Serveur API injoignable");
         const data = await response.json();
         setMovies(data);
