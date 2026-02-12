@@ -186,6 +186,74 @@ i18n.use(initReactI18next).init({
         common: {
           loading: "Chargement...",
         },
+
+        newsletter: {
+          hero: {
+            badge: "Newsletter marsAI",
+            title_main: "Restez dans",
+            title_accent: "la boucle",
+            description:
+              "Recevez les dernières actualités, les films sélectionnés et les offres exclusives du festival directement dans votre boîte mail.",
+          },
+          stats: {
+            subscribers: "Abonnés",
+            frequency: "Fréquence",
+            open_rate: "Taux d'ouverture",
+            freq_value: "2x/mois",
+          },
+          form: {
+            title: "Inscrivez-vous",
+            subtitle: "Gratuit • Sans spam • Désabonnement facile",
+            label_name: "Prénom",
+            placeholder_name: "Votre prénom",
+            label_email: "Email",
+            placeholder_email: "votre@email.com",
+            label_preferences: "Je souhaite recevoir :",
+            submit: "S'inscrire à la newsletter",
+            loading: "Inscription en cours...",
+            rgpd: "En vous inscrivant, vous acceptez de recevoir des emails de marsAI Festival. Vous pouvez vous désabonner à tout moment.",
+            privacy_link: "Politique de confidentialité",
+            success_title: "Inscription confirmée !",
+            success_msg:
+              "Bienvenue dans la communauté marsAI ! Vous recevrez bientôt votre première newsletter.",
+            success_hint:
+              "Vérifiez votre boîte mail (et vos spams) pour confirmer votre inscription.",
+          },
+          preferences: {
+            news: "Actualités du festival",
+            films: "Nouveaux films sélectionnés",
+            events: "Événements et projections",
+            partners: "Offres partenaires",
+          },
+          benefits: {
+            title: "Pourquoi s'abonner ?",
+            subtitle: "Des avantages exclusifs pour nos abonnés",
+            preview: {
+              title: "En avant-première",
+              desc: "Soyez les premiers informés des annonces et sélections officielles",
+            },
+            offers: {
+              title: "Offres exclusives",
+              desc: "Accédez à des réductions sur les billets et pass VIP",
+            },
+            content: {
+              title: "Contenus exclusifs",
+              desc: "Interviews, making-of et coulisses du festival",
+            },
+          },
+          faq: {
+            title: "Questions fréquentes",
+            q1: "À quelle fréquence recevrai-je la newsletter ?",
+            a1: "Nous envoyons 2 newsletters par mois : une en début de mois avec les actualités, et une en milieu de mois avec les contenus exclusifs.",
+            q2: "Puis-je me désabonner à tout moment ?",
+            a2: "Oui, absolument. Chaque email contient un lien de désinscription en bas de page. Vous pouvez aussi gérer vos préférences à tout moment.",
+            q3: "Mes données sont-elles sécurisées ?",
+            a3: "Nous prenons la confidentialité très au sérieux. Vos données ne sont jamais vendues ou partagées avec des tiers.",
+          },
+          errors: {
+            server: "Le serveur ne répond pas.",
+          },
+        },
       },
     },
     en: {
@@ -367,6 +435,74 @@ i18n.use(initReactI18next).init({
         },
         common: {
           loading: "Loading...",
+        },
+
+        newsletter: {
+          hero: {
+            badge: "marsAI Newsletter",
+            title_main: "Stay in",
+            title_accent: "the loop",
+            description:
+              "Get the latest news, selected films, and exclusive festival offers delivered directly to your inbox.",
+          },
+          stats: {
+            subscribers: "Subscribers",
+            frequency: "Frequency",
+            open_rate: "Open Rate",
+            freq_value: "2x/month",
+          },
+          form: {
+            title: "Sign Up",
+            subtitle: "Free • No spam • Easy unsubscribe",
+            label_name: "First Name",
+            placeholder_name: "Your first name",
+            label_email: "Email",
+            placeholder_email: "your@email.com",
+            label_preferences: "I want to receive:",
+            submit: "Subscribe to newsletter",
+            loading: "Subscribing...",
+            rgpd: "By signing up, you agree to receive emails from marsAI Festival. You can unsubscribe at any time.",
+            privacy_link: "Privacy Policy",
+            success_title: "Subscription confirmed!",
+            success_msg:
+              "Welcome to the marsAI community! You will receive your first newsletter soon.",
+            success_hint:
+              "Check your inbox (and spam folder) to confirm your subscription.",
+          },
+          preferences: {
+            news: "Festival news",
+            films: "New film selections",
+            events: "Events and screenings",
+            partners: "Partner offers",
+          },
+          benefits: {
+            title: "Why subscribe?",
+            subtitle: "Exclusive benefits for our subscribers",
+            preview: {
+              title: "Be the first to know",
+              desc: "Stay ahead with official announcements and selections",
+            },
+            offers: {
+              title: "Exclusive offers",
+              desc: "Access discounts on tickets and VIP passes",
+            },
+            content: {
+              title: "Exclusive content",
+              desc: "Interviews, making-of footage, and festival behind-the-scenes",
+            },
+          },
+          faq: {
+            title: "Frequently Asked Questions",
+            q1: "How often will I receive the newsletter?",
+            a1: "We send 2 newsletters per month: one at the beginning of the month with news, and one mid-month with exclusive content.",
+            q2: "Can I unsubscribe at any time?",
+            a2: "Yes, absolutely. Every email contains an unsubscribe link at the bottom. You can also manage your preferences at any time.",
+            q3: "Is my data secure?",
+            a3: "We take privacy very seriously. Your data is never sold or shared with third parties.",
+          },
+          errors: {
+            server: "The server is not responding.",
+          },
         },
       },
     },

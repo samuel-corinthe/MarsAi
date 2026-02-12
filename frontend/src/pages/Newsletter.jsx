@@ -36,7 +36,7 @@ const Newsletter = () => {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData), // Envoie firstName, email et preferences
+          body: JSON.stringify(formData),
         },
       );
 
@@ -44,7 +44,7 @@ const Newsletter = () => {
 
       if (response.ok) {
         setIsSubmitted(true);
-        // Reset après 5 sec
+        // Reset after 5 sec
         setTimeout(() => {
           setIsSubmitted(false);
           setFormData({ firstName: "", email: "", preferences: [] });
@@ -53,20 +53,20 @@ const Newsletter = () => {
         alert(data.message);
       }
     } catch (error) {
-      alert("Le serveur ne répond pas.");
+      alert("The server is not responding.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Stats de la newsletter
+  // Newsletter stats
   const stats = [
-    { number: "15K+", label: "Abonnés" },
-    { number: "2x/mois", label: "Fréquence" },
-    { number: "95%", label: "Taux d'ouverture" },
+    { number: "15K+", label: "Subscribers" },
+    { number: "2x/month", label: "Frequency" },
+    { number: "95%", label: "Open Rate" },
   ];
 
-  // Avantages de s'inscrire
+  // Benefits of signing up
   const benefits = [
     {
       icon: (
@@ -84,9 +84,9 @@ const Newsletter = () => {
           />
         </svg>
       ),
-      title: "En avant-première",
+      title: "Early Access",
       description:
-        "Soyez les premiers informés des annonces et sélections officielles",
+        "Be the first to know about official announcements and selections",
     },
     {
       icon: (
@@ -104,8 +104,8 @@ const Newsletter = () => {
           />
         </svg>
       ),
-      title: "Offres exclusives",
-      description: "Accédez à des réductions sur les billets et pass VIP",
+      title: "Exclusive Offers",
+      description: "Access discounts on tickets and VIP passes",
     },
     {
       icon: (
@@ -123,17 +123,18 @@ const Newsletter = () => {
           />
         </svg>
       ),
-      title: "Contenus exclusifs",
-      description: "Interviews, making-of et coulisses du festival",
+      title: "Exclusive Content",
+      description:
+        "Interviews, making-of footage, and festival behind-the-scenes",
     },
   ];
 
-  // Préférences de contenu
+  // Content preferences
   const contentPreferences = [
-    { id: "news", label: "Actualités du festival" },
-    { id: "films", label: "Nouveaux films sélectionnés" },
-    { id: "events", label: "Événements et projections" },
-    { id: "partners", label: "Offres partenaires" },
+    { id: "news", label: "Festival news" },
+    { id: "films", label: "New film selections" },
+    { id: "events", label: "Events and screenings" },
+    { id: "partners", label: "Partner offers" },
   ];
 
   return (
@@ -151,7 +152,7 @@ const Newsletter = () => {
                 <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
                 <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
               </svg>
-              <span>Newsletter marsAI</span>
+              <span>marsAI Newsletter</span>
             </div>
 
             {/* Title */}
@@ -159,10 +160,10 @@ const Newsletter = () => {
               className="text-4xl md:text-6xl lg:text-7xl font-black text-white leading-tight"
               style={{ fontFamily: "'Bebas Neue', sans-serif" }}
             >
-              Restez dans
+              Stay in
               <br />
               <span className="bg-gradient-to-r from-cyan-400 via-pink-500 to-purple-600 bg-clip-text text-transparent">
-                la boucle
+                the loop
               </span>
             </h1>
 
@@ -171,8 +172,8 @@ const Newsletter = () => {
               className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed"
               style={{ fontFamily: "'Inter', sans-serif" }}
             >
-              Recevez les dernières actualités, les films sélectionnés et les
-              offres exclusives du festival directement dans votre boîte mail.
+              Get the latest news, selected films, and exclusive festival offers
+              delivered directly to your inbox.
             </p>
           </div>
         </div>
@@ -216,25 +217,25 @@ const Newsletter = () => {
                   className="text-3xl md:text-4xl font-black text-white mb-3"
                   style={{ fontFamily: "'Bebas Neue', sans-serif" }}
                 >
-                  Inscrivez-vous
+                  Sign Up
                 </h2>
                 <p
                   className="text-gray-400"
                   style={{ fontFamily: "'Inter', sans-serif" }}
                 >
-                  Gratuit • Sans spam • Désabonnement facile
+                  Free • No spam • Easy unsubscribe
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Prénom */}
+                {/* First Name */}
                 <div>
                   <label
                     htmlFor="firstName"
                     className="block text-sm font-medium text-gray-300 mb-2"
                     style={{ fontFamily: "'Inter', sans-serif" }}
                   >
-                    Prénom
+                    First Name
                   </label>
                   <input
                     type="text"
@@ -244,7 +245,7 @@ const Newsletter = () => {
                     onChange={handleInputChange}
                     required
                     className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400 transition-all duration-200"
-                    placeholder="Votre prénom"
+                    placeholder="Your first name"
                     style={{ fontFamily: "'Inter', sans-serif" }}
                   />
                 </div>
@@ -266,18 +267,18 @@ const Newsletter = () => {
                     onChange={handleInputChange}
                     required
                     className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400 transition-all duration-200"
-                    placeholder="votre@email.com"
+                    placeholder="your@email.com"
                     style={{ fontFamily: "'Inter', sans-serif" }}
                   />
                 </div>
 
-                {/* Préférences */}
+                {/* Preferences */}
                 <div>
                   <label
                     className="block text-sm font-medium text-gray-300 mb-3"
                     style={{ fontFamily: "'Inter', sans-serif" }}
                   >
-                    Je souhaite recevoir :
+                    I want to receive:
                   </label>
                   <div className="space-y-3">
                     {contentPreferences.map((pref) => (
@@ -302,18 +303,18 @@ const Newsletter = () => {
                   </div>
                 </div>
 
-                {/* RGPD */}
+                {/* GDPR */}
                 <p
                   className="text-xs text-gray-500 leading-relaxed"
                   style={{ fontFamily: "'Inter', sans-serif" }}
                 >
-                  En vous inscrivant, vous acceptez de recevoir des emails de
-                  marsAI Festival. Vous pouvez vous désabonner à tout moment.
+                  By signing up, you agree to receive emails from marsAI
+                  Festival. You can unsubscribe at any time.
                   <a
-                    href="/politique-de-confidentialite"
+                    href="/privacy-policy"
                     className="text-cyan-400 hover:underline ml-1"
                   >
-                    Politique de confidentialité
+                    Privacy Policy
                   </a>
                 </p>
 
@@ -346,7 +347,7 @@ const Newsletter = () => {
                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                           ></path>
                         </svg>
-                        <span>Inscription en cours...</span>
+                        <span>Subscribing...</span>
                       </>
                     ) : (
                       <>
@@ -354,7 +355,7 @@ const Newsletter = () => {
                           className="w-5 h-5"
                           fill="none"
                           stroke="currentColor"
-                          viewBox="0 0 24 24"
+                          strokeViewBox="0 0 24 24"
                         >
                           <path
                             strokeLinecap="round"
@@ -363,7 +364,7 @@ const Newsletter = () => {
                             d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                           />
                         </svg>
-                        <span>S'inscrire à la newsletter</span>
+                        <span>Subscribe to newsletter</span>
                       </>
                     )}
                   </span>
@@ -393,21 +394,20 @@ const Newsletter = () => {
                 className="text-3xl md:text-4xl font-black text-white mb-4"
                 style={{ fontFamily: "'Bebas Neue', sans-serif" }}
               >
-                Inscription confirmée !
+                Subscription Confirmed!
               </h3>
               <p
                 className="text-lg text-gray-300 mb-6"
                 style={{ fontFamily: "'Inter', sans-serif" }}
               >
-                Bienvenue dans la communauté marsAI ! Vous recevrez bientôt
-                votre première newsletter.
+                Welcome to the marsAI community! You will receive your first
+                newsletter soon.
               </p>
               <p
                 className="text-sm text-gray-400"
                 style={{ fontFamily: "'Inter', sans-serif" }}
               >
-                Vérifiez votre boîte mail (et vos spams) pour confirmer votre
-                inscription.
+                Check your inbox (and spam folder) to confirm your subscription.
               </p>
             </div>
           )}
@@ -422,13 +422,13 @@ const Newsletter = () => {
               className="text-3xl md:text-5xl font-black text-white mb-4"
               style={{ fontFamily: "'Bebas Neue', sans-serif" }}
             >
-              Pourquoi s'abonner ?
+              Why subscribe?
             </h2>
             <p
               className="text-xl text-gray-400"
               style={{ fontFamily: "'Inter', sans-serif" }}
             >
-              Des avantages exclusifs pour nos abonnés
+              Exclusive benefits for our subscribers
             </p>
           </div>
 
@@ -466,22 +466,22 @@ const Newsletter = () => {
             className="text-3xl md:text-4xl font-black text-white text-center mb-12"
             style={{ fontFamily: "'Bebas Neue', sans-serif" }}
           >
-            Questions fréquentes
+            Frequently Asked Questions
           </h2>
 
           <div className="space-y-4">
             {[
               {
-                q: "À quelle fréquence recevrai-je la newsletter ?",
-                a: "Nous envoyons 2 newsletters par mois : une en début de mois avec les actualités, et une en milieu de mois avec les contenus exclusifs.",
+                q: "How often will I receive the newsletter?",
+                a: "We send 2 newsletters per month: one at the beginning of the month with news, and one mid-month with exclusive content.",
               },
               {
-                q: "Puis-je me désabonner à tout moment ?",
-                a: "Oui, absolument. Chaque email contient un lien de désinscription en bas de page. Vous pouvez aussi gérer vos préférences à tout moment.",
+                q: "Can I unsubscribe at any time?",
+                a: "Yes, absolutely. Every email contains an unsubscribe link at the bottom. You can also manage your preferences at any time.",
               },
               {
-                q: "Mes données sont-elles sécurisées ?",
-                a: "Nous prenons la confidentialité très au sérieux. Vos données ne sont jamais vendues ou partagées avec des tiers. Consultez notre politique de confidentialité pour plus de détails.",
+                q: "Is my data secure?",
+                a: "We take privacy very seriously. Your data is never sold or shared with third parties. Check our privacy policy for more details.",
               },
             ].map((faq, index) => (
               <div
