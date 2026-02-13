@@ -40,3 +40,28 @@ exports.getMovieById = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+// Enregistrer ou modifier une note
+exports.rateMovie = async (req, res) => {
+  const { id } = req.params;
+  const { score } = req.body;
+  try {
+    await Movie.saveRating(id, score);
+    res.status(200).json({ message: "Note mise à jour avec succès" });
+  } catch (err) {
+    console.error("Erreur Controller:", err);
+    res
+      .status(500)
+      .json({ error: "Erreur lors de l'enregistrement de la note" });
+  }
+};
+
+// Supprimer une note
+exports.deleteMovieRating = async (req, res) => {
+  const { id } = req.params;
+  try {
+    await Movie.deleteRating(id);
+    res.status(200).json({ message: "Note supprimée avec succès" });
+  } catch (err) {
+    res.status(500).json({ error: "Erreur lors de la suppression de la note" });
+  }
+};

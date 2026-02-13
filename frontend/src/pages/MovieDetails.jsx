@@ -25,7 +25,8 @@ const MovieDetails = () => {
         const data = await response.json();
 
         setMovie(data);
-        setOfficialRating(data.rating || 0); // Utilise la note de la BDD si elle existe
+        // On récupère le score depuis l'attribut de ta table MariaDB
+        setOfficialRating(data.score || null);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -35,15 +36,52 @@ const MovieDetails = () => {
     fetchMovie();
   }, [id]);
 
+  // --- LOGIQUE BASE DE DONNÉES ---
+
+  const handleSaveRating = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/movies/${id}/rate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ score: tempRating }),
+        },
+      );
+
+      if (!response.ok) throw new Error("Erreur lors de la sauvegarde");
+
+      setOfficialRating(tempRating);
+      setIsModalOpen(false);
+    } catch (err) {
+      alert("Erreur BDD : " + err.message);
+    }
+  };
+
+  const handleDeleteVote = async () => {
+    if (!window.confirm("Supprimer la note de la base de données ?")) return;
+
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/movies/${id}/rate`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      if (!response.ok) throw new Error("Erreur lors de la suppression");
+
+      setOfficialRating(null);
+      setTempRating(0);
+      setIsModalOpen(false);
+    } catch (err) {
+      alert("Erreur lors de la suppression : " + err.message);
+    }
+  };
+
   const openRatingModal = () => {
     setTempRating(officialRating || 0);
     setIsModalOpen(true);
-  };
-
-  const handleDeleteVote = () => {
-    setOfficialRating(null);
-    setIsModalOpen(false);
-    // Optionnel : Ajouter ici un fetch(PUT) pour mettre à jour la BDD
   };
 
   if (isLoading)
@@ -94,7 +132,6 @@ const MovieDetails = () => {
       <section className="relative w-full pt-20 md:pt-32 pb-20 overflow-hidden bg-gradient-to-b from-blue-900 to-blue-950">
         <div className="relative z-10 container mx-auto px-6">
           <div className="flex flex-col md:flex-row gap-10 md:gap-16 items-center md:items-start">
-            {/* Poster */}
             <div className="w-64 md:w-80 shrink-0 shadow-2xl rounded-[40px] overflow-hidden border-4 border-white/10">
               <img
                 src={movie.img}
@@ -103,7 +140,6 @@ const MovieDetails = () => {
               />
             </div>
 
-            {/* Infos Entête */}
             <div className="flex-1 text-center md:text-left">
               <div className="flex justify-center md:justify-start gap-2 mb-6">
                 {movie.genre?.map((g) => (
@@ -214,10 +250,10 @@ const MovieDetails = () => {
                 <div className="mt-16 p-8 bg-blue-950 rounded-[40px] flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl border border-white/10">
                   <div>
                     <p className="text-cyan-400 font-bold text-xs uppercase tracking-widest mb-1">
-                      Database Access
+                      Database Access (MariaDB)
                     </p>
                     <h4 className="text-white font-black text-2xl uppercase tracking-tighter">
-                      Note :{" "}
+                      Score :{" "}
                       {officialRating ? `${officialRating}/5` : "Non noté"}
                     </h4>
                   </div>
@@ -241,16 +277,21 @@ const MovieDetails = () => {
                   <span className="text-[10px] uppercase font-black text-slate-400 mb-1">
                     Réalisateur
                   </span>
+                  <span className="font-bold text-blue-900 uppercase">
+                    {movie.director}
+                  </span>
+                </div>
+                <div className="flex flex-col border-b border-slate-200 pb-4">
                   <span className="text-[10px] uppercase font-black text-slate-400 mb-1">
                     Pays
                   </span>
                   <img
-                    src="../public/images/flags/ad.png"
-                    alt={movie.title}
-                    className="w-15 "
+                    src="/images/flags/ad.png"
+                    alt="Pays"
+                    className="w-8 mb-1"
                   />
                   <span className="font-bold text-blue-900 uppercase">
-                    {movie.director}
+                    {movie.country}
                   </span>
                 </div>
                 <div className="flex flex-col border-b border-slate-200 pb-4">
@@ -286,26 +327,35 @@ const MovieDetails = () => {
             <h3 className="text-3xl font-black text-blue-950 mb-8 uppercase tracking-tighter italic">
               Évaluer
             </h3>
-            <div className="flex justify-center gap-3 mb-12">
+            <div className="flex justify-center gap-3 mb-10">
               {[1, 2, 3, 4, 5].map((num) => (
                 <button
                   key={num}
                   onClick={() => setTempRating(num)}
-                  className={`w-12 h-14 rounded-2xl font-black text-2xl transition-all ${tempRating === num ? "bg-blue-600 text-white scale-110 shadow-xl" : "bg-slate-100 text-slate-300"}`}
+                  className={`w-12 h-14 rounded-2xl font-black text-2xl transition-all ${tempRating === num ? "bg-blue-600 text-white scale-110 shadow-xl" : "bg-slate-100 text-slate-300 hover:bg-slate-200"}`}
                 >
                   {num}
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => {
-                setOfficialRating(tempRating);
-                setIsModalOpen(false);
-              }}
-              className="w-full py-5 bg-blue-950 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-800 transition-all"
-            >
-              Confirmer
-            </button>
+
+            <div className="flex flex-col gap-4">
+              <button
+                onClick={handleSaveRating}
+                className="w-full py-5 bg-blue-950 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-lg"
+              >
+                Mettre à jour BDD
+              </button>
+
+              {officialRating && (
+                <button
+                  onClick={handleDeleteVote}
+                  className="w-full py-3 text-red-500 font-bold uppercase tracking-widest text-xs hover:text-red-700 transition-all"
+                >
+                  Supprimer la note
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
