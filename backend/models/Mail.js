@@ -1,9 +1,13 @@
-const { transporter } = require("../config_file/mail");
-const { validate } = require("deep-email-validator"); // Import de la validation
+const { validate } = require("deep-email-validator");
+const {
+  transporter,
+  apiInstance,
+  SibApiV3Sdk,
+} = require("../config_file/mail");
 
 const Mail = {
   /**
-   * Valide l'adresse email de l'expéditeur (ton ancien code)
+   * 1. Validation technique (Anciennement dans emailService)
    */
   async validateEmail(email) {
     return await validate({
@@ -17,28 +21,33 @@ const Mail = {
   },
 
   /**
-   * Envoie un email via le transporteur configuré
+   * 2. Envoi du formulaire de contact (Logique métier + Transport)
    */
-  async send(data) {
+  async sendContactEmail(data) {
+    const { name, email, subject, message } = data;
+
     const mailOptions = {
-      from: `"${data.name}" <namasse.medamine@gmail.com>`, // On garde ton email d'envoi fixe
-      replyTo: data.email, // Pour pouvoir répondre directement à l'utilisateur
+      from: `"${name}" <namasse.medamine@gmail.com>`,
+      replyTo: email,
       to: "namasse.medamine@gmail.com",
-      subject: `[Contact MarsAi] ${data.subject}`,
-      text: `Message de ${data.name} (${data.email}) : \n\n${data.message}`,
+      subject: `[Contact MarsAi] ${subject}`,
+      text: `Nouveau message de : ${name} (${email})\n\n${message}`,
       html: `
-        <div style="font-family: sans-serif; line-height: 1.5;">
-          <h2>Nouveau message de contact</h2>
-          <p><strong>Nom :</strong> ${data.name}</p>
-          <p><strong>Email :</strong> ${data.email}</p>
-          <p><strong>Sujet :</strong> ${data.subject}</p>
-          <hr />
+        <div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
+          <h2 style="color: #007bff; margin-top: 0;">Nouveau message de contact</h2>
+          <p><strong>De :</strong> ${name} (<a href="mailto:${email}">${email}</a>)</p>
+          <p><strong>Sujet :</strong> ${subject}</p>
+          <hr style="border: 0; border-top: 1px solid #eee;" />
           <p><strong>Message :</strong></p>
-          <p>${data.message.replace(/\n/g, "<br>")}</p>
+          <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; white-space: pre-wrap;">${message}</div>
+          <footer style="margin-top: 20px; font-size: 0.8em; color: #888;">
+            Envoyé via le système de contact MarsAi.
+          </footer>
         </div>
       `,
     };
 
+    // Utilisation directe du transporteur importé
     return await transporter.sendMail(mailOptions);
   },
 };

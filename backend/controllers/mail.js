@@ -10,7 +10,7 @@ exports.sendContactEmail = async (req, res) => {
     }
 
     // Appel au modèle
-    await Mail.send({ name, email, subject, message });
+    await Mail.sendContactEmail({ name, email, subject, message });
 
     res.status(200).json({ message: "Email envoyé avec succès !" });
   } catch (error) {
