@@ -20,13 +20,19 @@ const Movie = {
   },
 
   // --- ACTIONS ADMIN ---
-  async saveRating(movieId, score) {
+  async saveRating(movieId, score, adminId) {
     const sql = `
-      INSERT INTO admin_ratings (movie_id, score) 
-      VALUES (?, ?) 
-      ON DUPLICATE KEY UPDATE score = ?
+      INSERT INTO admin_ratings (movie_id, score, admin_id) 
+      VALUES (?, ?, ?) 
+      ON DUPLICATE KEY UPDATE score = ?, admin_id = ?
     `;
-    const [result] = await db.query(sql, [movieId, score, score]);
+    const [result] = await db.query(sql, [
+      movieId,
+      score,
+      adminId,
+      score,
+      adminId,
+    ]);
     return result;
   },
 

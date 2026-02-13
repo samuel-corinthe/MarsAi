@@ -44,14 +44,17 @@ exports.getMovieById = async (req, res) => {
 exports.rateMovie = async (req, res) => {
   const { id } = req.params;
   const { score } = req.body;
+
+  // Si tu utilises JWT ou des sessions, l'ID est souvent dans req.user
+  // Pour le test, on va mettre un ID qui existe dans ta table 'users' (ex: 1)
+  const adminId = req.user ? req.user.id : 1;
+
   try {
-    await Movie.saveRating(id, score);
-    res.status(200).json({ message: "Note mise à jour avec succès" });
+    await Movie.saveRating(id, score, adminId); // On ajoute adminId ici
+    res.status(200).json({ message: "Note mise à jour" });
   } catch (err) {
-    console.error("Erreur Controller:", err);
-    res
-      .status(500)
-      .json({ error: "Erreur lors de l'enregistrement de la note" });
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
 };
 
