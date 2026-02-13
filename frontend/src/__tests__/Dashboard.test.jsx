@@ -7,10 +7,20 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Dashboard from "../pages/Dashboard.jsx";
 
+vi.mock("../components/Seo.jsx", () => ({
+  default: () => null,
+}));
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    i18n: { language: "fr" },
+  }),
+}));
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const mockPath = path.resolve(__dirname, "../../public/mock/admin-dashboard.json");
-const baseMockData = JSON.parse(readFileSync(mockPath, "utf-8"));
+const baseMockData = JSON.parse(readFileSync(mockPath, "utf-8").replace(/^\uFEFF/, ""));
 
 const FIXED_TIME = new Date("2026-02-04T12:00:00Z").getTime();
 
@@ -46,7 +56,7 @@ describe("Dashboard (admin)", () => {
     await renderDashboard();
 
     expect(fetch).toHaveBeenCalledWith(
-      "/mock/admin-dashboard.json",
+      "/api/dashboard",
       expect.objectContaining({ cache: "no-store" })
     );
     expect(screen.getByText("Dashboard Admin & Super Admin")).toBeInTheDocument();

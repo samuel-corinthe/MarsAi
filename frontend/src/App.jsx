@@ -11,7 +11,7 @@ import YoutubeUpload from "./pages/YoutubeUpload";
 import NotFound from "./pages/NotFound";
 import Gallery from "./pages/Gallery";
 import MovieDetails from "./pages/MovieDetails";
-import Dashboard from "./pages/Dashboard";
+import DashboardEntry from "./pages/DashboardEntry";
 import TestCountdown from "./pages/TestCountdown";
 
 export default function App() {
@@ -43,7 +43,7 @@ export default function App() {
           <Route path="/films" element={<Gallery />} />
           <Route path="/movies" element={<Gallery />} />
           <Route path="/movie/:id" element={<MovieDetails />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard" element={<DashboardEntry />} />
           <Route path="/testcountdown" element={<TestCountdown />} />
           <Route
             path="/en/call-for-project"

@@ -94,10 +94,18 @@ function Pill({ children, tone = "pink", active = false, onClick }) {
 }
 
 function FilmRow({ film, filmsBasePath }) {
+  const normalizedStatus = String(film.status ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const isPositiveStatus = ["accepte", "selectionne", "accepted", "selected"].includes(
+    normalizedStatus,
+  );
+  const isPendingStatus = ["en cours", "pending"].includes(normalizedStatus);
   const badgeColor =
-    film.status === "accepté" || film.status === "sélectionné"
+    isPositiveStatus
       ? "bg-emerald-500/20 text-emerald-200"
-      : film.status === "en cours"
+      : isPendingStatus
         ? "bg-amber-400/15 text-amber-200"
         : "bg-rose-500/15 text-rose-200";
   const ratingLabel = Number.isFinite(film.rating) ? film.rating.toFixed(1) : "-";
@@ -273,7 +281,7 @@ export default function Dashboard() {
     if (filters.status !== "tous" && film.status !== filters.status) return false;
     if (filters.country !== "tous" && film.country !== filters.country) return false;
     if (filters.phase !== "toutes" && film.phase !== filters.phase) return false;
-    if (filters.note === "= 4" && film.rating < 4) return false;
+    if (["= 4", ">= 4"].includes(filters.note) && film.rating < 4) return false;
     if (filters.note === "3 - 4" && (film.rating < 3 || film.rating >= 4)) return false;
     if (filters.note === "< 3" && film.rating >= 3) return false;
     return true;
@@ -861,8 +869,4 @@ export default function Dashboard() {
     </>
   );
 }
-
-
-
-
 

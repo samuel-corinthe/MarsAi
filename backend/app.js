@@ -1,11 +1,13 @@
 import express from "express";
 import cors from "cors";
-import "dotenv/config";
+import "./env.js";
 import multer from "multer";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import uploadRoutes from "./routes/upload.js";
 import altchaRoutes from "./routes/altcha.js";
+import dashboardRoutes from "./routes/dashboard.js";
+import authRoutes, { requireAuth, requireRole } from "./routes/auth.js";
 
 const require = createRequire(import.meta.url);
 const { validate } = require("deep-email-validator");
@@ -15,11 +17,29 @@ const SibApiV3Sdk = require("@getbrevo/brevo");
 const app = express();
 app.set("trust proxy", 1);
 
-const allowedOrigins = ["http://localhost:5173"];
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const isProduction = process.env.NODE_ENV === "production";
+
+function isOriginAllowed(origin = "") {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+
+  if (!isProduction) {
+    const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+    if (isLocalhost) return true;
+  }
+
+  return false;
+}
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      callback(null, isOriginAllowed(origin || ""));
+    },
     credentials: true,
     methods: ["GET", "POST"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
@@ -28,9 +48,8 @@ app.use(
 
 const verifyOrigin = (req, res, next) => {
   const origin = req.get("Origin") || req.get("Referer") || "";
-  const isAllowed = allowedOrigins.some((allowed) =>
-    origin.startsWith(allowed),
-  );
+  const isAllowed = allowedOrigins.some((allowed) => origin.startsWith(allowed))
+    || isOriginAllowed(origin);
 
   if (!isAllowed) {
     return res.status(403).json({ error: "Origine non autorisee" });
@@ -183,6 +202,8 @@ app.post("/subscribe-newsletter", async (req, res) => {
 
 app.use("/api/altcha", altchaRoutes);
 app.use("/api/upload", verifyOrigin, uploadRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/dashboard", requireAuth, requireRole(["admin", "superadmin"]), dashboardRoutes);
 
 app.get("/", (req, res) => {
   res.send("Serveur MarsAI operationnel");
@@ -190,6 +211,13 @@ app.get("/", (req, res) => {
 
 app.use((err, req, res, next) => {
   console.error("[SERVEUR] Erreur:", err.message);
+
+  if (err?.type === "entity.parse.failed") {
+    return res.status(400).json({
+      error: "JSON invalide dans la requete.",
+      details: err.message,
+    });
+  }
 
   if (err instanceof multer.MulterError) {
     if (err.code === "LIMIT_FILE_SIZE") {
@@ -204,7 +232,10 @@ app.use((err, req, res, next) => {
     return res.status(400).json({ error: err.message });
   }
 
-  return res.status(500).json({ error: "Erreur interne du serveur" });
+  return res.status(500).json({
+    error: "Erreur interne du serveur",
+    details: process.env.NODE_ENV === "production" ? undefined : err.message,
+  });
 });
 
 export default app;
