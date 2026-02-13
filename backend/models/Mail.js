@@ -30,7 +30,7 @@ const Mail = {
       from: `"${name}" <namasse.medamine@gmail.com>`,
       replyTo: email,
       to: "namasse.medamine@gmail.com",
-      subject: `[Contact MarsAi] ${subject}`,
+      subject: `${subject}`,
       text: `Nouveau message de : ${name} (${email})\n\n${message}`,
       html: `
         <div style="font-family: sans-serif; line-height: 1.6; color: #333; max-width: 600px; border: 1px solid #eee; padding: 20px; border-radius: 10px;">
