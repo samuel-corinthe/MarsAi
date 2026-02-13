@@ -53,7 +53,7 @@ const Newsletter = () => {
       } else {
         alert(data.message);
       }
-    } catch (error) {
+    } catch {
       alert("Le serveur ne répond pas.");
     } finally {
       setIsLoading(false);
