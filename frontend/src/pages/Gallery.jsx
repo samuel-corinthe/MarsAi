@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { allMovies } from "../components/MoviesData";
 import Seo from "../components/Seo";
-import { BreadcrumbSchema } from "../components/Schema"; // ← AJOUT
+import { BreadcrumbSchema } from "../components/Schema"; 
 
 const Gallery = () => {
   const { t, i18n } = useTranslation();

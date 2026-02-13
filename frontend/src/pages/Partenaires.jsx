@@ -23,7 +23,7 @@ export default function Partenaires() {
           setPage(data);
           setLoading(false);
         }
-      } catch (error) {
+      } catch  {
         if (!cancelled) {
           setPage(null);
           setLoading(false);
