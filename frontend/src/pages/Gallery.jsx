@@ -55,6 +55,7 @@ const Gallery = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [activeFilter, searchQuery]);
+  
 
   useEffect(() => {
     if (topMovies.length <= 1) return;
@@ -89,7 +90,7 @@ const Gallery = () => {
   return (
     <>
       <Seo title={seoTitle} description={seoDescription} />
-      <BreadcrumbSchema items={breadcrumbItems} /> {/* ← AJOUT */}
+      <BreadcrumbSchema items={breadcrumbItems} /> 
       
       <div className="min-h-screen bg-blue-950 flex flex-col font-sans text-slate-800">
       <section className="relative w-full pb-36 md:pb-40 pt-10">
