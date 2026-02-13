@@ -2,6 +2,7 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
+import { BreadcrumbSchema, ArticleSchema } from "../components/Schema";
 import { getPageBySlug } from "../api";
 import Home from "./Home";
 import JuryWpage from "./jury";
@@ -170,7 +171,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
             }
           }
         }
-      } catch (err) {
+      } catch  {
         if (!cancelled) {
           setError(true);
           setPage(null);
@@ -278,7 +279,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
       } else {
         alert("Erreur : " + result.message);
       }
-    } catch (error) {
+    } catch  {
       alert("Impossible de contacter le serveur.");
     } finally {
       setIsSending(false);
@@ -299,6 +300,18 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   const seoDescription = page?.excerpt?.rendered || page?.content?.rendered || "";
   const seoLang = i18n.language;
   
+  // Breadcrumb helper
+  const getPageName = () => {
+    if (slug === "agenda" || slug === "schedule") return "Agenda";
+    if (slug === "contact") return "Contact";
+    return page?.title?.rendered?.replace(/<[^>]+>/g, '') || slug;
+  };
+
+  const breadcrumbItems = [
+    { name: "Accueil", url: "/" },
+    { name: getPageName(), url: `/${slug}` }
+  ];
+  
   if (slug === "appel-a-projet") {
     return <CallForProject page={page} />;
   }
@@ -318,8 +331,11 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
 
   if (slug === "contact") {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white relative overflow-hidden">
+      <>
         <Seo title={seoTitle} description={seoDescription} lang={seoLang} />
+        <BreadcrumbSchema items={breadcrumbItems} />
+        
+        <main className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-32 -right-24 w-72 h-72 bg-cyan-500/10 blur-3xl rounded-full"></div>
           <div className="absolute top-40 -left-24 w-72 h-72 bg-purple-500/10 blur-3xl rounded-full"></div>
@@ -509,6 +525,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
           @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
         `}</style>
       </main>
+      </>
     );
   }
 
@@ -516,14 +533,25 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   const selectedParts = selectedDate ? formatDateParts(selectedDate) : null;
 
   return (
-    <main
+    <>
+      <Seo title={seoTitle} description={seoDescription} lang={seoLang} />
+      <BreadcrumbSchema items={breadcrumbItems} />
+      {!isAgenda && (
+        <ArticleSchema
+          headline={page?.title?.rendered}
+          description={seoDescription}
+          datePublished={page?.date}
+          dateModified={page?.modified}
+        />
+      )}
+      
+      <main
       className={
         isAgenda
           ? "min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white relative overflow-hidden"
           : "min-h-screen bg-[#fcfcfc] text-[#333] p-4 md:p-12"
       }
     >
-      <Seo title={seoTitle} description={seoDescription} lang={seoLang} />
       {isAgenda && (
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-32 -right-24 w-72 h-72 bg-cyan-500/10 blur-3xl rounded-full"></div>
@@ -865,7 +893,6 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
         )}
       </div>
     </main>
+    </>
   );
 }
-
-
