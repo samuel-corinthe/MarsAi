@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { getPageBySlug } from "../api";
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
+import { OrganizationSchema, WebSiteSchema } from "../components/Schema";
 
 const About = () => {
   const { t, i18n } = useTranslation();
@@ -42,6 +43,8 @@ const About = () => {
   return (
     <>
       <Seo title={seoTitle} description={seoDescription} />
+       <OrganizationSchema />
+      <WebSiteSchema />
       <div className="flex flex-col bg-blue-950 text-white min-h-screen relative selection:bg-cyan-500/30">
       <section className="relative overflow-hidden w-full">
         <div className="relative pt-20 pb-10">
