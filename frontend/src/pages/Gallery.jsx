@@ -1,22 +1,52 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next"; // Import de i18n
-import { allMovies } from "../components/MoviesData";
+import { useTranslation } from "react-i18next";
+import { allMovies as staticMovies } from "../components/MoviesData";
+import { getMovies } from "../api";
 
 const Gallery = () => {
-  const { t, i18n } = useTranslation(); // Initialisation de la traduction
+  const { t, i18n } = useTranslation();
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [dbMovies, setDbMovies] = useState([]);
   const searchRef = useRef(null);
 
-  // Liste des filtres (les clés doivent correspondre à ton fichier de traduction)
   const filters = ["All", "Action", "Sci-Fi", "Adventure", "Fantasy", "Drama"];
 
+  // Charger les films de la DB au mount
+  useEffect(() => {
+    getMovies()
+      .then((movies) => {
+        const normalized = movies.map((m) => ({
+          id: m.id,
+          title: m.title,
+          genre: [],
+          director: m.submitted_by || "",
+          releaseDate: String(m.release_year || 2026),
+          duration: m.duration ? `${Math.floor(m.duration / 60)}min ${m.duration % 60}s` : "",
+          description: m.synopsis || "",
+          img: m.poster_url || "",
+          aiTools: Array.isArray(m.ai_tools) ? m.ai_tools : [],
+          source: "db",
+        }));
+        setDbMovies(normalized);
+      })
+      .catch((err) => {
+        console.error("Erreur chargement films DB:", err);
+      });
+  }, []);
+
+  
+  const taggedStaticMovies = staticMovies.map((m) => ({ ...m, source: "static" }));
+
+ 
+  const allDisplayMovies = [...taggedStaticMovies, ...dbMovies];
+
   const pageSize = 20;
-  const topMovies = allMovies.slice(0, 5);
+  const topMovies = taggedStaticMovies.slice(0, 5);
   const carouselShift = "clamp(90px, 18vw, 240px)";
   const carouselPositions = [
     { offset: -2, scale: 0.72, opacity: 0.35, blur: 2, z: 1 },
@@ -28,21 +58,24 @@ const Gallery = () => {
   const activeCarouselPositions = carouselPositions.slice(0, topMovies.length);
 
   // --- LOGIQUE FILTRAGE ---
-  const filteredMovies = allMovies.filter((movie) => {
-    const matchesFilter =
-      activeFilter === "All" || movie.genre.includes(activeFilter);
+  const filteredMovies = allDisplayMovies.filter((movie) => {
     const matchesSearch = movie.title
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
+    if (!matchesSearch) return false;
+
+    if (activeFilter === "All") return true;
+    
+    if (movie.source === "db") return false;
+    return movie.genre.includes(activeFilter);
   });
 
-  const suggestions = allMovies
+  const suggestions = allDisplayMovies
     .filter(
       (m) =>
         m.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
         searchQuery.length > 0 &&
-        (activeFilter === "All" || m.genre.includes(activeFilter)),
+        (activeFilter === "All" || (m.source === "static" && m.genre.includes(activeFilter))),
     )
     .slice(0, 5);
 
@@ -51,6 +84,11 @@ const Gallery = () => {
     (currentPage - 1) * pageSize,
     currentPage * pageSize,
   );
+
+  // Lien selon la source du film
+  const getMovieLink = (movie) => {
+    return movie.source === "db" ? `/films/${movie.id}` : `/movie/${movie.id}`;
+  };
 
   useEffect(() => {
     setCurrentPage(1);
@@ -104,8 +142,8 @@ const Gallery = () => {
                   if (!pos) return null;
                   return (
                     <Link
-                      to={`/movie/${movie.id}`}
-                      key={movie.id}
+                      to={getMovieLink(movie)}
+                      key={`static-${movie.id}`}
                       className="absolute left-1/2 top-1/2 w-52 sm:w-60 md:w-72 transition-all duration-700 ease-out"
                       style={{
                         transform: `translate(-50%, -50%) translateX(calc(${pos.offset} * ${carouselShift})) scale(${pos.scale})`,
@@ -191,8 +229,8 @@ const Gallery = () => {
                   <div className="absolute z-[100] w-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
                     {suggestions.map((movie) => (
                       <Link
-                        key={movie.id}
-                        to={`/movie/${movie.id}`}
+                        key={`${movie.source}-${movie.id}`}
+                        to={getMovieLink(movie)}
                         onClick={() => setShowSuggestions(false)}
                         className="w-full flex items-center gap-4 px-6 py-4 hover:bg-blue-50 transition-colors border-b last:border-none border-slate-50"
                       >
@@ -206,9 +244,11 @@ const Gallery = () => {
                             {movie.title}
                           </p>
                           <p className="text-[10px] text-cyan-600 font-black uppercase tracking-widest">
-                            {Array.isArray(movie.genre)
-                              ? movie.genre[0]
-                              : movie.genre}
+                            {movie.source === "db"
+                              ? "Film soumis"
+                              : Array.isArray(movie.genre)
+                                ? movie.genre[0]
+                                : movie.genre}
                           </p>
                         </div>
                       </Link>
@@ -228,7 +268,6 @@ const Gallery = () => {
                     `}
                   >
                     {t(`genres.${f.toLowerCase()}`, f)}{" "}
-                    {/* Traduction du genre */}
                   </button>
                 ))}
               </div>
@@ -238,7 +277,7 @@ const Gallery = () => {
             {filteredMovies.length > 0 ? (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-10">
                 {paginatedMovies.map((movie) => (
-                  <Link to={`/movie/${movie.id}`} key={movie.id}>
+                  <Link to={getMovieLink(movie)} key={`${movie.source}-${movie.id}`}>
                     <div className="group relative aspect-[16/9] rounded-[35px] overflow-hidden shadow-2xl bg-blue-950 border border-slate-100">
                       <img
                         src={movie.img}

@@ -28,7 +28,7 @@ export const FORM_CONSTRAINTS = {
   },
 
   TITLE: {
-    MIN_LENGTH: 2,
+    MIN_LENGTH: 1,
     MAX_LENGTH: 100,
     PATTERN: /^[\p{L}\p{N}\p{M}\p{Pd}\p{Po}\p{Zs}]+$/u,
     ERROR_MSG: "Le titre doit contenir entre 2 et 100 caractères (lettres, chiffres et ponctuation basique)"
@@ -39,6 +39,33 @@ export const FORM_CONSTRAINTS = {
     MAX_LENGTH: 250,
     PATTERN: /^[\p{L}\p{N}\p{M}\p{P}\p{Z}\n]*$/u,
     ERROR_MSG: "La description ne doit pas dépasser 250 caractères"
+  },
+
+  COUNTRY_ALPHA2: {
+    MIN_LENGTH: 2,
+    MAX_LENGTH: 2,
+    PATTERN: /^[A-Z]{2}$/,
+    ERROR_MSG: "Code pays invalide (2 lettres majuscules, ex: FR)"
+  },
+
+  LANGUAGE: {
+    MIN_LENGTH: 2,
+    MAX_LENGTH: 25,
+    PATTERN: /^[\p{L}\p{M}\-' ]+$/u,
+    ERROR_MSG: "La langue doit contenir entre 2 et 50 caractères"
+  },
+
+  AI_TOOLS: {
+    MIN_LENGTH: 2,
+    MAX_LENGTH: 255,
+    ERROR_MSG: "Les outils IA sont requis (max 5, séparés par des virgules)"
+  },
+
+  BIO: {
+    MIN_LENGTH: 0,
+    MAX_LENGTH: 500,
+    PATTERN: /^[\p{L}\p{N}\p{M}\p{P}\p{Z}\n]*$/u,
+    ERROR_MSG: "La bio ne doit pas dépasser 500 caractères"
   }
 };
 
@@ -104,13 +131,6 @@ export const validateField = (fieldName, value) => {
       };
     }
 
-    if (ageValue > constraint.MAX_VALUE) {
-      return {
-        isValid: false,
-        error: "Veuillez entrer un âge valide",
-        cleaned
-      };
-    }
 
     return { isValid: true, error: '', cleaned };
   }
@@ -229,6 +249,74 @@ export const validateForm = (formData) => {
     }
   } else {
     cleanedData.description = '';
+  }
+
+  
+  if (!formData.countryAlpha2 || !formData.countryAlpha2.trim()) {
+    errors.countryAlpha2 = "Le code du pays est requis";
+  } else {
+    const cleaned = formData.countryAlpha2.trim().toUpperCase();
+    const validation = validateField('COUNTRY_ALPHA2', cleaned);
+    if (!validation.isValid) {
+      errors.countryAlpha2 = validation.error;
+    } else {
+      cleanedData.countryAlpha2 = cleaned;
+    }
+  }
+
+  
+  if (!formData.language || !formData.language.trim()) {
+    errors.language = "La langue est requise";
+  } else {
+    const validation = validateField('LANGUAGE', formData.language);
+    if (!validation.isValid) {
+      errors.language = validation.error;
+    } else {
+      cleanedData.language = validation.cleaned;
+    }
+  }
+
+  
+  if (!formData.aiTools || !formData.aiTools.trim()) {
+    errors.aiTools = "Les outils IA sont requis";
+  } else {
+    const cleaned = sanitizeInput(formData.aiTools);
+    const toolsArray = cleaned.split(',').map(t => t.trim()).filter(Boolean);
+    if (toolsArray.length === 0) {
+      errors.aiTools = "Au moins un outil IA est requis";
+    } else if (toolsArray.length > 5) {
+      errors.aiTools = "Il ne peut y avoir plus de 5 outils IA au maximum";
+    } else if (cleaned.length > FORM_CONSTRAINTS.AI_TOOLS.MAX_LENGTH) {
+      errors.aiTools = FORM_CONSTRAINTS.AI_TOOLS.ERROR_MSG;
+    } else {
+      cleanedData.aiTools = toolsArray.join(', ');
+    }
+  }
+
+  
+  if (formData.bio && formData.bio.trim()) {
+    const validation = validateField('BIO', formData.bio);
+    if (!validation.isValid) {
+      errors.bio = validation.error;
+    } else {
+      cleanedData.bio = validation.cleaned;
+    }
+  } else {
+    cleanedData.bio = '';
+  }
+
+  
+  const urlPattern = /^https?:\/\/.+/;
+  for (const key of ['socialWebsite', 'socialInstagram', 'socialX']) {
+    if (formData[key] && formData[key].trim()) {
+      if (!urlPattern.test(formData[key].trim())) {
+        errors[key] = "L\'URL est invalide (elle doit commencer par https://)";
+      } else {
+        cleanedData[key] = formData[key].trim();
+      }
+    } else {
+      cleanedData[key] = '';
+    }
   }
 
   return {

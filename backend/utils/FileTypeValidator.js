@@ -46,16 +46,17 @@ export async function  verifyVideoMagicBytes(filePath) {
 }
 
 export const validateFileMagicBytes = async (req, res, next) => {
-  if (!req.file) return next();
+  const videoFile = req.files?.video?.[0] || req.file;
+  if (!videoFile) return next();
 
-  const result = await verifyVideoMagicBytes(req.file.path);
+  const result = await verifyVideoMagicBytes(videoFile.path);
 
   if (!result.isValid) {
-    console.warn(` [SECURITY] Fichier rejeté [${result.code}]: ${req.file.originalname}`);
-    
-   
+    console.warn(` [SECURITY] Fichier rejeté [${result.code}]: ${videoFile.originalname}`);
+
+
     try {
-      await fs.unlink(req.file.path);
+      await fs.unlink(videoFile.path);
     } catch (err) {
       console.error(' [CLEANUP ERROR]: Impossible de supprimer le fichier suspect', err);
     }
@@ -67,8 +68,8 @@ export const validateFileMagicBytes = async (req, res, next) => {
     });
   }
 
-  
 
-  console.log(` [MAGIC BYTES] ✓ ${req.file.originalname} confirmé comme ${result.detectedType}`);
+
+  console.log(` [MAGIC BYTES] ✓ ${videoFile.originalname} confirmé comme ${result.detectedType}`);
   next();
 };

@@ -1,5 +1,6 @@
 import express from 'express';
 import multer from 'multer';
+import path from 'path';
 import oauth2Client from '../utils/YT-client.js';
 import { google } from 'googleapis';
 import fs from 'fs';
@@ -11,6 +12,7 @@ import { validateEmail } from '../utils/EmailValidator.js';
 import { validateFileMagicBytes } from '../utils/FileTypeValidator.js';
 import { validateHoneypot } from '../utils/HoneypotValidator.js';
 import { cleanMetadataMiddleware } from '../utils/MetadataCleaner.js';
+import connection from '../utils/db.js';
 
 
 
@@ -51,7 +53,7 @@ const concurrentLimiter = (req, res, next) => {
 
     if (activeUploads.has(ip)) {
         console.warn('[CONCURRENT] Upload déjà en cours pour', ip);
-        return res.status(429).json({ error: 'Un upload est déjà en cours. Veuillez patienter.' });
+        return res.status(429).json({ error: 'Un upload est  en cours. Veuillez patienter.' });
     }
 
     activeUploads.add(ip);
@@ -65,34 +67,78 @@ const upload = multer({
         fileSize: 300 * 1024 * 1024
     },
     fileFilter: (req, file, cb) => {
-        console.log('[MULTER] Filtrage fichier:', file.mimetype);
-        const allowedMime = ['video/mp4'];
-        if (!allowedMime.includes(file.mimetype)) {
-            return cb(new Error(`Type non autorisé : ${file.mimetype}`));
+        console.log('[MULTER] Filtrage fichier:', file.fieldname, file.mimetype);
+        if (file.fieldname === 'video') {
+            if (file.mimetype !== 'video/mp4') {
+                return cb(new Error(`Ce type de vidéo n\'est pas autorisé : ${file.mimetype}`));
+            }
+        } else if (file.fieldname === 'subtitle') {
+            const ext = path.extname(file.originalname).toLowerCase();
+            if (ext !== '.srt') {
+                return cb(new Error('Seul le format .srt est accepté pour les sous-titres'));
+            }
+            if (file.mimetype !== 'text/plain' && file.mimetype !== 'application/x-subrip') {
+                return cb(new Error(`Type sous-titre non autorisé : ${file.mimetype}`));
+            }
+        } else {
+            return cb(new Error(` le champ fichier est  inconnu : ${file.fieldname}`));
         }
         cb(null, true);
     }
 });
 
+const validateSrtContent = (filePath) => {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    if (content.length > 1024 * 1024) {
+        return { valid: false, error: 'Le Fichier SRT  est trop volumineux (max 1 Mo)' };
+    }
+    
+    const srtPattern = /\d+\r?\n\d{2}:\d{2}:\d{2},\d{3}\s*-->\s*\d{2}:\d{2}:\d{2},\d{3}/;
+    if (!srtPattern.test(content)) {
+        return { valid: false, error: 'Le fichier ne semble pas être un SRT valide' };
+    }
+    
+    const dangerousPatterns = /<script/i;
+    if (dangerousPatterns.test(content)) {
+        return { valid: false, error: ' Le contenu du fichier SRT n\'est pas autorisé' };
+    }
+    return { valid: true };
+};
+
 router.post('/youtube',
     ipLimiter,
     concurrentLimiter,
-    upload.single('video'),
+    upload.fields([
+        { name: 'video', maxCount: 1 },
+        { name: 'subtitle', maxCount: 1 }
+    ]),
     validateHoneypot,
     validateFileMagicBytes,
     validateAltchaMiddleware,
     validateFormData,
-    validateEmail, 
+    validateEmail,
     emailLimiter,
     cleanMetadataMiddleware,
     async (req, res) => {
         console.log('[UPLOAD] Nouvelle soumission reçue');
 
         const { title, description } = req.body;
-        const videoFile = req.file;
+        const videoFile = req.files?.video?.[0];
+        const subtitleFile = req.files?.subtitle?.[0];
 
         if (!videoFile) {
             return res.status(400).json({ error: 'Aucun fichier vidéo reçu.' });
+        }
+
+        
+        if (subtitleFile) {
+            const srtValidation = validateSrtContent(subtitleFile.path);
+            if (!srtValidation.valid) {
+                console.log('[UPLOAD] SRT invalide:', srtValidation.error);
+                if (fs.existsSync(videoFile.path)) fs.unlinkSync(videoFile.path);
+                if (fs.existsSync(subtitleFile.path)) fs.unlinkSync(subtitleFile.path);
+                return res.status(400).json({ error: srtValidation.error });
+            }
         }
 
         try {
@@ -105,6 +151,7 @@ router.post('/youtube',
             if (!validation.isValid) {
                 console.log('[UPLOAD] Vidéo non conforme:', validation.errors.map(e => e.field));
                 if (fs.existsSync(videoFile.path)) fs.unlinkSync(videoFile.path);
+                if (subtitleFile && fs.existsSync(subtitleFile.path)) fs.unlinkSync(subtitleFile.path);
 
                 const refusalReasons = validation.errors.map(e => e.message).join(' ; ');
 
@@ -135,11 +182,68 @@ router.post('/youtube',
                 },
             });
 
-            console.log('[UPLOAD] Upload réussi, ID:', response.data.id);
+            console.log('[UPLOAD] Upload YouTube réussi, ID:', response.data.id);
+
+            
+            const youtubeUrl = `https://www.youtube.com/watch?v=${response.data.id}`;
+            const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            const posterUrl = `https://picsum.photos/seed/${slug}-${response.data.id}/600/900`;
+            const submittedBy = `${req.body.firstName} ${req.body.lastName}`;
+            const duration = Math.round(metadata.duration);
+
+          
+            const [countryRows] = await connection.promise().query(
+                'SELECT id FROM countries WHERE alpha2 = ?',
+                [req.body.countryAlpha2]
+            );
+
+            if (countryRows.length === 0) {
+                console.log('[UPLOAD] le code pays  est introuvable:', req.body.countryAlpha2);
+                return res.status(400).json({ error: ' le code pays est  introuvable dans la base de données' });
+            }
+
+            const countryId = countryRows[0].id;
+
+            const [insertResult] = await connection.promise().query(
+                `INSERT INTO movies
+                (title, age, bio, social_links, synopsis, duration, release_year, country_id, language, subtitle_language, ai_tools, poster_url, video_url, youtube_url, view_count, submitted_by, submission_status)
+                VALUES (?, ?, ?, ?, ?, ?, 2026, ?, ?, NULL, ?, ?, ?, ?, 0, ?, 'en cours')`,
+                [
+                    title,
+                    parseInt(req.body.age, 10),
+                    req.body.bio,
+                    req.body.socialLinks,
+                    description || '',
+                    duration,
+                    countryId,
+                    req.body.language,
+                    req.body.aiTools,
+                    posterUrl,
+                    youtubeUrl,
+                    youtubeUrl,
+                    submittedBy
+                ]
+            );
+
+            const movieId = insertResult.insertId;
+            console.log('[UPLOAD] Film inséré dans MariaDB, ID:', movieId);
+
+            
+            if (subtitleFile) {
+                const subtitlesDir = 'uploads/subtitles';
+                if (!fs.existsSync(subtitlesDir)) {
+                    fs.mkdirSync(subtitlesDir, { recursive: true });
+                }
+                const srtDest = path.join(subtitlesDir, `${movieId}.srt`);
+                fs.renameSync(subtitleFile.path, srtDest);
+                console.log('[UPLOAD] SRT stocké:', srtDest);
+            }
+
             return res.status(200).json({
                 message: 'Upload réussi !',
                 videoId: response.data.id,
-                videoUrl: `https://youtube.com/watch?v=${response.data.id}`,
+                movieId: movieId,
+                videoUrl: youtubeUrl,
             });
 
         } catch (error) {
@@ -148,9 +252,13 @@ router.post('/youtube',
                return res.status(500).json({ error: 'Erreur interne du serveur' });
             }
         } finally {
-            if (req.file && fs.existsSync(req.file.path)) {
-                console.log('[UPLOAD] Nettoyage fichier temporaire');
-                fs.unlinkSync(req.file.path);
+            if (videoFile && fs.existsSync(videoFile.path)) {
+                console.log('[UPLOAD] Nettoyage fichier vidéo temporaire');
+                fs.unlinkSync(videoFile.path);
+            }
+            if (subtitleFile && fs.existsSync(subtitleFile.path)) {
+                console.log('[UPLOAD] Nettoyage fichier SRT temporaire');
+                fs.unlinkSync(subtitleFile.path);
             }
         }
     }

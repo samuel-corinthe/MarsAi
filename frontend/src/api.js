@@ -22,3 +22,15 @@ export async function getAdminDashboardData({ signal } = {}) {
   if (!res.ok) throw new Error(`Admin mock error ${res.status}`);
   return res.json();
 }
+
+export async function getMovies() {
+  const res = await fetch("/api/movies");
+  if (!res.ok) throw new Error(`Movies API error ${res.status}`);
+  return res.json();
+}
+
+export async function getMovieById(id) {
+  const res = await fetch(`/api/movies/${id}`);
+  if (!res.ok) throw new Error(`Movie API error ${res.status}`);
+  return res.json();
+}

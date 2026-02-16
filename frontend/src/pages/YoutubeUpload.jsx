@@ -21,6 +21,14 @@ export default function YoutubeUpload() {
     const [honeypotFieldName, setHoneypotFieldName] = useState('');
     const [honeypotToken, setHoneypotToken] = useState('');
     const [honeypotValue, setHoneypotValue] = useState('');
+    const [countryAlpha2, setCountryAlpha2] = useState('');
+    const [language, setLanguage] = useState('');
+    const [aiTools, setAiTools] = useState('');
+    const [bio, setBio] = useState('');
+    const [socialWebsite, setSocialWebsite] = useState('');
+    const [socialInstagram, setSocialInstagram] = useState('');
+    const [socialX, setSocialX] = useState('');
+    const [subtitleFile, setSubtitleFile] = useState(null);
 
 
     const fileInputRef = useRef(null);
@@ -114,7 +122,14 @@ export default function YoutubeUpload() {
             lastName,
             age,
             title,
-            description
+            description,
+            countryAlpha2,
+            language,
+            aiTools,
+            bio,
+            socialWebsite,
+            socialInstagram,
+            socialX
         });
 
         if (!validation.isValid) {
@@ -144,6 +159,14 @@ export default function YoutubeUpload() {
         formData.append('age', validation.cleanedData.age);
         formData.append('title', validation.cleanedData.title);
         formData.append('description', validation.cleanedData.description);
+        formData.append('countryAlpha2', validation.cleanedData.countryAlpha2);
+        formData.append('language', validation.cleanedData.language);
+        formData.append('aiTools', validation.cleanedData.aiTools);
+        if (validation.cleanedData.bio) formData.append('bio', validation.cleanedData.bio);
+        if (validation.cleanedData.socialWebsite) formData.append('socialWebsite', validation.cleanedData.socialWebsite);
+        if (validation.cleanedData.socialInstagram) formData.append('socialInstagram', validation.cleanedData.socialInstagram);
+        if (validation.cleanedData.socialX) formData.append('socialX', validation.cleanedData.socialX);
+        if (subtitleFile) formData.append('subtitle', subtitleFile);
         formData.append('altcha', altchaPayload);
         formData.append('honeypotToken', honeypotToken);
         // Ajouter le champ honeypot dynamique (doit être vide)
@@ -174,6 +197,14 @@ export default function YoutubeUpload() {
             setAge('');
             setTitle('');
             setDescription('');
+            setCountryAlpha2('');
+            setLanguage('');
+            setAiTools('');
+            setBio('');
+            setSocialWebsite('');
+            setSocialInstagram('');
+            setSocialX('');
+            setSubtitleFile(null);
             setAltchaPayload(null);
             setErrors({});
 
@@ -444,6 +475,217 @@ export default function YoutubeUpload() {
                             Cette description accompagnera votre vidéo sur YouTube
                         </span>
                     </div>
+                    {/* Code pays */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <label htmlFor="country-input" className="block text-sm font-semibold text-slate-700">
+                                Code pays (alpha-2) <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                            </label>
+                            <span className={`text-xs ${countryAlpha2.length > FORM_CONSTRAINTS.COUNTRY_ALPHA2.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                                {countryAlpha2.length}/{FORM_CONSTRAINTS.COUNTRY_ALPHA2.MAX_LENGTH}
+                            </span>
+                        </div>
+                        <input
+                            id="country-input"
+                            type="text"
+                            placeholder="Ex: FR, US, MA"
+                            maxLength={FORM_CONSTRAINTS.COUNTRY_ALPHA2.MAX_LENGTH}
+                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all uppercase ${errors.countryAlpha2 ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                            value={countryAlpha2}
+                            onChange={(e) => {
+                                setCountryAlpha2(e.target.value.toUpperCase());
+                                clearError('countryAlpha2');
+                            }}
+                            required
+                            aria-required="true"
+                            aria-invalid={!!errors.countryAlpha2}
+                            aria-describedby={errors.countryAlpha2 ? "country-error" : "country-hint"}
+                        />
+                        {errors.countryAlpha2 && (
+                            <p id="country-error" className="text-red-600 text-sm mt-1" role="alert">{errors.countryAlpha2}</p>
+                        )}
+                        <span id="country-hint" className="text-xs text-slate-500 block">
+                            Code ISO 3166-1 alpha-2 de votre pays (2 lettres)
+                        </span>
+                    </div>
+
+                    {/* Langue du film */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <label htmlFor="language-input" className="block text-sm font-semibold text-slate-700">
+                                Langue du film <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                            </label>
+                            <span className={`text-xs ${language.length > FORM_CONSTRAINTS.LANGUAGE.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                                {language.length}/{FORM_CONSTRAINTS.LANGUAGE.MAX_LENGTH}
+                            </span>
+                        </div>
+                        <input
+                            id="language-input"
+                            type="text"
+                            placeholder="Ex: Français"
+                            maxLength={FORM_CONSTRAINTS.LANGUAGE.MAX_LENGTH}
+                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.language ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                            value={language}
+                            onChange={(e) => {
+                                if (!exceedsMaxLength('LANGUAGE', e.target.value)) {
+                                    setLanguage(e.target.value);
+                                    clearError('language');
+                                }
+                            }}
+                            required
+                            aria-required="true"
+                            aria-invalid={!!errors.language}
+                            aria-describedby={errors.language ? "language-error" : undefined}
+                        />
+                        {errors.language && (
+                            <p id="language-error" className="text-red-600 text-sm mt-1" role="alert">{errors.language}</p>
+                        )}
+                    </div>
+
+                    {/* Outils IA */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <label htmlFor="aitools-input" className="block text-sm font-semibold text-slate-700">
+                                Outils IA utilisés <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                            </label>
+                            <span className={`text-xs ${aiTools.length > FORM_CONSTRAINTS.AI_TOOLS.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                                {aiTools.length}/{FORM_CONSTRAINTS.AI_TOOLS.MAX_LENGTH}
+                            </span>
+                        </div>
+                        <input
+                            id="aitools-input"
+                            type="text"
+                            placeholder="Ex: Runway, DALL·E, Suno"
+                            maxLength={FORM_CONSTRAINTS.AI_TOOLS.MAX_LENGTH}
+                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.aiTools ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                            value={aiTools}
+                            onChange={(e) => {
+                                if (!exceedsMaxLength('AI_TOOLS', e.target.value)) {
+                                    setAiTools(e.target.value);
+                                    clearError('aiTools');
+                                }
+                            }}
+                            required
+                            aria-required="true"
+                            aria-invalid={!!errors.aiTools}
+                            aria-describedby={errors.aiTools ? "aitools-error" : "aitools-hint"}
+                        />
+                        {errors.aiTools && (
+                            <p id="aitools-error" className="text-red-600 text-sm mt-1" role="alert">{errors.aiTools}</p>
+                        )}
+                        <span id="aitools-hint" className="text-xs text-slate-500 block">
+                            Séparez les outils par des virgules (5 maximum)
+                        </span>
+                    </div>
+
+                    {/* Bio */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <label htmlFor="bio-input" className="block text-sm font-semibold text-slate-700">
+                                Bio du réalisateur <span className="text-slate-500 font-normal">(optionnel)</span>
+                            </label>
+                            <span className={`text-xs ${bio.length > FORM_CONSTRAINTS.BIO.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                                {bio.length}/{FORM_CONSTRAINTS.BIO.MAX_LENGTH}
+                            </span>
+                        </div>
+                        <textarea
+                            id="bio-input"
+                            placeholder="Quelques mots sur vous..."
+                            maxLength={FORM_CONSTRAINTS.BIO.MAX_LENGTH}
+                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all h-24 resize-y ${errors.bio ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                            value={bio}
+                            onChange={(e) => {
+                                if (!exceedsMaxLength('BIO', e.target.value)) {
+                                    setBio(e.target.value);
+                                    clearError('bio');
+                                }
+                            }}
+                            aria-invalid={!!errors.bio}
+                            aria-describedby={errors.bio ? "bio-error" : undefined}
+                        />
+                        {errors.bio && (
+                            <p id="bio-error" className="text-red-600 text-sm mt-1" role="alert">{errors.bio}</p>
+                        )}
+                    </div>
+
+                    {/* Réseaux sociaux */}
+                    <div className="space-y-4">
+                        <p className="text-sm font-semibold text-slate-700">Réseaux sociaux <span className="text-slate-500 font-normal">(optionnel)</span></p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-1">
+                                <label htmlFor="social-website" className="text-xs text-slate-600">Site web</label>
+                                <input
+                                    id="social-website"
+                                    type="url"
+                                    placeholder="https://..."
+                                    className={`w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none ${errors.socialWebsite ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                                    value={socialWebsite}
+                                    onChange={(e) => { setSocialWebsite(e.target.value); clearError('socialWebsite'); }}
+                                />
+                                {errors.socialWebsite && <p className="text-red-600 text-xs" role="alert">{errors.socialWebsite}</p>}
+                            </div>
+                            <div className="space-y-1">
+                                <label htmlFor="social-instagram" className="text-xs text-slate-600">Instagram</label>
+                                <input
+                                    id="social-instagram"
+                                    type="url"
+                                    placeholder="https://instagram.com/..."
+                                    className={`w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none ${errors.socialInstagram ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                                    value={socialInstagram}
+                                    onChange={(e) => { setSocialInstagram(e.target.value); clearError('socialInstagram'); }}
+                                />
+                                {errors.socialInstagram && <p className="text-red-600 text-xs" role="alert">{errors.socialInstagram}</p>}
+                            </div>
+                            <div className="space-y-1">
+                                <label htmlFor="social-x" className="text-xs text-slate-600">X (Twitter)</label>
+                                <input
+                                    id="social-x"
+                                    type="url"
+                                    placeholder="https://x.com/..."
+                                    className={`w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none ${errors.socialX ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                                    value={socialX}
+                                    onChange={(e) => { setSocialX(e.target.value); clearError('socialX'); }}
+                                />
+                                {errors.socialX && <p className="text-red-600 text-xs" role="alert">{errors.socialX}</p>}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Fichier sous-titres SRT */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-slate-700">
+                            Sous-titres (fichier .srt) <span className="text-slate-500 font-normal">(optionnel)</span>
+                        </label>
+                        <input
+                            type="file"
+                            accept=".srt"
+                            onChange={(e) => {
+                                const selected = e.target.files[0];
+                                if (selected) {
+                                    if (!selected.name.toLowerCase().endsWith('.srt')) {
+                                        setErrors(prev => ({ ...prev, subtitle: 'Seul le format .srt est accepté' }));
+                                        setSubtitleFile(null);
+                                        return;
+                                    }
+                                    if (selected.size > 1024 * 1024) {
+                                        setErrors(prev => ({ ...prev, subtitle: 'Fichier SRT trop lourd (max 1 Mo)' }));
+                                        setSubtitleFile(null);
+                                        return;
+                                    }
+                                    setSubtitleFile(selected);
+                                    clearError('subtitle');
+                                }
+                            }}
+                            className={`w-full border p-3 rounded-lg text-sm ${errors.subtitle ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                        />
+                        {subtitleFile && (
+                            <p className="text-slate-700 text-sm" aria-live="polite">{subtitleFile.name}</p>
+                        )}
+                        {errors.subtitle && (
+                            <p className="text-red-600 text-sm mt-1" role="alert">{errors.subtitle}</p>
+                        )}
+                    </div>
+
                     {/* HONEYPOT - Champ piège dynamique invisible */}
                     {honeypotFieldName && (
                         <div
