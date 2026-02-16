@@ -41,7 +41,7 @@ app.use(
       callback(null, isOriginAllowed(origin || ""));
     },
     credentials: true,
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   }),
 );

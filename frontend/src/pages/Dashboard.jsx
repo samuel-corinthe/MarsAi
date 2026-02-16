@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Seo from "../components/Seo";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { getAdminDashboardData } from "../api";
+import { getAdminDashboardData, updateCurrentSessionProfile } from "../api";
 
 function toSlug(value) {
   return String(value ?? "")
@@ -12,7 +12,7 @@ function toSlug(value) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "");
 }
-function SparkLine({ data, stroke = "#f6c452" }) {
+function SparkLine({ data }) {
   const max = Math.max(...data);
   const min = Math.min(...data);
   const points = data
@@ -55,7 +55,6 @@ function DonutSplit({ accepted, pending, rejected }) {
   const total = accepted + pending + rejected || 1;
   const a = (accepted / total) * 360;
   const p = (pending / total) * 360;
-  const r = 360 - a - p;
   const style = {
     background: `conic-gradient(#25d0ff 0deg ${a}deg, #f6c452 ${a}deg ${a + p}deg, #f2438b ${a + p}deg 360deg)`,
   };
@@ -165,6 +164,10 @@ export default function Dashboard() {
   const [activeNav, setActiveNav] = useState("admin-top");
   const [currentUser, setCurrentUser] = useState(null);
   const [profileForm, setProfileForm] = useState(null);
+  const [wpPasswordForSync, setWpPasswordForSync] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSaveError, setProfileSaveError] = useState("");
+  const [profileSaveSuccess, setProfileSaveSuccess] = useState("");
   const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
   const [nowTs, setNowTs] = useState(Date.now());
 
@@ -297,10 +300,39 @@ export default function Dashboard() {
     countdown: `${remainingDays} j ${String(remainingHours).padStart(2, "0")} h ${String(remainingMinutes).padStart(2, "0")} min restantes`,
   };
 
-  const handleProfileSave = () => {
+  const handleProfileSave = async () => {
     if (!profileForm) return;
-    setCurrentUser(profileForm);
-    setAdminData((prev) => (prev ? { ...prev, currentUser: profileForm } : prev));
+    setProfileSaveError("");
+    setProfileSaveSuccess("");
+    setProfileSaving(true);
+
+    try {
+      const payload = await updateCurrentSessionProfile({
+        name: profileForm.name,
+        email: profileForm.email,
+        wpPassword: wpPasswordForSync,
+      });
+
+      const updatedUser = payload?.user ?? {};
+      const mergedUser = {
+        ...profileForm,
+        ...updatedUser,
+      };
+
+      setCurrentUser((prev) => (prev ? { ...prev, ...mergedUser } : mergedUser));
+      setProfileForm((prev) => (prev ? { ...prev, ...mergedUser } : mergedUser));
+      setAdminData((prev) =>
+        prev ? { ...prev, currentUser: { ...(prev.currentUser || {}), ...mergedUser } } : prev,
+      );
+      setWpPasswordForSync("");
+      setProfileSaveSuccess("Profil synchronise avec WordPress et la base locale.");
+    } catch (error) {
+      setProfileSaveError(
+        error?.message || "Impossible de synchroniser le profil avec WordPress.",
+      );
+    } finally {
+      setProfileSaving(false);
+    }
   };
   const handleAddSelection = () => {
     setAdminData((prev) => {
@@ -463,7 +495,7 @@ export default function Dashboard() {
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-sm text-slate-100/90">
-                Région
+                Region
                 <input
                   className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-300"
                   value={effectiveProfile.region}
@@ -475,20 +507,41 @@ export default function Dashboard() {
                   }
                 />
               </label>
+              <label className="flex flex-col gap-1 text-sm text-slate-100/90 md:col-span-2">
+                Mot de passe WordPress (requis pour synchroniser)
+                <input
+                  type="password"
+                  className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-300"
+                  value={wpPasswordForSync}
+                  onChange={(e) => setWpPasswordForSync(e.target.value)}
+                  placeholder="Entre ton mot de passe WordPress"
+                />
+              </label>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <button className="btn-primary px-4 py-2 rounded-lg" onClick={handleProfileSave}>
-                Enregistrer
+              <button
+                className="btn-primary px-4 py-2 rounded-lg disabled:opacity-60"
+                onClick={handleProfileSave}
+                disabled={profileSaving}
+              >
+                {profileSaving ? "Synchronisation..." : "Enregistrer et synchroniser"}
               </button>
-                <button
-                  className="btn-ghost px-4 py-2 rounded-lg border border-white/10"
-                  onClick={() => setProfileForm(effectiveUser)}
-                >
-                  Réinitialiser
-                </button>
+              <button
+                className="btn-ghost px-4 py-2 rounded-lg border border-white/10"
+                onClick={() => {
+                  setProfileForm(effectiveUser);
+                  setWpPasswordForSync("");
+                  setProfileSaveError("");
+                  setProfileSaveSuccess("");
+                }}
+              >
+                Reinitialiser
+              </button>
               {isSuperAdmin && <span className="pill pill-amber">Super admin : peut changer de phase</span>}
             </div>
+            {profileSaveError && <p className="text-sm text-rose-200">{profileSaveError}</p>}
+            {profileSaveSuccess && <p className="text-sm text-emerald-200">{profileSaveSuccess}</p>}
           </div>
 
           <div className="glass p-6 space-y-4">
@@ -869,4 +922,5 @@ export default function Dashboard() {
     </>
   );
 }
+
 

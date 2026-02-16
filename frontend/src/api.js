@@ -23,7 +23,7 @@ export async function loginWithWordPress({ email, username, password }) {
       credentials: "include",
       body: JSON.stringify({ email, username, password }),
     });
-  } catch (error) {
+  } catch {
     throw new Error(
       "Impossible de joindre l'API backend (/api/auth/wordpress/login). Verifie que le serveur Node est demarre.",
     );
@@ -75,6 +75,50 @@ export async function logoutSession() {
   }
 
   return res.json();
+}
+
+export async function updateCurrentSessionProfile({
+  name,
+  email,
+  wpPassword,
+  website,
+  bio,
+  nickname,
+}) {
+  const body = {
+    name,
+    email,
+    wpPassword,
+  };
+  if (typeof website === "string") body.website = website;
+  if (typeof bio === "string") body.bio = bio;
+  if (typeof nickname === "string") body.nickname = nickname;
+
+  const res = await fetch("/api/auth/me/profile", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(body),
+  });
+
+  const rawBody = await res.text();
+  let payload = {};
+  try {
+    payload = rawBody ? JSON.parse(rawBody) : {};
+  } catch {
+    payload = {};
+  }
+
+  if (!res.ok) {
+    const details =
+      payload?.details ||
+      payload?.error ||
+      rawBody.slice(0, 220) ||
+      `Profil update impossible (HTTP ${res.status}).`;
+    throw new Error(details);
+  }
+
+  return payload;
 }
 
 export async function getAdminDashboardData({ signal } = {}) {
