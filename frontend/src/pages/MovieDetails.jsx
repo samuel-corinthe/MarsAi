@@ -1,22 +1,132 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next"; // 1. Import du hook
 import { allMovies } from "../components/MoviesData";
 import Seo from "../components/Seo";
+import {
+  deleteMyMovieRating,
+  getCurrentSessionUser,
+  getMyMovieRating,
+  upsertMyMovieRating,
+} from "../api";
 
 const MovieDetails = () => {
   const { id } = useParams();
   const { t, i18n } = useTranslation(); // 2. Initialisation
   const galleryPath = i18n.language === "en" ? "/movies" : "/films";
 
-  // --- ÉTATS ---
-  const [isAdmin] = useState(true);
+  // --- ETATS ---
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [officialRating, setOfficialRating] = useState(4);
+  const [officialRating, setOfficialRating] = useState(null);
   const [tempRating, setTempRating] = useState(0);
+  const [ratingLoading, setRatingLoading] = useState(false);
+  const [ratingError, setRatingError] = useState("");
 
   // Recherche du film par ID
-  const movie = allMovies.find((m) => m.id === parseInt(id));
+  const movieId = Number.parseInt(id, 10);
+  const movie = allMovies.find((m) => m.id === movieId);
+
+  const seoTitle = movie?.title || t("movie_details.not_found");
+  const seoDescription = movie?.description || t("movie_details.back_to_gallery");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      setRatingError("");
+      setSessionChecked(false);
+      setRatingLoading(false);
+
+      if (!Number.isFinite(movieId) || movieId <= 0) {
+        setIsAdmin(false);
+        setOfficialRating(null);
+        setSessionChecked(true);
+        return;
+      }
+
+      try {
+        const sessionPayload = await getCurrentSessionUser();
+        if (cancelled) return;
+
+        const role = String(sessionPayload?.user?.role || "").toLowerCase();
+        const canRate =
+          Boolean(sessionPayload?.authenticated) &&
+          (role === "admin" || role === "superadmin");
+        setIsAdmin(canRate);
+
+        if (!canRate) {
+          setOfficialRating(null);
+          return;
+        }
+
+        setRatingLoading(true);
+        try {
+          const ratingPayload = await getMyMovieRating(movieId);
+          if (cancelled) return;
+          const myScore = Number(ratingPayload?.myScore);
+          setOfficialRating(Number.isFinite(myScore) ? myScore : null);
+        } catch (error) {
+          if (!cancelled) {
+            setRatingError(error?.message || "Impossible de charger votre note.");
+          }
+        } finally {
+          if (!cancelled) setRatingLoading(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setIsAdmin(false);
+          setOfficialRating(null);
+        }
+      } finally {
+        if (!cancelled) setSessionChecked(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [movieId]);
+
+  const openRatingModal = () => {
+    if (!isAdmin || !sessionChecked || ratingLoading) return;
+    setTempRating(officialRating || 0);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveVote = async () => {
+    if (!isAdmin) return;
+    if (!Number.isInteger(tempRating) || tempRating < 1 || tempRating > 5) return;
+
+    setRatingError("");
+    setRatingLoading(true);
+    try {
+      await upsertMyMovieRating(movieId, tempRating);
+      setOfficialRating(tempRating);
+      setIsModalOpen(false);
+    } catch (error) {
+      setRatingError(error?.message || "Impossible d'enregistrer la note.");
+    } finally {
+      setRatingLoading(false);
+    }
+  };
+
+  const handleDeleteVote = async () => {
+    if (!isAdmin) return;
+
+    setRatingError("");
+    setRatingLoading(true);
+    try {
+      await deleteMyMovieRating(movieId);
+      setOfficialRating(null);
+      setIsModalOpen(false);
+    } catch (error) {
+      setRatingError(error?.message || "Impossible de supprimer la note.");
+    } finally {
+      setRatingLoading(false);
+    }
+  };
 
   // Sécurité si le film n'existe pas
   if (!movie) {
@@ -41,19 +151,6 @@ const MovieDetails = () => {
       </>
     );
   }
-
-  const seoTitle = movie.title;
-  const seoDescription = movie.description;
-
-  const openRatingModal = () => {
-    setTempRating(officialRating || 0);
-    setIsModalOpen(true);
-  };
-
-  const handleDeleteVote = () => {
-    setOfficialRating(null);
-    setIsModalOpen(false);
-  };
 
   return (
     <>
@@ -115,7 +212,7 @@ const MovieDetails = () => {
 
               <div className="flex justify-center md:justify-start items-center gap-6 text-slate-300 font-medium mb-10 text-lg">
                 <span className="flex items-center gap-2">
-                  <span className="text-yellow-400 text-2xl">★</span>
+                  <span className="text-yellow-400 text-2xl">&#9733;</span>
                   {officialRating
                     ? `${officialRating}/5`
                     : t("movie_details.na")}
@@ -204,7 +301,7 @@ const MovieDetails = () => {
               </div>
 
               {/* Zone Admin */}
-              {isAdmin && (
+              {sessionChecked && isAdmin && (
                 <div className="mt-16 p-8 bg-blue-950 rounded-[40px] flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl border border-white/10">
                   <div>
                     <p className="text-cyan-400 font-bold text-xs uppercase tracking-widest mb-1">
@@ -219,11 +316,15 @@ const MovieDetails = () => {
                   </div>
                   <button
                     onClick={openRatingModal}
-                    className="bg-white text-blue-950 font-black px-10 py-4 rounded-2xl hover:bg-cyan-400 transition-all uppercase tracking-widest text-sm"
+                    className="bg-white text-blue-950 font-black px-10 py-4 rounded-2xl hover:bg-cyan-400 transition-all uppercase tracking-widest text-sm disabled:opacity-60"
+                    disabled={ratingLoading}
                   >
-                    {t("movie_details.admin_manage_note")}
+                    {ratingLoading ? "..." : t("movie_details.admin_manage_note")}
                   </button>
                 </div>
+              )}
+              {ratingError && (
+                <p className="mt-4 text-sm font-semibold text-rose-500">{ratingError}</p>
               )}
             </div>
 
@@ -262,7 +363,7 @@ const MovieDetails = () => {
       </section>
 
       {/* --- MODALE --- */}
-      {isModalOpen && (
+      {sessionChecked && isAdmin && isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div
             className="absolute inset-0 bg-blue-950/95 backdrop-blur-md"
@@ -285,18 +386,17 @@ const MovieDetails = () => {
             </div>
             <div className="flex flex-col gap-4">
               <button
-                onClick={() => {
-                  setOfficialRating(tempRating);
-                  setIsModalOpen(false);
-                }}
-                className="w-full py-5 bg-blue-950 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-800 transition-all"
+                onClick={handleSaveVote}
+                className="w-full py-5 bg-blue-950 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-800 transition-all disabled:opacity-60"
+                disabled={ratingLoading || tempRating < 1 || tempRating > 5}
               >
-                {t("movie_details.modal_confirm")}
+                {ratingLoading ? "..." : t("movie_details.modal_confirm")}
               </button>
               {officialRating && (
                 <button
                   onClick={handleDeleteVote}
-                  className="text-red-500 font-bold uppercase text-xs tracking-widest py-2"
+                  className="text-red-500 font-bold uppercase text-xs tracking-widest py-2 disabled:opacity-60"
+                  disabled={ratingLoading}
                 >
                   {t("movie_details.modal_delete")}
                 </button>
@@ -319,10 +419,13 @@ const DetailRow = ({ label, value, isStar, last }) => (
       {label}
     </span>
     <span className="font-bold text-blue-900 uppercase flex items-center gap-2">
-      {isStar && <span className="text-yellow-500 text-lg">★</span>}
+      {isStar && <span className="text-yellow-500 text-lg">&#9733;</span>}
       {value}
     </span>
   </div>
 );
 
 export default MovieDetails;
+
+
+

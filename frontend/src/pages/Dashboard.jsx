@@ -3,7 +3,12 @@ import Seo from "../components/Seo";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
+  autoAssignMovieReviews,
+  claimMovieAssignment,
   getAdminDashboardData,
+  getMyAssignments,
+  rebalanceMovieReviews,
+  releaseMovieAssignment,
   logoutSession,
   updateCurrentSessionProfile,
 } from "../api";
@@ -16,6 +21,13 @@ function toSlug(value) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "");
 }
+
+const DEFAULT_ASSIGNMENT_META = {
+  policy: null,
+  assignmentByMovie: {},
+  reviewerCountByMovie: {},
+  myPendingMinutes: 0,
+};
 function SparkLine({ data }) {
   const max = Math.max(...data);
   const min = Math.min(...data);
@@ -96,9 +108,18 @@ function Pill({ children, tone = "pink", active = false, onClick }) {
   );
 }
 
-function FilmRow({ film, filmsBasePath }) {
+function FilmRow({
+  film,
+  filmsBasePath,
+  onClaim,
+  onRelease,
+  busyMovieId,
+}) {
   const ratingLabel = Number.isFinite(film.rating) ? film.rating.toFixed(1) : "-";
   const filmSlug = film.slug ?? toSlug(film.title);
+  const isBusy = Number(busyMovieId) === Number(film.id);
+  const canClaim = Boolean(film.canClaim);
+  const canRelease = Boolean(film.canRelease);
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 md:px-5 md:py-4">
@@ -129,6 +150,24 @@ function FilmRow({ film, filmsBasePath }) {
             <button className="btn-primary px-3 py-1.5 rounded-lg">
               Noter
             </button>
+            {canClaim && (
+              <button
+                className="btn-primary px-3 py-1.5 rounded-lg disabled:opacity-60"
+                onClick={() => onClaim?.(film)}
+                disabled={isBusy}
+              >
+                {isBusy ? "..." : "Prendre"}
+              </button>
+            )}
+            {canRelease && (
+              <button
+                className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10 disabled:opacity-60"
+                onClick={() => onRelease?.(film)}
+                disabled={isBusy}
+              >
+                {isBusy ? "..." : "Retirer"}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -156,6 +195,11 @@ export default function Dashboard() {
   const [profileSaveSuccess, setProfileSaveSuccess] = useState("");
   const [logoutPending, setLogoutPending] = useState(false);
   const [logoutError, setLogoutError] = useState("");
+  const [assignmentMeta, setAssignmentMeta] = useState(DEFAULT_ASSIGNMENT_META);
+  const [assignmentBusyMovieId, setAssignmentBusyMovieId] = useState(null);
+  const [assignmentInfoError, setAssignmentInfoError] = useState("");
+  const [assignmentInfoSuccess, setAssignmentInfoSuccess] = useState("");
+  const [distributionBusy, setDistributionBusy] = useState(false);
   const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
   const [nowTs, setNowTs] = useState(Date.now());
 
@@ -167,9 +211,34 @@ export default function Dashboard() {
       setLoading(true);
       setLoadError("");
       try {
-        const data = await getAdminDashboardData({ signal: controller.signal });
+        const [dashboardResult, assignmentsResult] = await Promise.allSettled([
+          getAdminDashboardData({ signal: controller.signal }),
+          getMyAssignments(),
+        ]);
+        if (dashboardResult.status !== "fulfilled") {
+          throw dashboardResult.reason;
+        }
+        const data = dashboardResult.value;
+        const myAssignments =
+          assignmentsResult.status === "fulfilled" ? assignmentsResult.value : null;
         if (cancelled) return;
         setAdminData(data);
+        setAssignmentMeta({
+          policy: myAssignments?.policy || DEFAULT_ASSIGNMENT_META.policy,
+          assignmentByMovie:
+            myAssignments?.assignmentByMovie || DEFAULT_ASSIGNMENT_META.assignmentByMovie,
+          reviewerCountByMovie:
+            myAssignments?.reviewerCountByMovie
+            || DEFAULT_ASSIGNMENT_META.reviewerCountByMovie,
+          myPendingMinutes: Number(
+            myAssignments?.myPendingMinutes || DEFAULT_ASSIGNMENT_META.myPendingMinutes,
+          ),
+        });
+        if (assignmentsResult.status === "rejected") {
+          setAssignmentInfoError(
+            "Module d'assignations indisponible (endpoint /api/assignments absent ou backend non redemarre).",
+          );
+        }
         setActiveNav(data?.navItems?.[0]?.href ?? "admin-top");
         setCurrentUser(data?.currentUser ?? null);
         setProfileForm(data?.currentUser ?? null);
@@ -266,7 +335,36 @@ export default function Dashboard() {
     }
   };
 
-  const filteredFilms = films.filter((film) => {
+  const assignmentPolicy = assignmentMeta.policy || adminData.assignmentPolicy || {
+    minReviewers: 3,
+    maxReviewers: 5,
+  };
+
+  const filmsWithAssignments = films.map((film) => {
+    const movieIdKey = String(film.id);
+    const myAssignment = assignmentMeta.assignmentByMovie?.[movieIdKey] || null;
+    const reviewerCount =
+      Number(assignmentMeta.reviewerCountByMovie?.[movieIdKey]) ||
+      Number(film.reviewersCount || 0);
+    const myStatus = myAssignment?.status || film.myAssignmentStatus || null;
+
+    return {
+      ...film,
+      reviewersCount: reviewerCount,
+      myAssignmentStatus: myStatus,
+      myAssignmentSource: myAssignment?.source || film.myAssignmentSource || null,
+      isAssignedToMe: Boolean(myAssignment || film.isAssignedToMe),
+      canClaim:
+        !myAssignment &&
+        Number(reviewerCount) < Number(assignmentPolicy.maxReviewers || 5),
+      canRelease:
+        Boolean(myAssignment) &&
+        myStatus === "assigned" &&
+        Number(reviewerCount) > Number(assignmentPolicy.minReviewers || 3),
+    };
+  });
+
+  const filteredFilms = filmsWithAssignments.filter((film) => {
     if (filters.phase !== "toutes" && film.phase !== filters.phase) return false;
     if (["= 4", ">= 4"].includes(filters.note) && film.rating < 4) return false;
     if (filters.note === "3 - 4" && (film.rating < 3 || film.rating >= 4)) return false;
@@ -357,6 +455,108 @@ export default function Dashboard() {
     } catch (error) {
       setLogoutError(error?.message || "Deconnexion impossible.");
       setLogoutPending(false);
+    }
+  };
+
+  const refreshDashboardAndAssignments = async () => {
+    const [dashboardResult, assignmentsResult] = await Promise.allSettled([
+      getAdminDashboardData(),
+      getMyAssignments(),
+    ]);
+    if (dashboardResult.status !== "fulfilled") {
+      throw dashboardResult.reason;
+    }
+    const data = dashboardResult.value;
+    const myAssignments =
+      assignmentsResult.status === "fulfilled" ? assignmentsResult.value : null;
+
+    setAdminData(data);
+    setActiveNav((prev) => prev || data?.navItems?.[0]?.href || "admin-top");
+    setCurrentUser(data?.currentUser ?? null);
+    setProfileForm((prev) => prev ?? data?.currentUser ?? null);
+    setAssignmentMeta({
+      policy: myAssignments?.policy || DEFAULT_ASSIGNMENT_META.policy,
+      assignmentByMovie:
+        myAssignments?.assignmentByMovie || DEFAULT_ASSIGNMENT_META.assignmentByMovie,
+      reviewerCountByMovie:
+        myAssignments?.reviewerCountByMovie
+        || DEFAULT_ASSIGNMENT_META.reviewerCountByMovie,
+      myPendingMinutes: Number(
+        myAssignments?.myPendingMinutes || DEFAULT_ASSIGNMENT_META.myPendingMinutes,
+      ),
+    });
+    if (assignmentsResult.status === "rejected") {
+      setAssignmentInfoError(
+        "Module d'assignations indisponible (endpoint /api/assignments absent ou backend non redemarre).",
+      );
+    } else {
+      setAssignmentInfoError("");
+    }
+  };
+
+  const handleClaimFilm = async (film) => {
+    setAssignmentInfoError("");
+    setAssignmentInfoSuccess("");
+    setAssignmentBusyMovieId(Number(film.id));
+    try {
+      await claimMovieAssignment(film.id);
+      await refreshDashboardAndAssignments();
+      setAssignmentInfoSuccess(`Film "${film.title}" attribue a votre file.`);
+    } catch (error) {
+      setAssignmentInfoError(error?.message || "Impossible de prendre ce film.");
+    } finally {
+      setAssignmentBusyMovieId(null);
+    }
+  };
+
+  const handleReleaseFilm = async (film) => {
+    setAssignmentInfoError("");
+    setAssignmentInfoSuccess("");
+    setAssignmentBusyMovieId(Number(film.id));
+    try {
+      await releaseMovieAssignment(film.id);
+      await refreshDashboardAndAssignments();
+      setAssignmentInfoSuccess(`Film "${film.title}" retire de votre file.`);
+    } catch (error) {
+      setAssignmentInfoError(error?.message || "Impossible de retirer ce film.");
+    } finally {
+      setAssignmentBusyMovieId(null);
+    }
+  };
+
+  const handleAutoAssign = async () => {
+    if (!isSuperAdmin) return;
+    setAssignmentInfoError("");
+    setAssignmentInfoSuccess("");
+    setDistributionBusy(true);
+    try {
+      const result = await autoAssignMovieReviews();
+      await refreshDashboardAndAssignments();
+      setAssignmentInfoSuccess(
+        `Auto-repartition terminee: ${result?.createdAssignments || 0} assignations creees.`,
+      );
+    } catch (error) {
+      setAssignmentInfoError(error?.message || "Impossible de lancer l'auto-repartition.");
+    } finally {
+      setDistributionBusy(false);
+    }
+  };
+
+  const handleRebalance = async () => {
+    if (!isSuperAdmin) return;
+    setAssignmentInfoError("");
+    setAssignmentInfoSuccess("");
+    setDistributionBusy(true);
+    try {
+      const result = await rebalanceMovieReviews();
+      await refreshDashboardAndAssignments();
+      setAssignmentInfoSuccess(
+        `Reequilibrage termine: ${result?.movedAssignments || 0} deplaces, ${result?.createdAssignments || 0} crees.`,
+      );
+    } catch (error) {
+      setAssignmentInfoError(error?.message || "Impossible de reequilibrer les assignations.");
+    } finally {
+      setDistributionBusy(false);
     }
   };
 
@@ -588,22 +788,49 @@ export default function Dashboard() {
         {/* Admin area */}
         <section id="films" className="grid grid-cols-1 xl:grid-cols-12 gap-5">
           <div className="xl:col-span-8 glass p-6 space-y-6">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="text-2xl font-semibold">Vision rapide</h2>
+                <p className="text-xs text-slate-200/85">
+                  Charge perso: {assignmentMeta.myPendingMinutes} min en attente - Regle {assignmentPolicy.minReviewers}-{assignmentPolicy.maxReviewers} reviewers / film
+                </p>
               </div>
-              <button
-                className="btn-primary rounded-full px-4 py-2"
-                disabled={adminKpis.selected >= adminKpis.quota}
-                onClick={handleAddSelection}
-                style={{
-                  opacity: adminKpis.selected >= adminKpis.quota ? 0.6 : 1,
-                  cursor: adminKpis.selected >= adminKpis.quota ? "not-allowed" : "pointer",
-                }}
-              >
-                Ajouter à la sélection ({adminKpis.selected}/{adminKpis.quota})
-              </button>
+              <div className="flex flex-wrap gap-2">
+                {isSuperAdmin && (
+                  <>
+                    <button
+                      className="btn-ghost rounded-full px-4 py-2 border border-white/10 disabled:opacity-60"
+                      onClick={handleAutoAssign}
+                      disabled={distributionBusy}
+                    >
+                      {distributionBusy ? "Traitement..." : "Auto-repartir"}
+                    </button>
+                    <button
+                      className="btn-ghost rounded-full px-4 py-2 border border-white/10 disabled:opacity-60"
+                      onClick={handleRebalance}
+                      disabled={distributionBusy}
+                    >
+                      {distributionBusy ? "Traitement..." : "Reequilibrer"}
+                    </button>
+                  </>
+                )}
+                <button
+                  className="btn-primary rounded-full px-4 py-2"
+                  disabled={adminKpis.selected >= adminKpis.quota}
+                  onClick={handleAddSelection}
+                  style={{
+                    opacity: adminKpis.selected >= adminKpis.quota ? 0.6 : 1,
+                    cursor: adminKpis.selected >= adminKpis.quota ? "not-allowed" : "pointer",
+                  }}
+                >
+                  Ajouter a la selection ({adminKpis.selected}/{adminKpis.quota})
+                </button>
+              </div>
             </div>
+            {assignmentInfoError && <p className="text-sm text-rose-200">{assignmentInfoError}</p>}
+            {assignmentInfoSuccess && (
+              <p className="text-sm text-emerald-200">{assignmentInfoSuccess}</p>
+            )}
 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="stat-card glass-strong">
@@ -662,7 +889,14 @@ export default function Dashboard() {
                 <span>Tri : par défaut</span>
               </div>
               {filteredFilms.map((film) => (
-                <FilmRow key={film.title} film={film} filmsBasePath={filmsBasePath} />
+                <FilmRow
+                  key={`${film.id}-${film.title}`}
+                  film={film}
+                  filmsBasePath={filmsBasePath}
+                  onClaim={handleClaimFilm}
+                  onRelease={handleReleaseFilm}
+                  busyMovieId={assignmentBusyMovieId}
+                />
               ))}
               {filteredFilms.length === 0 && (
                 <div className="py-6 text-sm text-slate-300">Aucun film ne correspond aux filtres.</div>

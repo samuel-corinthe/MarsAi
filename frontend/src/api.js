@@ -141,3 +141,113 @@ export async function getAdminDashboardData({ signal } = {}) {
   }
   return res.json();
 }
+
+export async function getMyAssignments() {
+  const res = await fetch("/api/assignments/my", {
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(payload?.details || payload?.error || `Assignments API error ${res.status}`);
+  }
+  return payload;
+}
+
+export async function claimMovieAssignment(movieId) {
+  const res = await fetch("/api/assignments/claim", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ movieId }),
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(payload?.details || payload?.error || `Claim API error ${res.status}`);
+  }
+  return payload;
+}
+
+export async function releaseMovieAssignment(movieId) {
+  const res = await fetch("/api/assignments/release", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ movieId }),
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(payload?.details || payload?.error || `Release API error ${res.status}`);
+  }
+  return payload;
+}
+
+export async function autoAssignMovieReviews() {
+  const res = await fetch("/api/assignments/auto-assign", {
+    method: "POST",
+    credentials: "include",
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(payload?.details || payload?.error || `Auto-assign API error ${res.status}`);
+  }
+  return payload;
+}
+
+export async function rebalanceMovieReviews() {
+  const res = await fetch("/api/assignments/rebalance", {
+    method: "POST",
+    credentials: "include",
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(payload?.details || payload?.error || `Rebalance API error ${res.status}`);
+  }
+  return payload;
+}
+
+export async function getMyMovieRating(movieId) {
+  const res = await fetch(`/api/ratings/${movieId}/me`, {
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(payload?.details || payload?.error || `Rating API error ${res.status}`);
+  }
+  return payload;
+}
+
+export async function upsertMyMovieRating(movieId, score) {
+  const res = await fetch(`/api/ratings/${movieId}/me`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ score }),
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(payload?.details || payload?.error || `Rating API error ${res.status}`);
+  }
+  return payload;
+}
+
+export async function deleteMyMovieRating(movieId) {
+  const res = await fetch(`/api/ratings/${movieId}/me/delete`, {
+    method: "POST",
+    credentials: "include",
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(payload?.details || payload?.error || `Rating API error ${res.status}`);
+  }
+  return payload;
+}

@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url";
 import uploadRoutes from "./routes/upload.js";
 import altchaRoutes from "./routes/altcha.js";
 import dashboardRoutes from "./routes/dashboard.js";
+import assignmentRoutes from "./routes/assignments.js";
+import ratingRoutes from "./routes/ratings.js";
 import authRoutes, { requireAuth, requireRole } from "./routes/auth.js";
 
 const require = createRequire(import.meta.url);
@@ -204,6 +206,8 @@ app.use("/api/altcha", altchaRoutes);
 app.use("/api/upload", verifyOrigin, uploadRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/dashboard", requireAuth, requireRole(["admin", "superadmin"]), dashboardRoutes);
+app.use("/api/assignments", requireAuth, requireRole(["admin", "superadmin"]), assignmentRoutes);
+app.use("/api/ratings", requireAuth, requireRole(["admin", "superadmin"]), ratingRoutes);
 
 app.get("/", (req, res) => {
   res.send("Serveur MarsAI operationnel");
