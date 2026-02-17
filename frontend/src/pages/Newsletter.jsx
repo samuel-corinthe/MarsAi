@@ -33,7 +33,7 @@ const Newsletter = () => {
 
     try {
       const response = await fetch(
-        "http://localhost:3000/subscribe-newsletter",
+        "http://localhost:3000/api/newsletter/subscribe",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
