@@ -171,7 +171,7 @@ const Navbar = () => {
   return (
     <>
       <nav
-        className={`relative z-50 w-full transition-all duration-300 ${
+        className={`relative z-[70] w-full transition-all duration-300 ${
           isScrolled
             ? "bg-black/95 backdrop-blur-lg shadow-lg shadow-cyan-500/10"
             : "bg-black/80 backdrop-blur-sm"
@@ -339,7 +339,7 @@ const Navbar = () => {
       </nav>
 
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden">
+        <div className="fixed inset-0 z-[60] lg:hidden">
           <div
             className="fixed inset-0 bg-black/80 backdrop-blur-sm"
             onClick={() => setMobileMenuOpen(false)}

@@ -230,7 +230,7 @@ const MovieDetails = () => {
     <>
       <Seo title={seoTitle} description={seoDescription} />
       <div className="min-h-screen bg-blue-950 text-white font-sans relative">
-        <div className="sticky top-0 z-50 border-b border-white/10 bg-blue-950/85 backdrop-blur-md">
+        <div className="sticky top-0 z-30 border-b border-white/10 bg-blue-950/85 backdrop-blur-md">
           <div className="mx-auto w-full max-w-7xl px-4 py-3 sm:px-6">
             <Link
               to={galleryPath}

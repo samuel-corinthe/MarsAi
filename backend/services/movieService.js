@@ -1,5 +1,10 @@
 import { getDbPool } from "../db.js";
-import { findAllMovies, findMovieById } from "../models/movieModel.js";
+import {
+  findAllMovies,
+  findMovieById,
+  findCastByMovieId,
+  findCastByMovieIds,
+} from "../models/movieModel.js";
 
 const FALLBACK_POSTER_PREFIX = "https://picsum.photos/seed/marsai-movie-";
 
@@ -48,6 +53,74 @@ function toCast(value) {
       : [];
   } catch {
     return [];
+  }
+}
+
+function normalizeCastEntry(entry, index) {
+  if (!entry || typeof entry !== "object") return null;
+
+  const name = String(entry.name ?? entry.person_name ?? "").trim();
+  const role = String(entry.role ?? entry.role_name ?? "").trim();
+  const img = String(entry.img ?? entry.avatar_url ?? "").trim();
+
+  if (!name && !role && !img) return null;
+
+  return {
+    name: name || `Cast ${index + 1}`,
+    role: role || "N/A",
+    img,
+  };
+}
+
+function normalizeCast(value) {
+  const entries = Array.isArray(value) ? value : toCast(value);
+  return entries
+    .map((entry, index) => normalizeCastEntry(entry, index))
+    .filter(Boolean);
+}
+
+function isMissingCastTableError(error) {
+  const code = String(error?.code || "");
+  if (code === "ER_NO_SUCH_TABLE") return true;
+  return String(error?.message || "").toLowerCase().includes("movie_cast");
+}
+
+async function loadCastByMovieIds(pool, movieIds) {
+  if (!movieIds.length) return new Map();
+
+  try {
+    const rows = await findCastByMovieIds(pool, movieIds);
+    const castByMovieId = new Map();
+
+    rows.forEach((row) => {
+      const movieId = Number(row.movie_id);
+      if (!Number.isFinite(movieId) || movieId <= 0) return;
+
+      if (!castByMovieId.has(movieId)) {
+        castByMovieId.set(movieId, []);
+      }
+
+      castByMovieId.get(movieId).push(row);
+    });
+
+    return castByMovieId;
+  } catch (error) {
+    if (isMissingCastTableError(error)) {
+      return new Map();
+    }
+    throw error;
+  }
+}
+
+async function loadCastByMovieId(pool, movieId) {
+  try {
+    const rows = await findCastByMovieId(pool, movieId);
+    return Array.isArray(rows) ? rows : [];
+  } catch (error) {
+    if (isMissingCastTableError(error)) {
+      return [];
+    }
+    throw error;
   }
 }
 
@@ -114,10 +187,22 @@ function mapMovieRow(row) {
     duration: toDurationLabel(row.duration),
     img: toPosterUrl(row),
     aiTools: toArray(row.ai_tools || row.aiTools),
-    cast: toCast(row.cast),
+    cast: normalizeCast(row.cast),
     country: String(row.country_name_fr || row.country_name_eng || ""),
     submissionStatus: String(row.submission_status || ""),
     videoUrl: String(row.youtube_url || row.video_url || ""),
+  };
+}
+
+function mapMovieRowWithCast(row, castOverride = null) {
+  const base = mapMovieRow(row);
+  if (!Array.isArray(castOverride) || castOverride.length === 0) {
+    return base;
+  }
+
+  return {
+    ...base,
+    cast: normalizeCast(castOverride),
   };
 }
 
@@ -129,11 +214,23 @@ export function toMovieId(rawValue) {
 export async function listMovies() {
   const pool = getDbPool();
   const rows = await findAllMovies(pool);
-  return rows.map(mapMovieRow);
+  const movieIds = rows
+    .map((row) => Number(row.id))
+    .filter((movieId) => Number.isFinite(movieId) && movieId > 0);
+  const castByMovieId = await loadCastByMovieIds(pool, movieIds);
+
+  return rows.map((row) => {
+    const movieId = Number(row.id);
+    const castRows = castByMovieId.get(movieId) || null;
+    return mapMovieRowWithCast(row, castRows);
+  });
 }
 
 export async function getMovieDetails({ movieId }) {
   const pool = getDbPool();
   const row = await findMovieById(pool, movieId);
-  return row ? mapMovieRow(row) : null;
+  if (!row) return null;
+
+  const castRows = await loadCastByMovieId(pool, movieId);
+  return mapMovieRowWithCast(row, castRows);
 }
