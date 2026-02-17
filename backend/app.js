@@ -10,6 +10,7 @@ import dashboardRoutes from "./routes/dashboard.js";
 import assignmentRoutes from "./routes/assignments.js";
 import ratingRoutes from "./routes/ratings.js";
 import authRoutes from "./routes/auth.js";
+import movieRoutes from "./routes/movie.js";
 import { requireAuth, requireRole } from "./middlewares/authMiddleware.js";
 
 const app = express();
@@ -60,6 +61,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(publicRoutes);
+app.use("/api/movies", movieRoutes);
+app.use("/api/movie", movieRoutes);
 app.use("/api/altcha", altchaRoutes);
 app.use("/api/upload", verifyOrigin, uploadRoutes);
 app.use("/api/auth", authRoutes);

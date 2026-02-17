@@ -10,8 +10,8 @@ export async function ensureRatingSchema(pool) {
           admin_id INT(11) NOT NULL,
           score TINYINT(1) NOT NULL,
           comment TEXT NULL,
-          created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP NULL DEFAULT NULL,
           PRIMARY KEY (id),
           UNIQUE KEY uq_movie_admin_rating (movie_id, admin_id),
           KEY idx_movie_admin_ratings_movie (movie_id),
@@ -37,6 +37,23 @@ export async function ensureRatingSchema(pool) {
       if (!hasCommentColumn) {
         await pool.query(
           "ALTER TABLE movie_admin_ratings ADD COLUMN comment TEXT NULL AFTER score",
+        );
+      }
+
+      const [updatedAtColumnRows] = await pool.query(
+        `
+          SELECT COUNT(*) AS total
+          FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'movie_admin_ratings'
+            AND COLUMN_NAME = 'updated_at'
+        `,
+      );
+
+      const hasUpdatedAtColumn = Number(updatedAtColumnRows?.[0]?.total || 0) > 0;
+      if (!hasUpdatedAtColumn) {
+        await pool.query(
+          "ALTER TABLE movie_admin_ratings ADD COLUMN updated_at TIMESTAMP NULL DEFAULT NULL AFTER created_at",
         );
       }
     })().catch((error) => {
@@ -93,7 +110,10 @@ export async function upsertAdminRating(connection, { movieId, adminId, score, c
     `
       INSERT INTO movie_admin_ratings (movie_id, admin_id, score, comment)
       VALUES (?, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE score = VALUES(score), comment = VALUES(comment)
+      ON DUPLICATE KEY UPDATE
+        score = VALUES(score),
+        comment = VALUES(comment),
+        updated_at = CURRENT_TIMESTAMP
     `,
     [movieId, adminId, score, comment],
   );
