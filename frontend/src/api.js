@@ -224,12 +224,12 @@ export async function getMyMovieRating(movieId) {
   return payload;
 }
 
-export async function upsertMyMovieRating(movieId, score) {
+export async function upsertMyMovieRating(movieId, score, comment = "") {
   const res = await fetch(`/api/ratings/${movieId}/me`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ score }),
+    body: JSON.stringify({ score, comment }),
   });
 
   const payload = await res.json().catch(() => ({}));

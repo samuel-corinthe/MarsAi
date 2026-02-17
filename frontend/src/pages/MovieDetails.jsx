@@ -20,7 +20,9 @@ const MovieDetails = () => {
   const [sessionChecked, setSessionChecked] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [officialRating, setOfficialRating] = useState(null);
+  const [officialComment, setOfficialComment] = useState("");
   const [tempRating, setTempRating] = useState(0);
+  const [tempComment, setTempComment] = useState("");
   const [ratingLoading, setRatingLoading] = useState(false);
   const [ratingError, setRatingError] = useState("");
 
@@ -42,6 +44,7 @@ const MovieDetails = () => {
       if (!Number.isFinite(movieId) || movieId <= 0) {
         setIsAdmin(false);
         setOfficialRating(null);
+        setOfficialComment("");
         setSessionChecked(true);
         return;
       }
@@ -58,6 +61,7 @@ const MovieDetails = () => {
 
         if (!canRate) {
           setOfficialRating(null);
+          setOfficialComment("");
           return;
         }
 
@@ -66,7 +70,9 @@ const MovieDetails = () => {
           const ratingPayload = await getMyMovieRating(movieId);
           if (cancelled) return;
           const myScore = Number(ratingPayload?.myScore);
+          const myComment = String(ratingPayload?.myComment || "");
           setOfficialRating(Number.isFinite(myScore) ? myScore : null);
+          setOfficialComment(myComment);
         } catch (error) {
           if (!cancelled) {
             setRatingError(error?.message || "Impossible de charger votre note.");
@@ -78,6 +84,7 @@ const MovieDetails = () => {
         if (!cancelled) {
           setIsAdmin(false);
           setOfficialRating(null);
+          setOfficialComment("");
         }
       } finally {
         if (!cancelled) setSessionChecked(true);
@@ -92,6 +99,7 @@ const MovieDetails = () => {
   const openRatingModal = () => {
     if (!isAdmin || !sessionChecked || ratingLoading) return;
     setTempRating(officialRating || 0);
+    setTempComment(officialComment || "");
     setIsModalOpen(true);
   };
 
@@ -102,8 +110,10 @@ const MovieDetails = () => {
     setRatingError("");
     setRatingLoading(true);
     try {
-      await upsertMyMovieRating(movieId, tempRating);
+      const normalizedComment = String(tempComment || "").trim();
+      await upsertMyMovieRating(movieId, tempRating, normalizedComment);
       setOfficialRating(tempRating);
+      setOfficialComment(normalizedComment);
       setIsModalOpen(false);
     } catch (error) {
       setRatingError(error?.message || "Impossible d'enregistrer la note.");
@@ -120,6 +130,7 @@ const MovieDetails = () => {
     try {
       await deleteMyMovieRating(movieId);
       setOfficialRating(null);
+      setOfficialComment("");
       setIsModalOpen(false);
     } catch (error) {
       setRatingError(error?.message || "Impossible de supprimer la note.");
@@ -313,6 +324,10 @@ const MovieDetails = () => {
                         ? `${officialRating}/5`
                         : t("movie_details.admin_not_rated")}
                     </h4>
+                    <p className="mt-2 text-sm text-cyan-100/90">
+                      {t("movie_details.admin_comment")} :{" "}
+                      {officialComment || t("movie_details.admin_no_comment")}
+                    </p>
                   </div>
                   <button
                     onClick={openRatingModal}
@@ -383,6 +398,19 @@ const MovieDetails = () => {
                   {num}
                 </button>
               ))}
+            </div>
+            <div className="mb-6 text-left">
+              <label className="mb-2 block text-xs font-black uppercase tracking-widest text-slate-500">
+                {t("movie_details.modal_comment_label")}
+              </label>
+              <textarea
+                value={tempComment}
+                onChange={(event) => setTempComment(event.target.value)}
+                maxLength={2000}
+                rows={4}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white"
+                placeholder={t("movie_details.modal_comment_placeholder")}
+              />
             </div>
             <div className="flex flex-col gap-4">
               <button

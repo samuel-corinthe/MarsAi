@@ -116,6 +116,8 @@ function FilmRow({
   busyMovieId,
 }) {
   const ratingLabel = Number.isFinite(film.rating) ? film.rating.toFixed(1) : "-";
+  const myRatingLabel = Number.isFinite(film.myRating) ? `${film.myRating}/5` : "Non note";
+  const myComment = String(film.myComment || "").trim();
   const filmSlug = film.slug ?? toSlug(film.title);
   const isBusy = Number(busyMovieId) === Number(film.id);
   const canClaim = Boolean(film.canClaim);
@@ -134,11 +136,18 @@ function FilmRow({
             <span>{film.country}</span> · <span>{film.duration}</span> ·{" "}
             <span className="text-slate-300/90">{film.tools}</span>
           </div>
+          <div className="mt-2 text-xs text-slate-200/95">
+            <span className="font-semibold text-cyan-200/95">Mon commentaire :</span>{" "}
+            <span title={myComment || "Aucun commentaire"} className="text-slate-100/95">
+              {myComment || "Aucun commentaire"}
+            </span>
+          </div>
         </div>
         <div className="flex items-center justify-between gap-3 md:justify-end">
           <div className="text-sm text-slate-100">
             <span className="font-semibold">{ratingLabel}</span> ?
             <span className="text-xs text-slate-300/80"> ({film.notesCount})</span>
+            <div className="mt-1 text-xs text-cyan-100/90">Ma note : {myRatingLabel}</div>
           </div>
           <div className="flex gap-2">
             <Link
