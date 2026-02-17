@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 import Seo from "../components/Seo";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { getAdminDashboardData, updateCurrentSessionProfile } from "../api";
+import {
+  getAdminDashboardData,
+  logoutSession,
+  updateCurrentSessionProfile,
+} from "../api";
 
 function toSlug(value) {
   return String(value ?? "")
@@ -93,20 +97,6 @@ function Pill({ children, tone = "pink", active = false, onClick }) {
 }
 
 function FilmRow({ film, filmsBasePath }) {
-  const normalizedStatus = String(film.status ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-  const isPositiveStatus = ["accepte", "selectionne", "accepted", "selected"].includes(
-    normalizedStatus,
-  );
-  const isPendingStatus = ["en cours", "pending"].includes(normalizedStatus);
-  const badgeColor =
-    isPositiveStatus
-      ? "bg-emerald-500/20 text-emerald-200"
-      : isPendingStatus
-        ? "bg-amber-400/15 text-amber-200"
-        : "bg-rose-500/15 text-rose-200";
   const ratingLabel = Number.isFinite(film.rating) ? film.rating.toFixed(1) : "-";
   const filmSlug = film.slug ?? toSlug(film.title);
 
@@ -116,9 +106,7 @@ function FilmRow({ film, filmsBasePath }) {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <div className="font-semibold text-base text-white truncate">{film.title}</div>
-            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${badgeColor}`}>
-              {film.status}
-            </span>
+            <span className="text-xs text-slate-300/90">Statut : {film.status}</span>
             <span className="text-xs text-slate-300/90">{film.phase}</span>
           </div>
           <div className="mt-1 text-xs text-slate-200/90">
@@ -156,8 +144,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [filters, setFilters] = useState({
-    status: "tous",
-    country: "tous",
     phase: "toutes",
     note: "toutes",
   });
@@ -168,6 +154,8 @@ export default function Dashboard() {
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSaveError, setProfileSaveError] = useState("");
   const [profileSaveSuccess, setProfileSaveSuccess] = useState("");
+  const [logoutPending, setLogoutPending] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
   const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
   const [nowTs, setNowTs] = useState(Date.now());
 
@@ -232,8 +220,6 @@ export default function Dashboard() {
     selectionTarget = 0,
     adminKpis = { noted: 0, remaining: 0, selected: 0, quota: 0 },
     films = [],
-    statuses = [],
-    countries = [],
     phaseFilters = [],
     notes = [],
     navItems = [],
@@ -281,8 +267,6 @@ export default function Dashboard() {
   };
 
   const filteredFilms = films.filter((film) => {
-    if (filters.status !== "tous" && film.status !== filters.status) return false;
-    if (filters.country !== "tous" && film.country !== filters.country) return false;
     if (filters.phase !== "toutes" && film.phase !== filters.phase) return false;
     if (["= 4", ">= 4"].includes(filters.note) && film.rating < 4) return false;
     if (filters.note === "3 - 4" && (film.rating < 3 || film.rating >= 4)) return false;
@@ -364,6 +348,18 @@ export default function Dashboard() {
     setCurrentPhaseIndex((idx) => Math.min(idx + 1, phaseTimeline.length - 1));
   };
 
+  const handleLogout = async () => {
+    setLogoutError("");
+    setLogoutPending(true);
+    try {
+      await logoutSession();
+      window.location.assign("/dashboard");
+    } catch (error) {
+      setLogoutError(error?.message || "Deconnexion impossible.");
+      setLogoutPending(false);
+    }
+  };
+
   return (
     <>
       <Seo title="Dashboard" description="Espace administration marsAI." noIndex />
@@ -388,19 +384,21 @@ export default function Dashboard() {
           </aside>
 
           <div className="flex-1 space-y-8">
-        <header id="admin-top" className="glass p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <div className="pill pill-pink">Festival IA · cockpit</div>
-            <h1 className="dash-title mt-3 text-white">Dashboard Admin & Super Admin</h1>
+        <header id="admin-top" className="glass p-6 flex flex-col gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+              <h1 className="dash-title text-white">Dashboard Admin & Super Admin</h1>
+            <button
+              className="btn-ghost rounded-full px-4 py-2 border border-white/10 disabled:opacity-60"
+              onClick={handleLogout}
+              disabled={logoutPending}
+            >
+              {logoutPending ? "Deconnexion..." : "Se deconnecter"}
+            </button>
             <p className="dash-subtitle text-slate-100/90">
               Vue unifiée : juger les films, piloter les règles et la gouvernance du festival.
             </p>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Pill tone="cyan">Quota {quotaTarget}</Pill>
-            <Pill tone="amber">Phase : {currentPhase.label}</Pill>
-            <Pill>Traçabilité active</Pill>
-          </div>
+          {logoutError && <p className="text-sm text-rose-200">{logoutError}</p>}
         </header>
 
         {/* Profil admin + phase en cours */}
@@ -408,21 +406,11 @@ export default function Dashboard() {
           <div className="glass-strong p-6 space-y-4 xl:col-span-2">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className="pill pill-cyan">Profil admin</div>
-                <h2 className="text-xl font-semibold mt-2 text-white">{profilePreview.name}</h2>
+                <h2 className="text-xl font-semibold text-white">{profilePreview.name}</h2>
                 <p className="text-sm text-slate-100/80">
                   Rôle actuel : {profilePreview.role === "superadmin" ? "Super admin" : "Admin"} — statut {profilePreview.status}.
                 </p>
               </div>
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                  profilePreview.status === "actif"
-                    ? "bg-emerald-500/25 text-emerald-100"
-                    : "bg-amber-500/25 text-amber-100"
-                }`}
-              >
-                {profilePreview.status === "actif" ? "Actif" : "Suspendu"}
-              </span>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
@@ -538,7 +526,7 @@ export default function Dashboard() {
               >
                 Reinitialiser
               </button>
-              {isSuperAdmin && <span className="pill pill-amber">Super admin : peut changer de phase</span>}
+              {isSuperAdmin && <span className="text-xs text-amber-200/90">Super admin : peut changer de phase</span>}
             </div>
             {profileSaveError && <p className="text-sm text-rose-200">{profileSaveError}</p>}
             {profileSaveSuccess && <p className="text-sm text-emerald-200">{profileSaveSuccess}</p>}
@@ -547,8 +535,7 @@ export default function Dashboard() {
           <div className="glass p-6 space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="pill pill-amber">Phase en cours</div>
-                <h3 className="text-lg font-semibold text-white mt-1">{currentPhase.label}</h3>
+                <h3 className="text-lg font-semibold text-white">{currentPhase.label}</h3>
                 <p className="text-sm text-slate-100/80">{currentPhase.description}</p>
               </div>
               <div className="text-right">
@@ -603,8 +590,7 @@ export default function Dashboard() {
           <div className="xl:col-span-8 glass p-6 space-y-6">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <div className="pill pill-cyan">Espace admin</div>
-                <h2 className="text-2xl font-semibold mt-2">Vision rapide</h2>
+                <h2 className="text-2xl font-semibold">Vision rapide</h2>
               </div>
               <button
                 className="btn-primary rounded-full px-4 py-2"
@@ -648,26 +634,6 @@ export default function Dashboard() {
 
             {/* Filters */}
             <div className="flex flex-wrap gap-2">
-              {statuses.map((s) => (
-                <Pill
-                  key={s}
-                  tone="pink"
-                  active={filters.status === s}
-                  onClick={() => setFilters((f) => ({ ...f, status: s }))}
-                >
-                  Statut : {s}
-                </Pill>
-              ))}
-              {countries.map((c) => (
-                <Pill
-                  key={c}
-                  tone="cyan"
-                  active={filters.country === c}
-                  onClick={() => setFilters((f) => ({ ...f, country: c }))}
-                >
-                  Pays : {c}
-                </Pill>
-              ))}
               {phaseFilters.map((p) => (
                 <Pill
                   key={p}
@@ -727,7 +693,6 @@ export default function Dashboard() {
             <div className="glass p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Retards de notation</h3>
-                <span className="pill pill-amber">Priorité</span>
               </div>
               <ul className="space-y-2 text-sm text-slate-200">
                 <li>4 films en attente depuis 72h</li>
@@ -755,8 +720,7 @@ export default function Dashboard() {
         <section id="super-top" className="glass p-6 space-y-6">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="pill pill-pink">Espace super admin</div>
-              <h2 className="text-2xl font-semibold mt-2">Pilotage & gouvernance</h2>
+              <h2 className="text-2xl font-semibold">Pilotage & gouvernance</h2>
               <p className="dash-subtitle text-slate-100/90">
                 Comptes, phases, règles métier, logs et newsletter — tout au même endroit.
               </p>
@@ -793,7 +757,6 @@ export default function Dashboard() {
             <div className="list-card space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Gestion des comptes</h3>
-                <span className="pill pill-cyan">Rôles</span>
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
@@ -832,7 +795,6 @@ export default function Dashboard() {
             <div className="list-card space-y-3" id="phases">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Phases & règles</h3>
-                <span className="pill pill-amber">Dates clés</span>
               </div>
               <ul className="space-y-2 text-sm">
                 <li>?? Dépôt : jusqu'au 28 fév 2026</li>
@@ -850,7 +812,6 @@ export default function Dashboard() {
             <div className="list-card space-y-3 md:col-span-2" id="logs">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Logs & sécurité</h3>
-                <span className="pill pill-pink">Traçabilité</span>
               </div>
               <ul className="space-y-2 text-sm">
                 {logs.map((item) => (
@@ -869,7 +830,7 @@ export default function Dashboard() {
             <div className="list-card space-y-3" id="newsletter">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Newsletter</h3>
-                <span className="pill pill-cyan">1 423 inscrits</span>
+                <span className="text-xs text-slate-100/80">1 423 inscrits</span>
               </div>
               <p className="text-sm text-slate-200">
                 Export rapide pour annonce finale. Validation RGPD et opt-in déjà effectués.

@@ -724,6 +724,15 @@ async function updateLocalUserFromWpIdentity({ userId, appRole, wpIdentity }) {
 
   const { firstName, lastName } = splitDisplayName(wpIdentity.displayName);
   const { wpUserId, wpUsername, wpDisplayName, wpRolesValue } = toWpColumns(wpIdentity);
+  const targetEmail = String(wpIdentity.email || "").trim().toLowerCase();
+
+  const [emailRows] = await pool.query(
+    "SELECT id FROM users WHERE email = ? AND id <> ? LIMIT 1",
+    [targetEmail, safeUserId],
+  );
+  if (emailRows.length) {
+    throw new Error(`EMAIL_CONFLICT:${targetEmail}`);
+  }
 
   const [result] = await pool.query(
     `
@@ -740,7 +749,7 @@ async function updateLocalUserFromWpIdentity({ userId, appRole, wpIdentity }) {
       WHERE id = ?
     `,
     [
-      wpIdentity.email,
+      targetEmail,
       firstName,
       lastName,
       appRole,
@@ -757,7 +766,7 @@ async function updateLocalUserFromWpIdentity({ userId, appRole, wpIdentity }) {
   }
 
   return upsertLocalUser({
-    email: wpIdentity.email,
+    email: targetEmail,
     displayName: wpIdentity.displayName,
     appRole,
     wpIdentity,
@@ -1012,6 +1021,7 @@ router.patch("/me/profile", requireAuth, async (req, res) => {
   } catch (error) {
     console.error("[AUTH] Echec sync profil WordPress:", error.message);
     const message = String(error.message || "");
+    const isEmailConflict = message.startsWith("EMAIL_CONFLICT:");
     const isDbError =
       /ER_[A-Z_]+/i.test(message) ||
       message.includes("Access denied for user") ||
@@ -1019,9 +1029,12 @@ router.patch("/me/profile", requireAuth, async (req, res) => {
       message.includes("No database selected") ||
       message.includes("Can't connect to MySQL server") ||
       message.includes("Too many connections") ||
-      message.includes("Lost connection to MySQL server");
+      message.includes("Lost connection to MySQL server") ||
+      message.includes("Duplicate entry");
 
-    const statusCode = message.includes("Authentification WordPress invalide")
+    const statusCode = isEmailConflict
+      ? 409
+      : message.includes("Authentification WordPress invalide")
       ? 401
       : message.includes("Session WordPress expiree")
         ? 401
@@ -1029,9 +1042,16 @@ router.patch("/me/profile", requireAuth, async (req, res) => {
           ? 500
           : 502;
 
+    const clientMessage = isEmailConflict
+      ? "Cette adresse email est deja utilisee par un autre compte local."
+      : "Impossible de synchroniser le profil avec WordPress.";
+    const clientDetails = isEmailConflict
+      ? message.replace("EMAIL_CONFLICT:", "email_conflict:")
+      : message || "Erreur inconnue lors de la synchronisation du profil.";
+
     return res.status(statusCode).json({
-      error: "Impossible de synchroniser le profil avec WordPress.",
-      details: message,
+      error: clientMessage,
+      details: clientDetails,
     });
   }
 });
