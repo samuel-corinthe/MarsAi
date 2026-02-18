@@ -197,6 +197,8 @@ app.post("/subscribe-newsletter", async (req, res) => {
   }
 });
 
+app.use("/uploads/posters", express.static("uploads/posters"));
+
 app.use("/api/altcha", altchaRoutes);
 app.use("/api/upload", verifyOrigin, uploadRoutes);
 app.use("/api/movies", moviesRoutes);

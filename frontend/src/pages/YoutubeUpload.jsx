@@ -29,6 +29,8 @@ export default function YoutubeUpload() {
     const [socialInstagram, setSocialInstagram] = useState('');
     const [socialX, setSocialX] = useState('');
     const [subtitleFile, setSubtitleFile] = useState(null);
+    const [posterFile, setPosterFile] = useState(null);
+    const [posterPreview, setPosterPreview] = useState(null);
 
 
     const fileInputRef = useRef(null);
@@ -167,9 +169,10 @@ export default function YoutubeUpload() {
         if (validation.cleanedData.socialInstagram) formData.append('socialInstagram', validation.cleanedData.socialInstagram);
         if (validation.cleanedData.socialX) formData.append('socialX', validation.cleanedData.socialX);
         if (subtitleFile) formData.append('subtitle', subtitleFile);
+        if (posterFile) formData.append('poster', posterFile);
         formData.append('altcha', altchaPayload);
         formData.append('honeypotToken', honeypotToken);
-        // Ajouter le champ honeypot dynamique (doit être vide)
+        
         if (honeypotFieldName) {
             formData.append(honeypotFieldName, honeypotValue);
         }
@@ -205,6 +208,8 @@ export default function YoutubeUpload() {
             setSocialInstagram('');
             setSocialX('');
             setSubtitleFile(null);
+            setPosterFile(null);
+            setPosterPreview(null);
             setAltchaPayload(null);
             setErrors({});
 
@@ -649,6 +654,52 @@ export default function YoutubeUpload() {
                                 {errors.socialX && <p className="text-red-600 text-xs" role="alert">{errors.socialX}</p>}
                             </div>
                         </div>
+                    </div>
+
+                    {/* Image poster */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-slate-700">
+                            Image poster <span className="text-slate-500 font-normal">(optionnel)</span>
+                        </label>
+                        <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            onChange={(e) => {
+                                const selected = e.target.files[0];
+                                if (selected) {
+                                    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+                                    if (!allowedTypes.includes(selected.type)) {
+                                        setErrors(prev => ({ ...prev, poster: 'Formats acceptés : JPG, PNG ou WebP' }));
+                                        setPosterFile(null);
+                                        setPosterPreview(null);
+                                        return;
+                                    }
+                                    if (selected.size > 5 * 1024 * 1024) {
+                                        setErrors(prev => ({ ...prev, poster: 'L\'image  est trop lourde (max 5 Mo)' }));
+                                        setPosterFile(null);
+                                        setPosterPreview(null);
+                                        return;
+                                    }
+                                    setPosterFile(selected);
+                                    setPosterPreview(URL.createObjectURL(selected));
+                                    clearError('poster');
+                                }
+                            }}
+                            className={`w-full border p-3 rounded-lg text-sm ${errors.poster ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                        />
+                        {posterPreview && (
+                            <img
+                                src={posterPreview}
+                                alt="Aperçu du poster"
+                                className="mt-2 max-h-48 rounded-lg border border-slate-200"
+                            />
+                        )}
+                        {errors.poster && (
+                            <p className="text-red-600 text-sm mt-1" role="alert">{errors.poster}</p>
+                        )}
+                        <span className="text-xs text-slate-500 block">
+                            JPG, PNG ou WebP, max 5 Mo. Cette image sera utilisée comme affiche de votre film.
+                        </span>
                     </div>
 
                     {/* Fichier sous-titres SRT */}

@@ -72,6 +72,11 @@ const upload = multer({
             if (file.mimetype !== 'video/mp4') {
                 return cb(new Error(`Ce type de vidéo n\'est pas autorisé : ${file.mimetype}`));
             }
+        } else if (file.fieldname === 'poster') {
+            const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+            if (!allowedImageTypes.includes(file.mimetype)) {
+                return cb(new Error(`Type d'image non autorisé : ${file.mimetype}`));
+            }
         } else if (file.fieldname === 'subtitle') {
             const ext = path.extname(file.originalname).toLowerCase();
             if (ext !== '.srt') {
@@ -110,7 +115,8 @@ router.post('/youtube',
     concurrentLimiter,
     upload.fields([
         { name: 'video', maxCount: 1 },
-        { name: 'subtitle', maxCount: 1 }
+        { name: 'subtitle', maxCount: 1 },
+        { name: 'poster', maxCount: 1 }
     ]),
     validateHoneypot,
     validateFileMagicBytes,
@@ -125,6 +131,7 @@ router.post('/youtube',
         const { title, description } = req.body;
         const videoFile = req.files?.video?.[0];
         const subtitleFile = req.files?.subtitle?.[0];
+        const posterFile = req.files?.poster?.[0];
 
         if (!videoFile) {
             return res.status(400).json({ error: 'Aucun fichier vidéo reçu.' });
@@ -187,7 +194,23 @@ router.post('/youtube',
             
             const youtubeUrl = `https://www.youtube.com/watch?v=${response.data.id}`;
             const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-            const posterUrl = `https://picsum.photos/seed/${slug}-${response.data.id}/600/900`;
+
+            let posterUrl;
+            if (posterFile) {
+                const ext = path.extname(posterFile.originalname).toLowerCase() || '.jpg';
+                const posterFileName = `${slug}-${response.data.id}${ext}`;
+                const postersDir = 'uploads/posters';
+                if (!fs.existsSync(postersDir)) {
+                    fs.mkdirSync(postersDir, { recursive: true });
+                }
+                const posterDest = path.join(postersDir, posterFileName);
+                fs.renameSync(posterFile.path, posterDest);
+                const backendBase = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`;
+                posterUrl = `${backendBase}/uploads/posters/${posterFileName}`;
+                console.log('[UPLOAD] Poster stocké:', posterDest);
+            } else {
+                posterUrl = `https://picsum.photos/seed/${slug}-${response.data.id}/600/900`;
+            }
             const submittedBy = `${req.body.firstName} ${req.body.lastName}`;
             const duration = Math.round(metadata.duration);
 
@@ -259,6 +282,10 @@ router.post('/youtube',
             if (subtitleFile && fs.existsSync(subtitleFile.path)) {
                 console.log('[UPLOAD] Nettoyage fichier SRT temporaire');
                 fs.unlinkSync(subtitleFile.path);
+            }
+            if (posterFile && fs.existsSync(posterFile.path)) {
+                console.log('[UPLOAD] Nettoyage fichier poster temporaire');
+                fs.unlinkSync(posterFile.path);
             }
         }
     }

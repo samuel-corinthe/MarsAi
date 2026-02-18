@@ -1,26 +1,15 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import * as tz from "date-fns-tz";
 
-/*
-but du hook
-- prendre des phases avec target
-- trouver la phase active (celle dont la target est dans le futur)
-- calculer days hours minutes seconds
-- mettre a jour chaque seconde
 
-important pour les tests
-- timeLeft doit jamais etre {}
-- target peut etre une string iso OU un Date (dans ton test c est un Date)
-*/
 
 const ZERO = { days: 0, hours: 0, minutes: 0, seconds: 0 };
 
 const normalizeTarget = (target, tzName) => {
-  // si c est deja un Date on le garde
+ 
   if (target instanceof Date) return target;
 
-  // si c est une string iso on converti en date timezone
-  // utcToZonedTime (v2) / toZonedTime (v3) renvoi une date utilisable pour la diff
+ 
   try {
     const toZonedTime = tz.utcToZonedTime ?? tz.toZonedTime;
     return toZonedTime ? toZonedTime(target, tzName) : new Date(target);
@@ -54,7 +43,6 @@ const useMultiPhaseCountdown = (phases, timezone = "UTC") => {
   const calculateTimeLeft = useCallback(() => {
     const nowUtc = new Date();
 
-    // phase active = premiere phase dont la target est dans le futur
     const activeIndex = normalizedPhases.findIndex((p) => p.utcTarget > nowUtc);
 
     if (activeIndex === -1) {
@@ -78,17 +66,17 @@ const useMultiPhaseCountdown = (phases, timezone = "UTC") => {
   }, [normalizedPhases]);
 
   useEffect(() => {
-    // si pas de phases on fini direct
+    
     if (normalizedPhases.length === 0) {
       setIsFinished(true);
       setTimeLeft(ZERO);
       return undefined;
     }
 
-    // set direct au montage
+   
     setTimeLeft(calculateTimeLeft());
 
-    // tick toute les secondes
+    
     const timer = setInterval(() => {
       setTimeLeft(calculateTimeLeft());
     }, 1000);
