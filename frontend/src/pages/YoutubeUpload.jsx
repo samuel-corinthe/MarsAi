@@ -1,612 +1,918 @@
-﻿import { useState, useRef, useEffect } from "react";
-import axios from "axios";
-import { useTranslation } from "react-i18next";
-import Seo from "../components/Seo";
-import {
-  getVideoMetadata,
-  validateVideoFrontend,
-  VIDEO_CONSTRAINTS,
-} from "../utils/videoValidation";
-import {
-  validateForm,
-  FORM_CONSTRAINTS,
-  exceedsMaxLength,
-} from "../utils/formvalidation";
-import "altcha";
+import { useState, useRef, useEffect } from 'react';
+import axios from 'axios';
+import { getVideoMetadata, validateVideoFrontend, VIDEO_CONSTRAINTS } from '../utils/videoValidation';
+import { validateForm, FORM_CONSTRAINTS, exceedsMaxLength } from '../utils/formvalidation';
+import 'altcha';
 
 export default function YoutubeUpload() {
-  const { t } = useTranslation();
+    const [file, setFile] = useState(null);
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [email, setEmail] = useState('');
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [age, setAge] = useState('');
+    const [uploading, setUploading] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [status, setStatus] = useState({ type: '', message: '' });
+    const [isValidating, setIsValidating] = useState(false);
+    const [errors, setErrors] = useState({});
+    const [altchaPayload, setAltchaPayload] = useState(null);
+    const [honeypotFieldName, setHoneypotFieldName] = useState('');
+    const [honeypotToken, setHoneypotToken] = useState('');
+    const [honeypotValue, setHoneypotValue] = useState('');
+    const [countryAlpha2, setCountryAlpha2] = useState('');
+    const [language, setLanguage] = useState('');
+    const [aiTools, setAiTools] = useState('');
+    const [bio, setBio] = useState('');
+    const [socialWebsite, setSocialWebsite] = useState('');
+    const [socialInstagram, setSocialInstagram] = useState('');
+    const [socialX, setSocialX] = useState('');
+    const [subtitleFile, setSubtitleFile] = useState(null);
+    const [posterFile, setPosterFile] = useState(null);
+    const [posterPreview, setPosterPreview] = useState(null);
 
-  const [file, setFile] = useState(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [email, setEmail] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [age, setAge] = useState("");
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState({ type: "", message: "" });
-  const [isValidating, setIsValidating] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [altchaPayload, setAltchaPayload] = useState(null);
-  const [honeypotFieldName, setHoneypotFieldName] = useState("");
-  const [honeypotToken, setHoneypotToken] = useState("");
-  const [honeypotValue, setHoneypotValue] = useState("");
 
-  const fileInputRef = useRef(null);
-  const statusRef = useRef(null);
+    const fileInputRef = useRef(null);
+    const statusRef = useRef(null);
 
-  useEffect(() => {
-    const loadChallenge = async () => {
-      try {
-        const response = await axios.get(
-          "http://localhost:3000/api/altcha/challenge",
-        );
-        if (response.data.honeypot) {
-          setHoneypotFieldName(response.data.honeypot.fieldName);
-          setHoneypotToken(response.data.honeypot.token);
+    
+    useEffect(() => {
+        const loadChallenge = async () => {
+            try {
+                const response = await axios.get('http://localhost:3000/api/altcha/challenge');
+                if (response.data.honeypot) {
+                    setHoneypotFieldName(response.data.honeypot.fieldName);
+                    setHoneypotToken(response.data.honeypot.token);
+                }
+            } catch (error) {
+                console.error('[HONEYPOT] Erreur chargement challenge:', error);
+            }
+        };
+
+        loadChallenge();
+    }, []);
+
+    const handleFileChange = async (e) => {
+        const selectedFile = e.target.files[0];
+        if (!selectedFile) return;
+
+        
+        if (selectedFile.type !== 'video/mp4') {
+            const error = "Seul le format MP4 est accepté.";
+            setStatus({ type: 'error', message: error });
+            setErrors(prev => ({ ...prev, file: error }));
+            setFile(null);
+            return;
         }
-      } catch (error) {
-        console.error("[HONEYPOT] Erreur chargement challenge:", error);
-      }
+
+       
+        const maxSize = VIDEO_CONSTRAINTS.FILE.MAX_SIZE;
+        if (selectedFile.size > maxSize) {
+            const error = `Le fichier est trop lourd (max ${maxSize / (1024 * 1024)}Mo).`;
+            setStatus({ type: 'error', message: error });
+            setErrors(prev => ({ ...prev, file: error }));
+            setFile(null);
+            return;
+        }
+
+        try {
+            setIsValidating(true);
+            setStatus({ type: '', message: '' });
+            setErrors(prev => ({ ...prev, file: '' }));
+
+            const metadata = await getVideoMetadata(selectedFile);
+            const validation = validateVideoFrontend(metadata);
+
+            if (!validation.isValid) {
+                setFile(null);
+                const errorMessage = `Vidéo non conforme : ${validation.errors.join(' ')}`;
+                setStatus({
+                    type: 'error',
+                    message: errorMessage
+                });
+                setErrors(prev => ({ ...prev, file: errorMessage }));
+                return;
+            }
+
+            setFile(selectedFile);
+            setStatus({ type: 'success', message: "Vidéo validée ! Prête pour l'envoi." });
+
+
+            setTimeout(() => {
+                statusRef.current?.focus();
+            }, 100);
+
+        } catch (err) {
+            console.error(err);
+            setFile(null);
+            const errorMessage = typeof err === 'string' ? err : "Erreur lors de l'analyse du fichier.";
+            setStatus({ type: 'error', message: errorMessage });
+            setErrors(prev => ({ ...prev, file: errorMessage }));
+        } finally {
+            setIsValidating(false);
+        }
     };
-    loadChallenge();
-  }, []);
 
-  const handleFileChange = async (e) => {
-    const selectedFile = e.target.files[0];
-    if (!selectedFile) return;
+    const handleUpload = async (e) => {
+        e.preventDefault();
 
-    if (selectedFile.type !== "video/mp4") {
-      const error = t("upload.errors.format_mp4");
-      setStatus({ type: "error", message: error });
-      setErrors((prev) => ({ ...prev, file: error }));
-      setFile(null);
-      return;
-    }
 
-    const maxSize = VIDEO_CONSTRAINTS.FILE.MAX_SIZE;
-    if (selectedFile.size > maxSize) {
-      const error = t("upload.errors.file_size", {
-        size: maxSize / (1024 * 1024),
-      });
-      setStatus({ type: "error", message: error });
-      setErrors((prev) => ({ ...prev, file: error }));
-      setFile(null);
-      return;
-    }
+        const validation = validateForm({
+            email,
+            firstName,
+            lastName,
+            age,
+            title,
+            description,
+            countryAlpha2,
+            language,
+            aiTools,
+            bio,
+            socialWebsite,
+            socialInstagram,
+            socialX
+        });
 
-    try {
-      setIsValidating(true);
-      setStatus({ type: "", message: "" });
-      setErrors((prev) => ({ ...prev, file: "" }));
+        if (!validation.isValid) {
+            setErrors(validation.errors);
+            setStatus({ type: 'error', message: 'Veuillez corriger les erreurs dans le formulaire' });
+            return;
+        }
 
-      const metadata = await getVideoMetadata(selectedFile);
-      const validation = validateVideoFrontend(metadata);
+        if (!file) {
+            setErrors({ file: "Veuillez sélectionner une vidéo" });
+            setStatus({ type: 'error', message: 'Veuillez sélectionner une vidéo' });
+            return;
+        }
 
-      if (!validation.isValid) {
-        setFile(null);
-        const errorMessage = `${t("upload.errors.not_compliant")} : ${validation.errors.join(" ")}`;
-        setStatus({ type: "error", message: errorMessage });
-        setErrors((prev) => ({ ...prev, file: errorMessage }));
-        return;
-      }
+        if (!altchaPayload) {
+            setErrors({ altcha: "Veuillez compléter la vérification anti-robot" });
+            setStatus({ type: 'error', message: 'Veuillez compléter la vérification anti-robot' });
+            return;
+        }
 
-      setFile(selectedFile);
-      setStatus({
-        type: "success",
-        message: t("upload.status.video_validated"),
-      });
 
-      setTimeout(() => {
-        statusRef.current?.focus();
-      }, 100);
-    } catch (err) {
-      console.error(err);
-      setFile(null);
-      const errorMessage =
-        typeof err === "string" ? err : t("upload.errors.analysis_failed");
-      setStatus({ type: "error", message: errorMessage });
-      setErrors((prev) => ({ ...prev, file: errorMessage }));
-    } finally {
-      setIsValidating(false);
-    }
-  };
+        const formData = new FormData();
+        formData.append('video', file);
+        formData.append('email', validation.cleanedData.email);
+        formData.append('firstName', validation.cleanedData.firstName);
+        formData.append('lastName', validation.cleanedData.lastName);
+        formData.append('age', validation.cleanedData.age);
+        formData.append('title', validation.cleanedData.title);
+        formData.append('description', validation.cleanedData.description);
+        formData.append('countryAlpha2', validation.cleanedData.countryAlpha2);
+        formData.append('language', validation.cleanedData.language);
+        formData.append('aiTools', validation.cleanedData.aiTools);
+        if (validation.cleanedData.bio) formData.append('bio', validation.cleanedData.bio);
+        if (validation.cleanedData.socialWebsite) formData.append('socialWebsite', validation.cleanedData.socialWebsite);
+        if (validation.cleanedData.socialInstagram) formData.append('socialInstagram', validation.cleanedData.socialInstagram);
+        if (validation.cleanedData.socialX) formData.append('socialX', validation.cleanedData.socialX);
+        if (subtitleFile) formData.append('subtitle', subtitleFile);
+        if (posterFile) formData.append('poster', posterFile);
+        formData.append('altcha', altchaPayload);
+        formData.append('honeypotToken', honeypotToken);
+        
+        if (honeypotFieldName) {
+            formData.append(honeypotFieldName, honeypotValue);
+        }
 
-  const handleUpload = async (e) => {
-    e.preventDefault();
+        try {
+            setUploading(true);
+            setStatus({ type: '', message: '' });
 
-    const validation = validateForm({
-      email,
-      firstName,
-      lastName,
-      age,
-      title,
-      description,
-    });
+            const res = await axios.post('http://localhost:3000/api/upload/youtube', formData, {
+                onUploadProgress: (progressEvent) => {
+                    const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    setProgress(percent);
+                }
+            });
 
-    if (!validation.isValid) {
-      setErrors(validation.errors);
-      setStatus({ type: "error", message: t("upload.errors.form_invalid") });
-      return;
-    }
+            setStatus({
+                type: 'success',
+                message: 'Votre vidéo a été mise en ligne avec succès !'
+            });
 
-    if (!file) {
-      setErrors({ file: t("upload.errors.select_video") });
-      setStatus({ type: "error", message: t("upload.errors.select_video") });
-      return;
-    }
+            setFile(null);
+            setEmail('');
+            setFirstName('');
+            setLastName('');
+            setAge('');
+            setTitle('');
+            setDescription('');
+            setCountryAlpha2('');
+            setLanguage('');
+            setAiTools('');
+            setBio('');
+            setSocialWebsite('');
+            setSocialInstagram('');
+            setSocialX('');
+            setSubtitleFile(null);
+            setPosterFile(null);
+            setPosterPreview(null);
+            setAltchaPayload(null);
+            setErrors({});
 
-    if (!altchaPayload) {
-      setErrors({ altcha: t("upload.errors.altcha_missing") });
-      setStatus({ type: "error", message: t("upload.errors.altcha_missing") });
-      return;
-    }
+            setTimeout(() => {
+                statusRef.current?.focus();
+            }, 100);
 
-    const formData = new FormData();
-    formData.append("video", file);
-    formData.append("email", validation.cleanedData.email);
-    formData.append("firstName", validation.cleanedData.firstName);
-    formData.append("lastName", validation.cleanedData.lastName);
-    formData.append("age", validation.cleanedData.age);
-    formData.append("title", validation.cleanedData.title);
-    formData.append("description", validation.cleanedData.description);
-    formData.append("altcha", altchaPayload);
-    formData.append("honeypotToken", honeypotToken);
-    if (honeypotFieldName) {
-      formData.append(honeypotFieldName, honeypotValue);
-    }
+        } catch (err) {
+            console.error(err);
+            setStatus({
+                type: 'error',
+                message: err.response?.data?.error || "Une erreur est survenue lors de l'upload."
+            });
+        } finally {
+            setUploading(false);
+            setProgress(0);
+        }
+    };
 
-    try {
-      setUploading(true);
-      setStatus({ type: "", message: "" });
+    const clearError = (field) => {
+        setErrors(prev => ({ ...prev, [field]: '' }));
+    };
 
-      await axios.post("http://localhost:3000/api/upload/youtube", formData, {
-        onUploadProgress: (progressEvent) => {
-          const percent = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total,
-          );
-          setProgress(percent);
-        },
-      });
+    return (
+        <div className="section app-container py-12">
+            <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
+                <div className="bg-slate-900 p-8 text-white">
+                    <h1 className="text-3xl font-bold">Concours MarsAI 2026</h1>
+                    <p className="text-slate-400 mt-2">Partagez votre vision d'un futur souhaitable.</p>
+                </div>
 
-      setStatus({
-        type: "success",
-        message: t("upload.status.upload_success"),
-      });
+                <form onSubmit={handleUpload} className="p-8 space-y-6" noValidate>
+                    {/* Email */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <label
+                                htmlFor="email-input"
+                                className="block text-sm font-semibold text-slate-700"
+                            >
+                                Votre Email <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                            </label>
+                            <span className={`text-xs ${email.length > FORM_CONSTRAINTS.EMAIL.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                                {email.length}/{FORM_CONSTRAINTS.EMAIL.MAX_LENGTH}
+                            </span>
+                        </div>
+                        <input
+                            id="email-input"
+                            type="email"
+                            placeholder="votre@email.com"
+                            maxLength={FORM_CONSTRAINTS.EMAIL.MAX_LENGTH}
+                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.email ? 'border-red-500 bg-red-50' : 'border-slate-200'
+                                }`}
+                            value={email}
+                            onChange={(e) => {
+                                if (!exceedsMaxLength('EMAIL', e.target.value)) {
+                                    setEmail(e.target.value);
+                                    clearError('email');
+                                }
+                            }}
+                            required
+                            aria-required="true"
+                            aria-invalid={!!errors.email}
+                            aria-describedby={errors.email ? "email-error" : "email-hint"}
+                        />
+                        {errors.email && (
+                            <p id="email-error" className="text-red-600 text-sm mt-1" role="alert">
+                                {errors.email}
+                            </p>
+                        )}
+                        <span id="email-hint" className="text-xs text-slate-500 block">
+                            Nous vous contacterons à cette adresse
+                        </span>
+                    </div>
 
-      setFile(null);
-      setEmail("");
-      setFirstName("");
-      setLastName("");
-      setAge("");
-      setTitle("");
-      setDescription("");
-      setAltchaPayload(null);
-      setErrors({});
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Prénom */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <label
+                                    htmlFor="firstname-input"
+                                    className="block text-sm font-semibold text-slate-700"
+                                >
+                                    Votre Prénom <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                                </label>
+                                <span className={`text-xs ${firstName.length > FORM_CONSTRAINTS.FIRST_NAME.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                                    {firstName.length}/{FORM_CONSTRAINTS.FIRST_NAME.MAX_LENGTH}
+                                </span>
+                            </div>
+                            <input
+                                id="firstname-input"
+                                type="text"
+                                placeholder="Votre prénom"
+                                maxLength={FORM_CONSTRAINTS.FIRST_NAME.MAX_LENGTH}
+                                className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.firstName ? 'border-red-500 bg-red-50' : 'border-slate-200'
+                                    }`}
+                                value={firstName}
+                                onChange={(e) => {
+                                    if (!exceedsMaxLength('FIRST_NAME', e.target.value)) {
+                                        setFirstName(e.target.value);
+                                        clearError('firstName');
+                                    }
+                                }}
+                                required
+                                aria-required="true"
+                                aria-invalid={!!errors.firstName}
+                                aria-describedby={errors.firstName ? "firstname-error" : undefined}
+                            />
+                            {errors.firstName && (
+                                <p id="firstname-error" className="text-red-600 text-sm mt-1" role="alert">
+                                    {errors.firstName}
+                                </p>
+                            )}
+                        </div>
 
-      setTimeout(() => {
-        statusRef.current?.focus();
-      }, 100);
-    } catch (err) {
-      console.error(err);
-      setStatus({
-        type: "error",
-        message: err.response?.data?.error || t("upload.errors.upload_failed"),
-      });
-    } finally {
-      setUploading(false);
-      setProgress(0);
-    }
-  };
+                        {/* Nom */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <label
+                                    htmlFor="lastname-input"
+                                    className="block text-sm font-semibold text-slate-700"
+                                >
+                                    Votre Nom <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                                </label>
+                                <span className={`text-xs ${lastName.length > FORM_CONSTRAINTS.LAST_NAME.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                                    {lastName.length}/{FORM_CONSTRAINTS.LAST_NAME.MAX_LENGTH}
+                                </span>
+                            </div>
+                            <input
+                                id="lastname-input"
+                                type="text"
+                                placeholder="Votre nom"
+                                maxLength={FORM_CONSTRAINTS.LAST_NAME.MAX_LENGTH}
+                                className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.lastName ? 'border-red-500 bg-red-50' : 'border-slate-200'
+                                    }`}
+                                value={lastName}
+                                onChange={(e) => {
+                                    if (!exceedsMaxLength('LAST_NAME', e.target.value)) {
+                                        setLastName(e.target.value);
+                                        clearError('lastName');
+                                    }
+                                }}
+                                required
+                                aria-required="true"
+                                aria-invalid={!!errors.lastName}
+                                aria-describedby={errors.lastName ? "lastname-error" : undefined}
+                            />
+                            {errors.lastName && (
+                                <p id="lastname-error" className="text-red-600 text-sm mt-1" role="alert">
+                                    {errors.lastName}
+                                </p>
+                            )}
+                        </div>
+                    </div>
 
-  const clearError = (field) => {
-    setErrors((prev) => ({ ...prev, [field]: "" }));
-  };
+                    {/* Âge */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <label
+                                htmlFor="age-input"
+                                className="block text-sm font-semibold text-slate-700"
+                            >
+                                Votre Âge <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                            </label>
+                        </div>
+                        <input
+                            id="age-input"
+                            type="number"
+                            placeholder="Votre âge"
+                            min="18"
+                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.age ? 'border-red-500 bg-red-50' : 'border-slate-200'
+                                }`}
+                            value={age}
+                            onChange={(e) => {
+                                setAge(e.target.value);
+                                clearError('age');
+                            }}
+                            required
+                            aria-required="true"
+                            aria-invalid={!!errors.age}
+                            aria-describedby={errors.age ? "age-error" : "age-hint"}
+                        />
+                        {errors.age && (
+                            <p id="age-error" className="text-red-600 text-sm mt-1" role="alert">
+                                {errors.age}
+                            </p>
+                        )}
+                        <span id="age-hint" className="text-xs text-slate-500 block">
+                            Vous devez avoir au moins 18 ans pour participer
+                        </span>
+                    </div>
 
-  return (
-    <>
-      <Seo title={t("upload.title")} description={t("upload.subtitle")} />
-      <div className="section app-container py-12">
-      <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
-        <div className="bg-slate-900 p-8 text-white">
-          <h1 className="text-3xl font-bold">{t("upload.title")}</h1>
-          <p className="text-slate-400 mt-2">{t("upload.subtitle")}</p>
+                    {/* Titre */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <label
+                                htmlFor="title-input"
+                                className="block text-sm font-semibold text-slate-700"
+                            >
+                                Titre de votre film <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                            </label>
+                            <span className={`text-xs ${title.length > FORM_CONSTRAINTS.TITLE.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                                {title.length}/{FORM_CONSTRAINTS.TITLE.MAX_LENGTH}
+                            </span>
+                        </div>
+                        <input
+                            id="title-input"
+                            type="text"
+                            placeholder="Ex: Ma vie sur Mars"
+                            maxLength={FORM_CONSTRAINTS.TITLE.MAX_LENGTH}
+                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.title ? 'border-red-500 bg-red-50' : 'border-slate-200'
+                                }`}
+                            value={title}
+                            onChange={(e) => {
+                                if (!exceedsMaxLength('TITLE', e.target.value)) {
+                                    setTitle(e.target.value);
+                                    clearError('title');
+                                }
+                            }}
+                            required
+                            aria-required="true"
+                            aria-invalid={!!errors.title}
+                            aria-describedby={errors.title ? "title-error" : "title-hint"}
+                        />
+                        {errors.title && (
+                            <p id="title-error" className="text-red-600 text-sm mt-1" role="alert">
+                                {errors.title}
+                            </p>
+                        )}
+                        <span id="title-hint" className="text-xs text-slate-500 block">
+                            Le titre qui apparaîtra sur YouTube et le site du concours
+                        </span>
+                    </div>
+
+                    {/* Description */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <label
+                                htmlFor="description-input"
+                                className="block text-sm font-semibold text-slate-700"
+                            >
+                                Description <span className="text-slate-500 font-normal">(optionnel)</span>
+                            </label>
+                            <span className={`text-xs ${description.length > FORM_CONSTRAINTS.DESCRIPTION.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                                {description.length}/{FORM_CONSTRAINTS.DESCRIPTION.MAX_LENGTH}
+                            </span>
+                        </div>
+                        <textarea
+                            id="description-input"
+                            placeholder="Expliquez brièvement votre projet..."
+                            maxLength={FORM_CONSTRAINTS.DESCRIPTION.MAX_LENGTH}
+                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all h-32 resize-y ${errors.description ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                            value={description}
+                            onChange={(e) => {
+                                if (!exceedsMaxLength('DESCRIPTION', e.target.value)) {
+                                    setDescription(e.target.value);
+                                    clearError('description');
+                                }
+                            }}
+                            aria-describedby={errors.description ? "description-error" : "description-hint"}
+                            aria-invalid={!!errors.description}
+                        />
+                        {errors.description && (
+                            <p id="description-error" className="text-red-600 text-sm mt-1" role="alert">
+                                {errors.description}
+                            </p>
+                        )}
+                        <span id="description-hint" className="text-xs text-slate-500 block">
+                            Cette description accompagnera votre vidéo sur YouTube
+                        </span>
+                    </div>
+                    {/* Code pays */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <label htmlFor="country-input" className="block text-sm font-semibold text-slate-700">
+                                Code pays (alpha-2) <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                            </label>
+                            <span className={`text-xs ${countryAlpha2.length > FORM_CONSTRAINTS.COUNTRY_ALPHA2.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                                {countryAlpha2.length}/{FORM_CONSTRAINTS.COUNTRY_ALPHA2.MAX_LENGTH}
+                            </span>
+                        </div>
+                        <input
+                            id="country-input"
+                            type="text"
+                            placeholder="Ex: FR, US, MA"
+                            maxLength={FORM_CONSTRAINTS.COUNTRY_ALPHA2.MAX_LENGTH}
+                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all uppercase ${errors.countryAlpha2 ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                            value={countryAlpha2}
+                            onChange={(e) => {
+                                setCountryAlpha2(e.target.value.toUpperCase());
+                                clearError('countryAlpha2');
+                            }}
+                            required
+                            aria-required="true"
+                            aria-invalid={!!errors.countryAlpha2}
+                            aria-describedby={errors.countryAlpha2 ? "country-error" : "country-hint"}
+                        />
+                        {errors.countryAlpha2 && (
+                            <p id="country-error" className="text-red-600 text-sm mt-1" role="alert">{errors.countryAlpha2}</p>
+                        )}
+                        <span id="country-hint" className="text-xs text-slate-500 block">
+                            Code ISO 3166-1 alpha-2 de votre pays (2 lettres)
+                        </span>
+                    </div>
+
+                    {/* Langue du film */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <label htmlFor="language-input" className="block text-sm font-semibold text-slate-700">
+                                Langue du film <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                            </label>
+                            <span className={`text-xs ${language.length > FORM_CONSTRAINTS.LANGUAGE.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                                {language.length}/{FORM_CONSTRAINTS.LANGUAGE.MAX_LENGTH}
+                            </span>
+                        </div>
+                        <input
+                            id="language-input"
+                            type="text"
+                            placeholder="Ex: Français"
+                            maxLength={FORM_CONSTRAINTS.LANGUAGE.MAX_LENGTH}
+                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.language ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                            value={language}
+                            onChange={(e) => {
+                                if (!exceedsMaxLength('LANGUAGE', e.target.value)) {
+                                    setLanguage(e.target.value);
+                                    clearError('language');
+                                }
+                            }}
+                            required
+                            aria-required="true"
+                            aria-invalid={!!errors.language}
+                            aria-describedby={errors.language ? "language-error" : undefined}
+                        />
+                        {errors.language && (
+                            <p id="language-error" className="text-red-600 text-sm mt-1" role="alert">{errors.language}</p>
+                        )}
+                    </div>
+
+                    {/* Outils IA */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <label htmlFor="aitools-input" className="block text-sm font-semibold text-slate-700">
+                                Outils IA utilisés <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                            </label>
+                            <span className={`text-xs ${aiTools.length > FORM_CONSTRAINTS.AI_TOOLS.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                                {aiTools.length}/{FORM_CONSTRAINTS.AI_TOOLS.MAX_LENGTH}
+                            </span>
+                        </div>
+                        <input
+                            id="aitools-input"
+                            type="text"
+                            placeholder="Ex: Runway, DALL·E, Suno"
+                            maxLength={FORM_CONSTRAINTS.AI_TOOLS.MAX_LENGTH}
+                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.aiTools ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                            value={aiTools}
+                            onChange={(e) => {
+                                if (!exceedsMaxLength('AI_TOOLS', e.target.value)) {
+                                    setAiTools(e.target.value);
+                                    clearError('aiTools');
+                                }
+                            }}
+                            required
+                            aria-required="true"
+                            aria-invalid={!!errors.aiTools}
+                            aria-describedby={errors.aiTools ? "aitools-error" : "aitools-hint"}
+                        />
+                        {errors.aiTools && (
+                            <p id="aitools-error" className="text-red-600 text-sm mt-1" role="alert">{errors.aiTools}</p>
+                        )}
+                        <span id="aitools-hint" className="text-xs text-slate-500 block">
+                            Séparez les outils par des virgules (5 maximum)
+                        </span>
+                    </div>
+
+                    {/* Bio */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <label htmlFor="bio-input" className="block text-sm font-semibold text-slate-700">
+                                Bio du réalisateur <span className="text-slate-500 font-normal">(optionnel)</span>
+                            </label>
+                            <span className={`text-xs ${bio.length > FORM_CONSTRAINTS.BIO.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                                {bio.length}/{FORM_CONSTRAINTS.BIO.MAX_LENGTH}
+                            </span>
+                        </div>
+                        <textarea
+                            id="bio-input"
+                            placeholder="Quelques mots sur vous..."
+                            maxLength={FORM_CONSTRAINTS.BIO.MAX_LENGTH}
+                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all h-24 resize-y ${errors.bio ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                            value={bio}
+                            onChange={(e) => {
+                                if (!exceedsMaxLength('BIO', e.target.value)) {
+                                    setBio(e.target.value);
+                                    clearError('bio');
+                                }
+                            }}
+                            aria-invalid={!!errors.bio}
+                            aria-describedby={errors.bio ? "bio-error" : undefined}
+                        />
+                        {errors.bio && (
+                            <p id="bio-error" className="text-red-600 text-sm mt-1" role="alert">{errors.bio}</p>
+                        )}
+                    </div>
+
+                    {/* Réseaux sociaux */}
+                    <div className="space-y-4">
+                        <p className="text-sm font-semibold text-slate-700">Réseaux sociaux <span className="text-slate-500 font-normal">(optionnel)</span></p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-1">
+                                <label htmlFor="social-website" className="text-xs text-slate-600">Site web</label>
+                                <input
+                                    id="social-website"
+                                    type="url"
+                                    placeholder="https://..."
+                                    className={`w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none ${errors.socialWebsite ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                                    value={socialWebsite}
+                                    onChange={(e) => { setSocialWebsite(e.target.value); clearError('socialWebsite'); }}
+                                />
+                                {errors.socialWebsite && <p className="text-red-600 text-xs" role="alert">{errors.socialWebsite}</p>}
+                            </div>
+                            <div className="space-y-1">
+                                <label htmlFor="social-instagram" className="text-xs text-slate-600">Instagram</label>
+                                <input
+                                    id="social-instagram"
+                                    type="url"
+                                    placeholder="https://instagram.com/..."
+                                    className={`w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none ${errors.socialInstagram ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                                    value={socialInstagram}
+                                    onChange={(e) => { setSocialInstagram(e.target.value); clearError('socialInstagram'); }}
+                                />
+                                {errors.socialInstagram && <p className="text-red-600 text-xs" role="alert">{errors.socialInstagram}</p>}
+                            </div>
+                            <div className="space-y-1">
+                                <label htmlFor="social-x" className="text-xs text-slate-600">X (Twitter)</label>
+                                <input
+                                    id="social-x"
+                                    type="url"
+                                    placeholder="https://x.com/..."
+                                    className={`w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none ${errors.socialX ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                                    value={socialX}
+                                    onChange={(e) => { setSocialX(e.target.value); clearError('socialX'); }}
+                                />
+                                {errors.socialX && <p className="text-red-600 text-xs" role="alert">{errors.socialX}</p>}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Image poster */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-slate-700">
+                            Image poster <span className="text-slate-500 font-normal">(optionnel)</span>
+                        </label>
+                        <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            onChange={(e) => {
+                                const selected = e.target.files[0];
+                                if (selected) {
+                                    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+                                    if (!allowedTypes.includes(selected.type)) {
+                                        setErrors(prev => ({ ...prev, poster: 'Formats acceptés : JPG, PNG ou WebP' }));
+                                        setPosterFile(null);
+                                        setPosterPreview(null);
+                                        return;
+                                    }
+                                    if (selected.size > 5 * 1024 * 1024) {
+                                        setErrors(prev => ({ ...prev, poster: 'L\'image  est trop lourde (max 5 Mo)' }));
+                                        setPosterFile(null);
+                                        setPosterPreview(null);
+                                        return;
+                                    }
+                                    setPosterFile(selected);
+                                    setPosterPreview(URL.createObjectURL(selected));
+                                    clearError('poster');
+                                }
+                            }}
+                            className={`w-full border p-3 rounded-lg text-sm ${errors.poster ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                        />
+                        {posterPreview && (
+                            <img
+                                src={posterPreview}
+                                alt="Aperçu du poster"
+                                className="mt-2 max-h-48 rounded-lg border border-slate-200"
+                            />
+                        )}
+                        {errors.poster && (
+                            <p className="text-red-600 text-sm mt-1" role="alert">{errors.poster}</p>
+                        )}
+                        <span className="text-xs text-slate-500 block">
+                            JPG, PNG ou WebP, max 5 Mo. Cette image sera utilisée comme affiche de votre film.
+                        </span>
+                    </div>
+
+                    {/* Fichier sous-titres SRT */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-slate-700">
+                            Sous-titres (fichier .srt) <span className="text-slate-500 font-normal">(optionnel)</span>
+                        </label>
+                        <input
+                            type="file"
+                            accept=".srt"
+                            onChange={(e) => {
+                                const selected = e.target.files[0];
+                                if (selected) {
+                                    if (!selected.name.toLowerCase().endsWith('.srt')) {
+                                        setErrors(prev => ({ ...prev, subtitle: 'Seul le format .srt est accepté' }));
+                                        setSubtitleFile(null);
+                                        return;
+                                    }
+                                    if (selected.size > 1024 * 1024) {
+                                        setErrors(prev => ({ ...prev, subtitle: 'Fichier SRT trop lourd (max 1 Mo)' }));
+                                        setSubtitleFile(null);
+                                        return;
+                                    }
+                                    setSubtitleFile(selected);
+                                    clearError('subtitle');
+                                }
+                            }}
+                            className={`w-full border p-3 rounded-lg text-sm ${errors.subtitle ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                        />
+                        {subtitleFile && (
+                            <p className="text-slate-700 text-sm" aria-live="polite">{subtitleFile.name}</p>
+                        )}
+                        {errors.subtitle && (
+                            <p className="text-red-600 text-sm mt-1" role="alert">{errors.subtitle}</p>
+                        )}
+                    </div>
+
+                    {/* HONEYPOT - Champ piège dynamique invisible */}
+                    {honeypotFieldName && (
+                        <div
+                            style={{
+                                position: 'absolute',
+                                left: '-9999px',
+                                width: '1px',
+                                height: '1px',
+                                overflow: 'hidden'
+                            }}
+                            aria-hidden="true"
+                        >
+                            <label htmlFor={honeypotFieldName}>
+                                Website (ne pas remplir si vous êtes humain)
+                            </label>
+                            <input
+                                id={honeypotFieldName}
+                                type="text"
+                                name={honeypotFieldName}
+                                tabIndex="-1"
+                                autoComplete="off"
+                                value={honeypotValue}
+                                onChange={(e) => setHoneypotValue(e.target.value)}
+                            />
+                        </div>
+                    )}
+
+                    
+
+                    {/* Fichier vidéo */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-slate-700">
+                            Fichier vidéo (MP4 uniquement) <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                        </label>
+                        <div className={`border-2 border-dashed rounded-lg p-8 transition-colors ${errors.file ? 'border-red-500 bg-red-50' : 'border-slate-200 hover:border-blue-400'
+                            }`}>
+                            <div className="flex flex-col items-center gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={isValidating}
+                                    className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                    aria-controls="video-upload"
+                                    aria-describedby="video-requirements"
+                                >
+                                    {isValidating ? 'Analyse en cours...' : 'Choisir une vidéo'}
+                                </button>
+                                <input
+                                    id="video-upload"
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="video/mp4"
+                                    onChange={handleFileChange}
+                                    className="sr-only"
+                                    aria-label="Sélectionnez votre fichier vidéo MP4"
+                                    aria-required="true"
+                                    aria-invalid={!!errors.file}
+                                    aria-describedby="video-requirements"
+                                />
+                                {file && (
+                                    <p className="text-slate-700 font-medium" aria-live="polite">
+                                        📁 {file.name}
+                                    </p>
+                                )}
+                                <p id="video-requirements" className="text-xs text-slate-500 text-center">
+                                    Taille max : 300Mo • Format : 16:9 obligatoire • Durée : 45-100 secondes
+                                </p>
+                            </div>
+                        </div>
+                        {errors.file && (
+                            <p className="text-red-600 text-sm mt-1" role="alert">
+                                {errors.file}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Vérification anti-robot Altcha */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-semibold text-slate-700">
+                            Vérification anti-robot <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                        </label>
+                        <div className={`${errors.altcha ? 'border-2 border-red-500 rounded-lg p-2' : ''}`}>
+                            <altcha-widget
+                                challengeurl="http://localhost:3000/api/altcha/challenge"
+                                hidefooter="true"
+                                strings={JSON.stringify({
+                                    label: 'I am not a robot',
+                                    verifying: 'Verifying...',
+                                    verified: 'Verified',
+                                    error: 'Verification failed',
+                                    expired: 'Verification expired'
+                                })}
+                                ref={(el) => {
+                                    if (el) {
+                                        el.addEventListener('statechange', (ev) => {
+                                            if (ev.detail.state === 'verified' && ev.detail.payload) {
+                                                setAltchaPayload(ev.detail.payload);
+                                                setErrors(prev => ({ ...prev, altcha: '' }));
+                                            }
+                                        });
+                                    }
+                                }}
+                            />
+                        </div>
+                        {errors.altcha && (
+                            <p className="text-red-600 text-sm mt-1" role="alert">
+                                {errors.altcha}
+                            </p>
+                        )}
+                        <span className="text-xs text-slate-500 block">
+                            Cette vérification nous aide à protéger le concours contre les robots
+                        </span>
+                    </div>
+
+                    {/* Barre de progression */}
+                    {uploading && (
+                        <div className="space-y-2" role="region" aria-label="Progression de l'envoi">
+                            <div
+                                role="progressbar"
+                                aria-valuenow={progress}
+                                aria-valuemin="0"
+                                aria-valuemax="100"
+                                aria-label={`Progression de l'envoi : ${progress} pourcent`}
+                                className="w-full bg-slate-100 rounded-full h-3 overflow-hidden"
+                            >
+                                <div
+                                    className="bg-blue-600 h-full transition-all duration-300 ease-out"
+                                    style={{ width: `${progress}%` }}
+                                />
+                            </div>
+                            <p className="text-sm font-medium text-slate-600 text-center" aria-live="polite">
+                                Envoi en cours... {progress}%
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Messages de statut */}
+                    {status.message && (
+                        <div
+                            ref={statusRef}
+                            role="alert"
+                            aria-live="polite"
+                            aria-atomic="true"
+                            tabIndex="-1"
+                            className={`p-4 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 ${status.type === 'success'
+                                ? 'bg-green-50 text-green-700 border border-green-200 focus:ring-green-500'
+                                : 'bg-red-50 text-red-700 border border-red-200 focus:ring-red-500'
+                                }`}
+                        >
+                            {status.message}
+                        </div>
+                    )}
+
+                    {/* Bouton de soumission */}
+                    <button
+                        type="submit"
+                        disabled={uploading || isValidating || !file}
+                        aria-busy={uploading || isValidating}
+                        aria-disabled={uploading || isValidating || !file}
+                        className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-slate-800 transition-all disabled:bg-slate-300 disabled:cursor-not-allowed shadow-lg active:scale-95 focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
+                    >
+                        {isValidating ? 'Analyse de la vidéo...' :
+                            uploading ? `Traitement en cours... ${progress}%` :
+                                'Soumettre ma participation'}
+                    </button>
+
+                    {/* Aide contextuelle pour le bouton (masquée visuellement) */}
+                    {(!file || uploading || isValidating) && (
+                        <p className="sr-only" aria-live="polite">
+                            {!file ? 'Veuillez d\'abord sélectionner une vidéo pour activer le bouton de soumission' :
+                                isValidating ? 'Validation de la vidéo en cours, veuillez patienter' :
+                                    'Envoi de la vidéo en cours, veuillez patienter'}
+                        </p>
+                    )}
+                </form>
+            </div>
         </div>
-
-        <form onSubmit={handleUpload} className="p-8 space-y-6" noValidate>
-          {/* Email */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <label
-                htmlFor="email-input"
-                className="block text-sm font-semibold text-slate-700"
-              >
-                {t("upload.form.email_label")}{" "}
-                <abbr
-                  title={t("upload.form.required")}
-                  className="text-red-600 no-underline"
-                >
-                  *
-                </abbr>
-              </label>
-              <span
-                className={`text-xs ${email.length > FORM_CONSTRAINTS.EMAIL.MAX_LENGTH ? "text-red-600 font-semibold" : "text-slate-500"}`}
-              >
-                {email.length}/{FORM_CONSTRAINTS.EMAIL.MAX_LENGTH}
-              </span>
-            </div>
-            <input
-              id="email-input"
-              type="email"
-              placeholder={t("upload.form.email_placeholder")}
-              maxLength={FORM_CONSTRAINTS.EMAIL.MAX_LENGTH}
-              className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.email ? "border-red-500 bg-red-50" : "border-slate-200"}`}
-              value={email}
-              onChange={(e) => {
-                if (!exceedsMaxLength("EMAIL", e.target.value)) {
-                  setEmail(e.target.value);
-                  clearError("email");
-                }
-              }}
-              required
-            />
-            {errors.email && (
-              <p className="text-red-600 text-sm mt-1">{errors.email}</p>
-            )}
-            <span className="text-xs text-slate-500 block">
-              {t("upload.form.email_hint")}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* PrÃ©nom */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label
-                  htmlFor="firstname-input"
-                  className="block text-sm font-semibold text-slate-700"
-                >
-                  {t("upload.form.first_name_label")}{" "}
-                  <abbr
-                    title={t("upload.form.required")}
-                    className="text-red-600 no-underline"
-                  >
-                    *
-                  </abbr>
-                </label>
-                <span
-                  className={`text-xs ${firstName.length > FORM_CONSTRAINTS.FIRST_NAME.MAX_LENGTH ? "text-red-600 font-semibold" : "text-slate-500"}`}
-                >
-                  {firstName.length}/{FORM_CONSTRAINTS.FIRST_NAME.MAX_LENGTH}
-                </span>
-              </div>
-              <input
-                id="firstname-input"
-                type="text"
-                placeholder={t("upload.form.first_name_placeholder")}
-                maxLength={FORM_CONSTRAINTS.FIRST_NAME.MAX_LENGTH}
-                className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.firstName ? "border-red-500 bg-red-50" : "border-slate-200"}`}
-                value={firstName}
-                onChange={(e) => {
-                  if (!exceedsMaxLength("FIRST_NAME", e.target.value)) {
-                    setFirstName(e.target.value);
-                    clearError("firstName");
-                  }
-                }}
-                required
-              />
-              {errors.firstName && (
-                <p className="text-red-600 text-sm mt-1">{errors.firstName}</p>
-              )}
-            </div>
-
-            {/* Nom */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label
-                  htmlFor="lastname-input"
-                  className="block text-sm font-semibold text-slate-700"
-                >
-                  {t("upload.form.last_name_label")}{" "}
-                  <abbr
-                    title={t("upload.form.required")}
-                    className="text-red-600 no-underline"
-                  >
-                    *
-                  </abbr>
-                </label>
-                <span
-                  className={`text-xs ${lastName.length > FORM_CONSTRAINTS.LAST_NAME.MAX_LENGTH ? "text-red-600 font-semibold" : "text-slate-500"}`}
-                >
-                  {lastName.length}/{FORM_CONSTRAINTS.LAST_NAME.MAX_LENGTH}
-                </span>
-              </div>
-              <input
-                id="lastname-input"
-                type="text"
-                placeholder={t("upload.form.last_name_placeholder")}
-                maxLength={FORM_CONSTRAINTS.LAST_NAME.MAX_LENGTH}
-                className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.lastName ? "border-red-500 bg-red-50" : "border-slate-200"}`}
-                value={lastName}
-                onChange={(e) => {
-                  if (!exceedsMaxLength("LAST_NAME", e.target.value)) {
-                    setLastName(e.target.value);
-                    clearError("lastName");
-                  }
-                }}
-                required
-              />
-              {errors.lastName && (
-                <p className="text-red-600 text-sm mt-1">{errors.lastName}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Ã‚ge */}
-          <div className="space-y-2">
-            <label
-              htmlFor="age-input"
-              className="block text-sm font-semibold text-slate-700"
-            >
-              {t("upload.form.age_label")}{" "}
-              <abbr
-                title={t("upload.form.required")}
-                className="text-red-600 no-underline"
-              >
-                *
-              </abbr>
-            </label>
-            <input
-              id="age-input"
-              type="number"
-              placeholder={t("upload.form.age_placeholder")}
-              min="18"
-              className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.age ? "border-red-500 bg-red-50" : "border-slate-200"}`}
-              value={age}
-              onChange={(e) => {
-                setAge(e.target.value);
-                clearError("age");
-              }}
-              required
-            />
-            {errors.age && (
-              <p className="text-red-600 text-sm mt-1">{errors.age}</p>
-            )}
-            <span className="text-xs text-slate-500 block">
-              {t("upload.form.age_hint")}
-            </span>
-          </div>
-
-          {/* Titre */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <label
-                htmlFor="title-input"
-                className="block text-sm font-semibold text-slate-700"
-              >
-                {t("upload.form.title_label")}{" "}
-                <abbr
-                  title={t("upload.form.required")}
-                  className="text-red-600 no-underline"
-                >
-                  *
-                </abbr>
-              </label>
-              <span
-                className={`text-xs ${title.length > FORM_CONSTRAINTS.TITLE.MAX_LENGTH ? "text-red-600 font-semibold" : "text-slate-500"}`}
-              >
-                {title.length}/{FORM_CONSTRAINTS.TITLE.MAX_LENGTH}
-              </span>
-            </div>
-            <input
-              id="title-input"
-              type="text"
-              placeholder={t("upload.form.title_placeholder")}
-              maxLength={FORM_CONSTRAINTS.TITLE.MAX_LENGTH}
-              className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.title ? "border-red-500 bg-red-50" : "border-slate-200"}`}
-              value={title}
-              onChange={(e) => {
-                if (!exceedsMaxLength("TITLE", e.target.value)) {
-                  setTitle(e.target.value);
-                  clearError("title");
-                }
-              }}
-              required
-            />
-            {errors.title && (
-              <p className="text-red-600 text-sm mt-1">{errors.title}</p>
-            )}
-          </div>
-
-          {/* Description */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <label
-                htmlFor="description-input"
-                className="block text-sm font-semibold text-slate-700"
-              >
-                {t("upload.form.description_label")}{" "}
-                <span className="font-normal">
-                  ({t("upload.form.optional")})
-                </span>
-              </label>
-              <span
-                className={`text-xs ${description.length > FORM_CONSTRAINTS.DESCRIPTION.MAX_LENGTH ? "text-red-600 font-semibold" : "text-slate-500"}`}
-              >
-                {description.length}/{FORM_CONSTRAINTS.DESCRIPTION.MAX_LENGTH}
-              </span>
-            </div>
-            <textarea
-              id="description-input"
-              placeholder={t("upload.form.description_placeholder")}
-              maxLength={FORM_CONSTRAINTS.DESCRIPTION.MAX_LENGTH}
-              className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all h-32 resize-y ${errors.description ? "border-red-500 bg-red-50" : "border-slate-200"}`}
-              value={description}
-              onChange={(e) => {
-                if (!exceedsMaxLength("DESCRIPTION", e.target.value)) {
-                  setDescription(e.target.value);
-                  clearError("description");
-                }
-              }}
-            />
-            <span className="text-xs text-slate-500 block">
-              {t("upload.form.description_hint")}
-            </span>
-          </div>
-
-          {honeypotFieldName && (
-            <div
-              style={{
-                position: "absolute",
-                left: "-9999px",
-                width: "1px",
-                height: "1px",
-                overflow: "hidden",
-              }}
-              aria-hidden="true"
-            >
-              <label htmlFor={honeypotFieldName}>Website</label>
-              <input
-                id={honeypotFieldName}
-                type="text"
-                name={honeypotFieldName}
-                tabIndex="-1"
-                autoComplete="off"
-                value={honeypotValue}
-                onChange={(e) => setHoneypotValue(e.target.value)}
-              />
-            </div>
-          )}
-          {/* Fichier vidÃ©o */}
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-slate-700">
-              {t("upload.form.video_label")}{" "}
-              <abbr
-                title={t("upload.form.required")}
-                className="text-red-600 no-underline"
-              >
-                *
-              </abbr>
-            </label>
-            <div
-              className={`border-2 border-dashed rounded-lg p-8 transition-colors ${errors.file ? "border-red-500 bg-red-50" : "border-slate-200 hover:border-blue-400"}`}
-            >
-              <div className="flex flex-col items-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isValidating}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-slate-300"
-                >
-                  {isValidating
-                    ? t("upload.button.analyzing")
-                    : t("upload.button.choose_video")}
-                </button>
-                <input
-                  id="video-upload"
-                  ref={fileInputRef}
-                  type="file"
-                  accept="video/mp4"
-                  onChange={handleFileChange}
-                  className="sr-only"
-                />
-                {file && (
-                  <p className="text-slate-700 font-medium">ðŸ“ {file.name}</p>
-                )}
-                <p className="text-xs text-slate-500 text-center">
-                  {t("upload.form.video_requirements")}
-                </p>
-              </div>
-            </div>
-            {errors.file && (
-              <p className="text-red-600 text-sm mt-1">{errors.file}</p>
-            )}
-          </div>
-
-          {/* Altcha */}
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-slate-700">
-              {t("upload.form.antispam_label")}{" "}
-              <abbr
-                title={t("upload.form.required")}
-                className="text-red-600 no-underline"
-              >
-                *
-              </abbr>
-            </label>
-            <div
-              className={
-                errors.altcha ? "border-2 border-red-500 rounded-lg p-2" : ""
-              }
-            >
-              <altcha-widget
-                challengeurl="http://localhost:3000/api/altcha/challenge"
-                hidefooter="true"
-                strings={JSON.stringify({
-                  label: t("altcha.label"),
-                  verifying: t("altcha.verifying"),
-                  verified: t("altcha.verified"),
-                  error: t("altcha.error"),
-                  expired: t("altcha.expired"),
-                })}
-                ref={(el) => {
-                  if (el) {
-                    el.addEventListener("statechange", (ev) => {
-                      if (ev.detail.state === "verified" && ev.detail.payload) {
-                        setAltchaPayload(ev.detail.payload);
-                        setErrors((prev) => ({ ...prev, altcha: "" }));
-                      }
-                    });
-                  }
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Barre de progression */}
-          {uploading && (
-            <div className="space-y-2">
-              <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
-                <div
-                  className="bg-blue-600 h-full transition-all"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <p className="text-sm font-medium text-slate-600 text-center">
-                {t("upload.button.uploading")} {progress}%
-              </p>
-            </div>
-          )}
-
-          {/* Status Message */}
-          {status.message && (
-            <div
-              ref={statusRef}
-              tabIndex="-1"
-              className={`p-4 rounded-lg text-sm font-medium ${status.type === "success" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-700 border border-red-200"}`}
-            >
-              {status.message}
-            </div>
-          )}
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={uploading || isValidating || !file}
-            className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-slate-800 transition-all disabled:bg-slate-300 shadow-lg active:scale-95"
-          >
-            {isValidating
-              ? t("upload.button.analyzing")
-              : uploading
-                ? `${t("upload.button.uploading")} ${progress}%`
-                : t("upload.button.submit")}
-          </button>
-        </form>
-      </div>
-      </div>
-    </>
-  );
+    );
 }
-

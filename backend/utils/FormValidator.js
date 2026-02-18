@@ -25,7 +25,7 @@ export const FORM_CONSTRAINTS = {
   },
 
   TITLE: {
-    MIN_LENGTH: 2,
+    MIN_LENGTH: 1,
     MAX_LENGTH: 100,
     PATTERN: /^[\p{L}\p{N}\p{M}\p{Pd}\p{Po}\p{Zs}]+$/u
   },
@@ -34,8 +34,31 @@ export const FORM_CONSTRAINTS = {
     MIN_LENGTH: 0,
     MAX_LENGTH: 500,
     PATTERN: /^[\p{L}\p{N}\p{M}\p{P}\p{Z}\n]*$/u
-  }
+  },
+  COUNTRY_ALPHA2: {
+    MIN_LENGTH: 2,
+    MAX_LENGTH: 2,
+    PATTERN: /^[A-Z]{2}$/
+},
+
+LANGUAGE: {
+    MIN_LENGTH: 2,
+    MAX_LENGTH: 25,
+    PATTERN: /^[\p{L}\p{M}\-' ]+$/u
+},
+
+AI_TOOLS: {
+    MIN_LENGTH: 2,
+    MAX_LENGTH: 25
+},
+
+BIO: {
+    MIN_LENGTH: 0,
+    MAX_LENGTH: 500,
+    PATTERN: /^[\p{L}\p{N}\p{M}\p{P}\p{Z}\n]*$/u
+}
 };
+
 
 
 export const sanitizeString = (str) => {
@@ -127,7 +150,7 @@ export const validateFormData = (req, res, next) => {
   if (email.length > FORM_CONSTRAINTS.EMAIL.MAX_LENGTH) {
     console.log(` [VALIDATION] Email trop long: ${email.length} caractères`);
     return res.status(400).json({
-      error: `Email trop long (max ${FORM_CONSTRAINTS.EMAIL.MAX_LENGTH} caractères)`
+      error: `l'Email est  trop long (max ${FORM_CONSTRAINTS.EMAIL.MAX_LENGTH} caractères)`
     });
   }
 
@@ -205,6 +228,76 @@ export const validateFormData = (req, res, next) => {
   } else {
     req.body.description = '';
   }
+
+ 
+  if (!req.body?.countryAlpha2) {
+    console.log(' [VALIDATION] le  code pays  est manquant');
+    return res.status(400).json({ error: ' Le code pay est  requis' });
+  }
+  const alpha2 = req.body.countryAlpha2.trim().toUpperCase();
+  if (!FORM_CONSTRAINTS.COUNTRY_ALPHA2.PATTERN.test(alpha2)) {
+    console.log(' [VALIDATION] Le code pays  est invalide:', alpha2);
+    return res.status(400).json({ error: 'Code pays invalide (2 lettres, ex: FR)' });
+  }
+  req.body.countryAlpha2 = alpha2;
+
+  
+  if (!req.body?.language) {
+    console.log(' [VALIDATION]  La langue est  manquante');
+    return res.status(400).json({ error: ' La langue du film  est requise' });
+  }
+  const langValidation = validateField('LANGUAGE', req.body.language);
+  if (!langValidation.valid) {
+    console.log(' [VALIDATION] Langue invalide:', langValidation.error);
+    return res.status(400).json({ error: langValidation.error });
+  }
+  req.body.language = langValidation.cleaned;
+
+ 
+  if (!req.body?.aiTools) {
+    console.log(' [VALIDATION] Outils IA manquants');
+    return res.status(400).json({ error: 'Les outils IA sont requis' });
+  }
+  const aiToolsCleaned = sanitizeString(req.body.aiTools);
+  if (aiToolsCleaned.length > FORM_CONSTRAINTS.AI_TOOLS.MAX_LENGTH) {
+    return res.status(400).json({ error: 'Le nom des outils IA est trop long (max 25 caractères)' });
+  }
+  const toolsArray = aiToolsCleaned.split(',').map(t => t.trim()).filter(Boolean);
+  if (toolsArray.length === 0) {
+    return res.status(400).json({ error: 'Au moins un outil IA  est requis' });
+  }
+  if (toolsArray.length > 5) {
+    console.log(' [VALIDATION] Trop d\'outils IA:', toolsArray.length);
+    return res.status(400).json({ error: '5 outils IA maximum' });
+  }
+  req.body.aiTools = toolsArray.join(', ');
+
+ 
+  if (req.body?.bio) {
+    const bioValidation = validateField('BIO', req.body.bio);
+    if (!bioValidation.valid) {
+      console.log(' [VALIDATION] Bio invalide:', bioValidation.error);
+      return res.status(400).json({ error: bioValidation.error });
+    }
+    req.body.bio = bioValidation.cleaned;
+  } else {
+    req.body.bio = null;
+  }
+
+ 
+  const socialLinks = {};
+  for (const key of ['socialWebsite', 'socialInstagram', 'socialX']) {
+    if (req.body?.[key] && req.body[key].trim()) {
+      const url = req.body[key].trim();
+      if (!validator.isURL(url, { require_protocol: true })) {
+        console.log(` [VALIDATION] ${key} URL invalide:`, url);
+        return res.status(400).json({ error: `${key} doit être une URL valide (avec https://)` });
+      }
+      const field = key.replace('social', '').toLowerCase();
+      socialLinks[field] = url;
+    }
+  }
+  req.body.socialLinks = Object.keys(socialLinks).length > 0 ? JSON.stringify(socialLinks) : null;
 
   console.log(' [VALIDATION] Formulaire validé avec succès');
   next();

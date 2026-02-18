@@ -74,7 +74,8 @@ export function cleanMetadata(filePath, timeout = 30_000) {
 }
 
 export const cleanMetadataMiddleware = async (req, res, next) => {
-  const filePath = req.file?.path;
+  const videoFile = req.files?.video?.[0] || req.file;
+  const filePath = videoFile?.path;
 
   if (!filePath) {
     return next();

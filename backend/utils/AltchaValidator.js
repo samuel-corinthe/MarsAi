@@ -24,6 +24,7 @@ export const generateChallenge = async () => {
     return {
       algorithm: challenge.algorithm,
       challenge: challenge.challenge,
+      maxnumber: challenge.maxnumber,
       salt: challenge.salt,
       signature: challenge.signature
     };
