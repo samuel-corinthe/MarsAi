@@ -23,8 +23,11 @@ const Gallery = () => {
   const [movies, setMovies] = useState([]);
   const [moviesLoading, setMoviesLoading] = useState(true);
   const [moviesError, setMoviesError] = useState("");
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("default");
+  const [minRating, setMinRating] = useState(0);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [carouselIndex, setCarouselIndex] = useState(0);
@@ -56,15 +59,30 @@ const Gallery = () => {
     return ["All", ...orderedGenres];
   }, [movies]);
 
-  const filteredMovies = movies.filter((movie) => {
-    const genres = normalizeMovieGenres(movie);
-    const matchesFilter = activeFilter === "All" || genres.includes(activeFilter);
-    const matchesSearch = String(movie.title || "")
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
+  const filteredMovies = movies
+    .filter((movie) => {
+      const genres = normalizeMovieGenres(movie);
+      const matchesFilter = activeFilter === "All" || genres.includes(activeFilter);
+      const matchesSearch = String(movie.title || "")
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      const matchesRating = Number(movie?.rating || 0) >= minRating;
 
-    return matchesFilter && matchesSearch;
-  });
+      return matchesFilter && matchesSearch && matchesRating;
+    })
+    .sort((a, b) => {
+      if (sortBy === "title") {
+        return String(a?.title || "").localeCompare(String(b?.title || ""), "fr");
+      }
+
+      if (sortBy === "year") {
+        const yearA = Number(String(a?.releaseDate || "").match(/\d{4}/)?.[0] || 0);
+        const yearB = Number(String(b?.releaseDate || "").match(/\d{4}/)?.[0] || 0);
+        return yearB - yearA;
+      }
+
+      return 0;
+    });
 
   const suggestions = filteredMovies
     .filter((movie) => searchQuery.length > 0 && String(movie.title || "")
@@ -114,7 +132,14 @@ const Gallery = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeFilter, searchQuery]);
+  }, [activeFilter, searchQuery, sortBy, minRating]);
+
+  useEffect(() => {
+    document.body.style.overflow = isFilterModalOpen ? "hidden" : "unset";
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isFilterModalOpen]);
 
   useEffect(() => {
     if (topMovies.length <= 1) return;
@@ -140,6 +165,13 @@ const Gallery = () => {
     "gallery.top_movies_subtitle",
     "Decouvrez les films selectionnes du festival marsAI.",
   );
+
+  const resetAdvancedFilters = () => {
+    setActiveFilter("All");
+    setSortBy("default");
+    setMinRating(0);
+    setSearchQuery("");
+  };
 
   return (
     <>
@@ -220,8 +252,9 @@ const Gallery = () => {
           <div className="bg-white min-h-[500px] w-full relative z-20 pb-20">
             <div className="container mx-auto px-6 md:px-20 pt-8">
               <div className="flex flex-col items-center gap-8 mb-16">
-                <div className="relative w-full max-w-2xl" ref={searchRef}>
-                  <div className="relative">
+              <div className="w-full max-w-2xl">
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-grow" ref={searchRef}>
                     <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
                       <svg
                         className="w-5 h-5 text-slate-400"
@@ -251,35 +284,57 @@ const Gallery = () => {
                       }}
                       className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-slate-100 rounded-3xl text-lg font-bold text-blue-950 focus:bg-white focus:border-blue-600 outline-none transition-all shadow-sm"
                     />
+
+                    {showSuggestions && suggestions.length > 0 && (
+                      <div className="absolute z-[100] w-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
+                        {suggestions.map((movie) => (
+                          <Link
+                            key={movie.id}
+                            to={`/movie/${movie.id}`}
+                            onClick={() => setShowSuggestions(false)}
+                            className="w-full flex items-center gap-4 px-6 py-4 hover:bg-blue-50 transition-colors border-b last:border-none border-slate-50"
+                          >
+                            <img
+                              src={movie.img}
+                              alt=""
+                              className="w-16 h-9 object-cover rounded-lg shadow-md"
+                            />
+                            <div>
+                              <p className="font-black text-blue-950 text-sm uppercase tracking-tighter">
+                                {movie.title}
+                              </p>
+                              <p className="text-[10px] text-cyan-600 font-black uppercase tracking-widest">
+                                {normalizeMovieGenres(movie)[0]}
+                              </p>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
-                  {showSuggestions && suggestions.length > 0 && (
-                    <div className="absolute z-[100] w-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
-                      {suggestions.map((movie) => (
-                        <Link
-                          key={movie.id}
-                          to={`/movie/${movie.id}`}
-                          onClick={() => setShowSuggestions(false)}
-                          className="w-full flex items-center gap-4 px-6 py-4 hover:bg-blue-50 transition-colors border-b last:border-none border-slate-50"
-                        >
-                          <img
-                            src={movie.img}
-                            alt=""
-                            className="w-16 h-9 object-cover rounded-lg shadow-md"
-                          />
-                          <div>
-                            <p className="font-black text-blue-950 text-sm uppercase tracking-tighter">
-                              {movie.title}
-                            </p>
-                            <p className="text-[10px] text-cyan-600 font-black uppercase tracking-widest">
-                              {normalizeMovieGenres(movie)[0]}
-                            </p>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
+                  <button
+                    onClick={() => setIsFilterModalOpen(true)}
+                    className="h-[68px] min-w-[68px] rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-300/40 hover:bg-blue-700 transition-colors"
+                    aria-label="Ouvrir les filtres avances"
+                    title="Filtres avances"
+                  >
+                    <svg
+                      className="mx-auto h-6 w-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2.5"
+                        d="M4 6h16M7 12h10M10 18h4"
+                      />
+                    </svg>
+                  </button>
                 </div>
+              </div>
 
                 <div className="flex flex-wrap justify-center gap-3">
                   {filters.map((filterValue) => (
@@ -362,6 +417,95 @@ const Gallery = () => {
           </div>
         </section>
       </div>
+
+      {isFilterModalOpen && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-blue-950/80 backdrop-blur-md"
+            onClick={() => setIsFilterModalOpen(false)}
+          ></div>
+
+          <div className="relative w-full max-w-md rounded-[36px] bg-white p-8 shadow-2xl">
+            <div className="mb-8 flex items-center justify-between">
+              <h2 className="text-2xl font-black uppercase tracking-tight text-blue-950">
+                Filtres Avances
+              </h2>
+              <button
+                onClick={() => setIsFilterModalOpen(false)}
+                className="rounded-full bg-slate-100 p-2 text-slate-500 hover:bg-slate-200"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="3"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-8">
+              <div>
+                <p className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                  Trier par
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { label: "Defaut", value: "default" },
+                    { label: "Titre", value: "title" },
+                    { label: "Annee", value: "year" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => setSortBy(option.value)}
+                      className={`rounded-xl py-3 text-[10px] font-black uppercase tracking-widest transition-colors ${
+                        sortBy === option.value
+                          ? "bg-blue-950 text-cyan-300"
+                          : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                    Note minimale
+                  </p>
+                  <span className="text-sm font-black text-blue-700">
+                    {minRating}+
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="5"
+                  step="1"
+                  value={minRating}
+                  onChange={(event) => setMinRating(Number(event.target.value))}
+                  className="w-full accent-blue-600"
+                />
+              </div>
+
+              <button
+                onClick={resetAdvancedFilters}
+                className="w-full rounded-2xl border border-red-200 bg-red-50 py-3 text-xs font-black uppercase tracking-widest text-red-600 hover:bg-red-100"
+              >
+                Reinitialiser
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
