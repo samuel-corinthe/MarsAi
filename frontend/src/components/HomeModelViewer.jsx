@@ -1,58 +1,4 @@
-import { useEffect, useRef, useState } from "react";
-
-const MODEL_VIEWER_SOURCES = [
-  import.meta.env.VITE_MODEL_VIEWER_SRC,
-  "/vendor/model-viewer.min.js",
-  "https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js",
-].filter(Boolean);
-
-const loadScriptOnce = (src) =>
-  new Promise((resolve) => {
-    const existing = document.querySelector(
-      `script[data-model-viewer="true"][src="${src}"]`,
-    );
-    if (existing) {
-      if (existing.dataset.loaded === "true") {
-        resolve(true);
-        return;
-      }
-      existing.addEventListener("load", () => resolve(true), { once: true });
-      existing.addEventListener("error", () => resolve(false), { once: true });
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.type = "module";
-    script.src = src;
-    script.dataset.modelViewer = "true";
-    script.onload = () => {
-      script.dataset.loaded = "true";
-      resolve(true);
-    };
-    script.onerror = () => {
-      script.remove();
-      resolve(false);
-    };
-    document.head.appendChild(script);
-  });
-
-const loadModelViewerScript = async () => {
-  if (typeof window === "undefined") return Promise.resolve(false);
-  if (window.customElements?.get("model-viewer")) return Promise.resolve(true);
-
-  try {
-    await import("@google/model-viewer");
-    if (window.customElements?.get("model-viewer")) return true;
-  } catch (err) {
-    // Fallback to script sources if module import fails.
-  }
-
-  for (const src of MODEL_VIEWER_SOURCES) {
-    const ok = await loadScriptOnce(src);
-    if (ok && window.customElements?.get("model-viewer")) return true;
-  }
-  return false;
-};
+import useHomeModelViewerController from "../controllers/useHomeModelViewerController";
 
 export default function HomeModelViewer({
   src,
@@ -61,80 +7,18 @@ export default function HomeModelViewer({
   alt = "Objet 3D",
   only = "all",
 }) {
-  const wrapperRef = useRef(null);
-  const [shouldLoad, setShouldLoad] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [reduceMotion, setReduceMotion] = useState(false);
-  const [isSmallViewport, setIsSmallViewport] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia("(max-width: 767px)").matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReduceMotion(mq.matches);
-    update();
-    if (mq.addEventListener) {
-      mq.addEventListener("change", update);
-      return () => mq.removeEventListener("change", update);
-    }
-    mq.addListener(update);
-    return () => mq.removeListener(update);
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mq = window.matchMedia("(max-width: 767px)");
-    const update = () => setIsSmallViewport(mq.matches);
-    update();
-    if (mq.addEventListener) {
-      mq.addEventListener("change", update);
-      return () => mq.removeEventListener("change", update);
-    }
-    mq.addListener(update);
-    return () => mq.removeListener(update);
-  }, []);
-
-  useEffect(() => {
-    if (!wrapperRef.current) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          setShouldLoad(true);
-        }
-      },
-      { rootMargin: "200px" },
-    );
-    observer.observe(wrapperRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!src || !shouldLoad) return;
-    let cancelled = false;
-    const startLoad = () => {
-      loadModelViewerScript().then((ok) => {
-        if (!cancelled) setReady(ok);
-      });
-    };
-    if ("requestIdleCallback" in window) {
-      window.requestIdleCallback(startLoad, { timeout: 1200 });
-    } else {
-      setTimeout(startLoad, 300);
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [src, shouldLoad]);
+  const {
+    wrapperRef,
+    ready,
+    shouldRender,
+    canAutoRotate,
+    interactionPrompt,
+  } = useHomeModelViewerController({ src, only });
 
   if (!src) return null;
-  if (only === "mobile" && !isSmallViewport) return null;
-  if (only === "desktop" && isSmallViewport) return null;
+  if (!shouldRender) return null;
 
-  const shouldAutoRotate = !reduceMotion && !isSmallViewport;
-  const autoRotateProps = shouldAutoRotate ? { "auto-rotate": "" } : {};
-  const interactionPrompt = isSmallViewport ? "auto" : "none";
+  const autoRotateProps = canAutoRotate ? { "auto-rotate": "" } : {};
 
   return (
     <div
