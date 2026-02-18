@@ -28,10 +28,18 @@ const Gallery = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("default");
   const [minRating, setMinRating] = useState(0);
+  const [maxRating, setMaxRating] = useState(5);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const searchRef = useRef(null);
+  const sortOptions = [
+    { label: "Defaut", value: "default" },
+    { label: "Titre A-Z", value: "title_asc" },
+    { label: "Titre Z-A", value: "title_desc" },
+    { label: "Annee - +", value: "year_asc" },
+    { label: "Annee + -", value: "year_desc" },
+  ];
 
   const pageSize = 20;
   const topMovies = movies.slice(0, 5);
@@ -66,19 +74,28 @@ const Gallery = () => {
       const matchesSearch = String(movie.title || "")
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
-      const matchesRating = Number(movie?.rating || 0) >= minRating;
+      const movieRating = Number(movie?.rating || 0);
+      const matchesRating = movieRating >= minRating && movieRating <= maxRating;
 
       return matchesFilter && matchesSearch && matchesRating;
     })
     .sort((a, b) => {
-      if (sortBy === "title") {
+      if (sortBy === "title_asc") {
         return String(a?.title || "").localeCompare(String(b?.title || ""), "fr");
       }
+      if (sortBy === "title_desc") {
+        return String(b?.title || "").localeCompare(String(a?.title || ""), "fr");
+      }
 
-      if (sortBy === "year") {
+      if (sortBy === "year_desc") {
         const yearA = Number(String(a?.releaseDate || "").match(/\d{4}/)?.[0] || 0);
         const yearB = Number(String(b?.releaseDate || "").match(/\d{4}/)?.[0] || 0);
         return yearB - yearA;
+      }
+      if (sortBy === "year_asc") {
+        const yearA = Number(String(a?.releaseDate || "").match(/\d{4}/)?.[0] || 0);
+        const yearB = Number(String(b?.releaseDate || "").match(/\d{4}/)?.[0] || 0);
+        return yearA - yearB;
       }
 
       return 0;
@@ -132,7 +149,7 @@ const Gallery = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeFilter, searchQuery, sortBy, minRating]);
+  }, [activeFilter, searchQuery, sortBy, minRating, maxRating]);
 
   useEffect(() => {
     document.body.style.overflow = isFilterModalOpen ? "hidden" : "unset";
@@ -165,11 +182,14 @@ const Gallery = () => {
     "gallery.top_movies_subtitle",
     "Decouvrez les films selectionnes du festival marsAI.",
   );
+  const activeSortLabel =
+    sortOptions.find((option) => option.value === sortBy)?.label || "Defaut";
 
   const resetAdvancedFilters = () => {
     setActiveFilter("All");
     setSortBy("default");
     setMinRating(0);
+    setMaxRating(5);
     setSearchQuery("");
   };
 
@@ -334,6 +354,30 @@ const Gallery = () => {
                     </svg>
                   </button>
                 </div>
+
+                {(sortBy !== "default" || minRating > 0 || maxRating < 5) && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {sortBy !== "default" && (
+                      <button
+                        onClick={() => setSortBy("default")}
+                        className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-blue-700 hover:bg-blue-100"
+                      >
+                        Tri: {activeSortLabel} x
+                      </button>
+                    )}
+                    {(minRating > 0 || maxRating < 5) && (
+                      <button
+                        onClick={() => {
+                          setMinRating(0);
+                          setMaxRating(5);
+                        }}
+                        className="rounded-full bg-amber-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-amber-700 hover:bg-amber-100"
+                      >
+                        Note {minRating}-{maxRating} x
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
                 <div className="flex flex-wrap justify-center gap-3">
@@ -455,12 +499,8 @@ const Gallery = () => {
                 <p className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                   Trier par
                 </p>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { label: "Defaut", value: "default" },
-                    { label: "Titre", value: "title" },
-                    { label: "Annee", value: "year" },
-                  ].map((option) => (
+                <div className="grid grid-cols-2 gap-2">
+                  {sortOptions.map((option) => (
                     <button
                       key={option.value}
                       onClick={() => setSortBy(option.value)}
@@ -479,21 +519,54 @@ const Gallery = () => {
               <div>
                 <div className="mb-3 flex items-center justify-between">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                    Note minimale
+                    Note (min - max)
                   </p>
                   <span className="text-sm font-black text-blue-700">
-                    {minRating}+
+                    {minRating} - {maxRating}
                   </span>
                 </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="5"
-                  step="1"
-                  value={minRating}
-                  onChange={(event) => setMinRating(Number(event.target.value))}
-                  className="w-full accent-blue-600"
-                />
+                <div className="space-y-3">
+                  <div>
+                    <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                      Min
+                    </p>
+                    <input
+                      type="range"
+                      min="0"
+                      max="5"
+                      step="1"
+                      value={minRating}
+                      onChange={(event) => {
+                        const nextMin = Number(event.target.value);
+                        setMinRating(nextMin);
+                        if (nextMin > maxRating) {
+                          setMaxRating(nextMin);
+                        }
+                      }}
+                      className="w-full accent-blue-600"
+                    />
+                  </div>
+                  <div>
+                    <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                      Max
+                    </p>
+                    <input
+                      type="range"
+                      min="0"
+                      max="5"
+                      step="1"
+                      value={maxRating}
+                      onChange={(event) => {
+                        const nextMax = Number(event.target.value);
+                        setMaxRating(nextMax);
+                        if (nextMax < minRating) {
+                          setMinRating(nextMax);
+                        }
+                      }}
+                      className="w-full accent-blue-600"
+                    />
+                  </div>
+                </div>
               </div>
 
               <button
