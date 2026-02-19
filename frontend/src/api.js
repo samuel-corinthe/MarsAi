@@ -54,11 +54,11 @@ function appendDeploymentPathCandidates(urls) {
   return extended;
 }
 
-async function fetchWith404Fallback(urls, options = {}) {
+async function fetchWith404Fallback(urls, options = {}, errorContext = "API") {
   const withDeploymentPaths = appendDeploymentPathCandidates(urls);
   const candidates = appendLocalCandidates(withDeploymentPaths);
 
-  let lastStatus = 404;
+  let lastStatus = null;
   let lastPayload = {};
   let lastError = null;
 
@@ -90,7 +90,7 @@ async function fetchWith404Fallback(urls, options = {}) {
       lastStatus = res.status;
       lastPayload = payload;
 
-      if (res.status === 404) {
+      if (res.status === 404 || res.status >= 500) {
         continue;
       }
 
@@ -100,11 +100,14 @@ async function fetchWith404Fallback(urls, options = {}) {
     }
   }
 
-  if (lastError && !lastStatus) {
-    throw lastError;
+  if (lastError && lastStatus == null) {
+    throw new Error(lastError.message || "Impossible de joindre l'API backend.");
   }
 
-  throw new Error(lastPayload?.details || lastPayload?.error || `Movies API error ${lastStatus}`);
+  const fallbackStatus = lastStatus == null ? "unreachable" : lastStatus;
+  throw new Error(
+    lastPayload?.details || lastPayload?.error || `${errorContext} error ${fallbackStatus}`,
+  );
 }
 
 export const getPageBySlug = async (slug, lang = "fr") => {
@@ -125,6 +128,7 @@ export async function getMovies() {
   const { payload } = await fetchWith404Fallback(
     ["/api/movies", "/api/movie"],
     { cache: "no-store" },
+    "Movies API",
   );
 
   if (Array.isArray(payload)) return payload;
@@ -136,11 +140,44 @@ export async function getMovieById(movieId) {
   const { payload } = await fetchWith404Fallback(
     [`/api/movies/${movieId}`, `/api/movie/${movieId}`],
     { cache: "no-store" },
+    "Movie details API",
   );
 
   if (payload?.movie && typeof payload.movie === "object") return payload.movie;
   if (payload && typeof payload === "object" && Number.isFinite(Number(payload.id))) return payload;
   return null;
+}
+
+export async function sendContactForm({ name, email, subject, message }) {
+  const { payload } = await fetchWith404Fallback(
+    ["/api/send-email", "/send-email", "/api/mail/send-email"],
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, subject, message }),
+    },
+    "Contact API",
+  );
+
+  return payload;
+}
+
+export async function subscribeNewsletterForm({ firstName, email, preferences }) {
+  const { payload } = await fetchWith404Fallback(
+    [
+      "/api/subscribe-newsletter",
+      "/subscribe-newsletter",
+      "/api/newsletter/subscribe",
+    ],
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ firstName, email, preferences }),
+    },
+    "Newsletter API",
+  );
+
+  return payload;
 }
 
 export async function loginWithWordPress({ email, username, password }) {

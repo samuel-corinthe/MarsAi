@@ -2,7 +2,7 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
-import { getPageBySlug } from "../api";
+import { getPageBySlug, sendContactForm } from "../api";
 import Home from "./Home";
 import JuryWpage from "./jury";
 import NotFound from "./NotFound";
@@ -294,22 +294,11 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     const dataToSend = Object.fromEntries(formData);
 
     try {
-      const response = await fetch("http://localhost:3000/send-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dataToSend),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        alert("Message envoyé avec succès !");
-        e.target.reset();
-      } else {
-        alert("Erreur : " + result.message);
-      }
+      const result = await sendContactForm(dataToSend);
+      alert(result?.message || "Message envoye avec succes !");
+      e.target.reset();
     } catch (error) {
-      alert("Impossible de contacter le serveur.");
+      alert(error?.message || "Impossible de contacter le serveur.");
     } finally {
       setIsSending(false);
     }

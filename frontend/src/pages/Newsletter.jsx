@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Seo from "../components/Seo";
 import { useTranslation } from "react-i18next";
+import { subscribeNewsletterForm } from "../api";
 
 const Newsletter = () => {
   const { t } = useTranslation();
@@ -32,28 +33,14 @@ const Newsletter = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(
-        "http://localhost:3000/api/newsletter/subscribe",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
-        },
-      );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setIsSubmitted(true);
-        setTimeout(() => {
-          setIsSubmitted(false);
-          setFormData({ firstName: "", email: "", preferences: [] });
-        }, 5000);
-      } else {
-        alert(data.message);
-      }
+      await subscribeNewsletterForm(formData);
+      setIsSubmitted(true);
+      setTimeout(() => {
+        setIsSubmitted(false);
+        setFormData({ firstName: "", email: "", preferences: [] });
+      }, 5000);
     } catch (error) {
-      alert(t("newsletter.errors.server"));
+      alert(error?.message || t("newsletter.errors.server"));
     } finally {
       setIsLoading(false);
     }

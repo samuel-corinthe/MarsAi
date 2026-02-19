@@ -62,6 +62,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static("uploads"));
 
 app.use(publicRoutes);
+app.use("/api", publicRoutes);
+app.use("/api/mail", publicRoutes);
+app.use("/MarsAi", publicRoutes);
+app.use("/MarsAi/api", publicRoutes);
+app.use("/MarsAi/api/mail", publicRoutes);
 app.use("/api/movies", movieRoutes);
 app.use("/api/movie", movieRoutes);
 app.use("/api/altcha", altchaRoutes);

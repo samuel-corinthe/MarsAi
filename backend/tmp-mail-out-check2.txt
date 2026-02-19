@@ -1,0 +1,2 @@
+[dotenv@17.2.3] injecting env (22) from backend\.env -- tip: ⚙️  suppress all logs with { quiet: true }
+Serveur demarre sur http://localhost:3005
