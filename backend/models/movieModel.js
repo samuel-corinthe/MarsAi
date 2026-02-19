@@ -1,9 +1,15 @@
 export async function findAllMovies(pool) {
   const [rows] = await pool.query(
     `
-      SELECT *
-      FROM movies
-      ORDER BY id DESC
+      SELECT
+        m.*,
+        c.alpha2 AS country_alpha2,
+        c.name_fr AS country_name_fr,
+        c.name_eng AS country_name_eng,
+        c.flag_path AS country_flag_path
+      FROM movies m
+      LEFT JOIN countries c ON c.id = m.country_id
+      ORDER BY m.id DESC
     `,
   );
 
@@ -13,9 +19,15 @@ export async function findAllMovies(pool) {
 export async function findMovieById(pool, movieId) {
   const [rows] = await pool.query(
     `
-      SELECT *
-      FROM movies
-      WHERE id = ?
+      SELECT
+        m.*,
+        c.alpha2 AS country_alpha2,
+        c.name_fr AS country_name_fr,
+        c.name_eng AS country_name_eng,
+        c.flag_path AS country_flag_path
+      FROM movies m
+      LEFT JOIN countries c ON c.id = m.country_id
+      WHERE m.id = ?
       LIMIT 1
     `,
     [movieId],

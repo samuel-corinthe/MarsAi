@@ -1,21 +1,27 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
 import { getMovies } from "../api";
 
-function normalizeMovieGenres(movie) {
-  if (!movie) return ["Uncategorized"];
+const TOP_CAROUSEL_PREVIEW_SECONDS = 5;
+const TOP_CAROUSEL_ROTATION_MS = 5200;
 
-  if (Array.isArray(movie.genre)) {
-    const genres = movie.genre
-      .map((entry) => String(entry || "").trim())
-      .filter(Boolean);
-    return genres.length ? genres : ["Uncategorized"];
+function toFlagAssetPath(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (/^\/MarsAi\//i.test(raw)) return raw;
+
+  const withLeadingSlash = raw.startsWith("/") ? raw : `/${raw}`;
+  if (typeof window !== "undefined") {
+    const pathname = String(window.location?.pathname || "").toLowerCase();
+    if (pathname === "/marsai" || pathname.startsWith("/marsai/")) {
+      return `/MarsAi${withLeadingSlash}`;
+    }
   }
 
-  const genre = String(movie.genre || "").trim();
-  return genre ? [genre] : ["Uncategorized"];
+  return withLeadingSlash;
 }
 
 const Gallery = () => {
@@ -24,7 +30,6 @@ const Gallery = () => {
   const [moviesLoading, setMoviesLoading] = useState(true);
   const [moviesError, setMoviesError] = useState("");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("default");
   const [minRating, setMinRating] = useState(0);
@@ -33,6 +38,7 @@ const Gallery = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const searchRef = useRef(null);
+  const topCarouselVideoRef = useRef(null);
   const sortOptions = [
     { label: "Defaut", value: "default" },
     { label: "Titre A-Z", value: "title_asc" },
@@ -52,32 +58,25 @@ const Gallery = () => {
     { offset: 2, scale: 0.72, opacity: 0.35, blur: 2, z: 1 },
   ];
   const activeCarouselPositions = carouselPositions.slice(0, topMovies.length);
-
-  const filters = useMemo(() => {
-    const uniqueGenres = new Set();
-
-    movies.forEach((movie) => {
-      normalizeMovieGenres(movie).forEach((genre) => uniqueGenres.add(genre));
-    });
-
-    const orderedGenres = Array.from(uniqueGenres)
-      .filter((genre) => genre !== "All")
-      .sort((a, b) => a.localeCompare(b, "fr"));
-
-    return ["All", ...orderedGenres];
-  }, [movies]);
+  const highlightedPositionIndex = activeCarouselPositions.reduce(
+    (bestIndex, current, index, allPositions) =>
+      current.scale > allPositions[bestIndex].scale ? index : bestIndex,
+    0,
+  );
+  const activeTopMovie =
+    topMovies.length > 0
+      ? topMovies[(carouselIndex + highlightedPositionIndex) % topMovies.length]
+      : null;
 
   const filteredMovies = movies
     .filter((movie) => {
-      const genres = normalizeMovieGenres(movie);
-      const matchesFilter = activeFilter === "All" || genres.includes(activeFilter);
       const matchesSearch = String(movie.title || "")
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
       const movieRating = Number(movie?.rating || 0);
       const matchesRating = movieRating >= minRating && movieRating <= maxRating;
 
-      return matchesFilter && matchesSearch && matchesRating;
+      return matchesSearch && matchesRating;
     })
     .sort((a, b) => {
       if (sortBy === "title_asc") {
@@ -142,14 +141,8 @@ const Gallery = () => {
   }, []);
 
   useEffect(() => {
-    if (!filters.includes(activeFilter)) {
-      setActiveFilter("All");
-    }
-  }, [filters, activeFilter]);
-
-  useEffect(() => {
     setCurrentPage(1);
-  }, [activeFilter, searchQuery, sortBy, minRating, maxRating]);
+  }, [searchQuery, sortBy, minRating, maxRating]);
 
   useEffect(() => {
     document.body.style.overflow = isFilterModalOpen ? "hidden" : "unset";
@@ -159,12 +152,67 @@ const Gallery = () => {
   }, [isFilterModalOpen]);
 
   useEffect(() => {
+    if (topMovies.length === 0) {
+      setCarouselIndex(0);
+      return;
+    }
+    setCarouselIndex((prev) => prev % topMovies.length);
+  }, [topMovies.length]);
+
+  useEffect(() => {
     if (topMovies.length <= 1) return;
     const id = setInterval(() => {
       setCarouselIndex((prev) => (prev + 1) % topMovies.length);
-    }, 2400);
+    }, TOP_CAROUSEL_ROTATION_MS);
     return () => clearInterval(id);
   }, [topMovies.length]);
+
+  useEffect(() => {
+    const video = topCarouselVideoRef.current;
+    if (!video || !activeTopMovie?.videoUrl) return;
+
+    const restartPreview = () => {
+      video.currentTime = 0;
+      const playPromise = video.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
+      }
+    };
+
+    const handleLoadedMetadata = () => {
+      restartPreview();
+    };
+
+    const handleTimeUpdate = () => {
+      const duration = Number.isFinite(video.duration) ? video.duration : 0;
+      const previewLimit = duration > 0
+        ? Math.min(TOP_CAROUSEL_PREVIEW_SECONDS, duration)
+        : TOP_CAROUSEL_PREVIEW_SECONDS;
+      if (video.currentTime >= Math.max(0.2, previewLimit - 0.05)) {
+        video.currentTime = 0;
+      }
+    };
+
+    const handleEnded = () => {
+      restartPreview();
+    };
+
+    video.addEventListener("loadedmetadata", handleLoadedMetadata);
+    video.addEventListener("timeupdate", handleTimeUpdate);
+    video.addEventListener("ended", handleEnded);
+
+    if (video.readyState >= 1) {
+      restartPreview();
+    }
+
+    return () => {
+      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      video.removeEventListener("timeupdate", handleTimeUpdate);
+      video.removeEventListener("ended", handleEnded);
+      video.pause();
+      video.currentTime = 0;
+    };
+  }, [activeTopMovie?.id, activeTopMovie?.videoUrl]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -186,7 +234,6 @@ const Gallery = () => {
     sortOptions.find((option) => option.value === sortBy)?.label || "Defaut";
 
   const resetAdvancedFilters = () => {
-    setActiveFilter("All");
     setSortBy("default");
     setMinRating(0);
     setMaxRating(5);
@@ -198,7 +245,19 @@ const Gallery = () => {
       <Seo title={seoTitle} description={seoDescription} />
       <div className="min-h-screen bg-blue-950 flex flex-col font-sans text-slate-800">
         <section className="relative w-full pb-36 md:pb-40 pt-10">
-          <div className="absolute inset-0 bg-gradient-to-b from-blue-900/80 to-blue-950"></div>
+          {activeTopMovie?.videoUrl && (
+            <video
+              key={`top-carousel-preview-${activeTopMovie.id}`}
+              ref={topCarouselVideoRef}
+              src={activeTopMovie.videoUrl}
+              muted
+              playsInline
+              preload="metadata"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
+          <div className="absolute inset-0 bg-blue-950/45"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-blue-900/70 to-blue-950"></div>
           <div className="relative z-10 container mx-auto px-6 text-center">
             <h1 className="text-3xl md:text-5xl font-black text-white mb-10 mt-8 tracking-tighter uppercase">
               {i18n.language === "fr" ? "Decouvrez " : "Discover "}
@@ -323,9 +382,6 @@ const Gallery = () => {
                               <p className="font-black text-blue-950 text-sm uppercase tracking-tighter">
                                 {movie.title}
                               </p>
-                              <p className="text-[10px] text-cyan-600 font-black uppercase tracking-widest">
-                                {normalizeMovieGenres(movie)[0]}
-                              </p>
                             </div>
                           </Link>
                         ))}
@@ -380,19 +436,6 @@ const Gallery = () => {
                 )}
               </div>
 
-                <div className="flex flex-wrap justify-center gap-3">
-                  {filters.map((filterValue) => (
-                    <button
-                      key={filterValue}
-                      onClick={() => setActiveFilter(filterValue)}
-                      className={`px-8 py-3 rounded-2xl border-2 text-xs font-black uppercase tracking-widest transition-all
-                         ${activeFilter === filterValue ? "bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-500/40" : "bg-white border-slate-100 text-slate-400 hover:text-blue-500 hover:border-blue-200"}
-                    `}
-                    >
-                      {t(`genres.${filterValue.toLowerCase()}`, filterValue)}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               {moviesLoading ? (
@@ -413,6 +456,16 @@ const Gallery = () => {
                           alt={movie.title}
                           className="w-full h-full object-cover opacity-90 group-hover:opacity-30 transition-all duration-700 transform group-hover:scale-110"
                         />
+                        {movie.countryFlagPath && (
+                          <div className="absolute right-3 top-3 z-20 rounded-md bg-white/90 p-1 shadow-md">
+                            <img
+                              src={toFlagAssetPath(movie.countryFlagPath)}
+                              alt={`Drapeau ${movie.country || "pays"}`}
+                              className="h-4 w-6 rounded-sm object-cover"
+                              loading="lazy"
+                            />
+                          </div>
+                        )}
                         <div className="absolute inset-0 flex flex-col items-center justify-center p-6 opacity-0 group-hover:opacity-100 transition-all duration-300">
                           <h3 className="text-white font-black text-xl text-center uppercase leading-none mb-4 tracking-tighter">
                             {movie.title}

@@ -6,7 +6,7 @@ import { OrganizationSchema, EventSchema } from "../components/Schema";
 import { useTranslation } from "react-i18next";
 
 export default function Home({ page }) {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const modelSrc =
     import.meta.env.VITE_HOME_MODEL_URL ||
     `${import.meta.env.BASE_URL}models/walking_robot_mr.glb`;
@@ -252,7 +252,7 @@ export default function Home({ page }) {
         <section className="relative py-20 md:py-32 bg-[#0f172a]">
           <div className="max-w-4xl mx-auto px-10 md:px-4">
             <h3 className="text-2xl md:text-4xl font-black uppercase tracking-[0.4em] text-[#38bdf8] mb-24 text-center">
-              Actualites
+              {t("home_news", "Actualites")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16 md:gap-12 justify-items-center">
               {parsed.articles.slice(0, 6).map((a, i) => (
@@ -269,7 +269,7 @@ export default function Home({ page }) {
                   {a.link && (
                     <a href={a.link}
                        className="inline-block mt-6 text-[11px] font-black uppercase tracking-widest text-[#38bdf8] hover:text-white transition-colors border-b-2 border-[#38bdf8] pb-1 w-fit">
-                      Lire l'article
+                      {t("agenda.read_article", "Lire l'article")}
                     </a>
                   )}
                 </article>

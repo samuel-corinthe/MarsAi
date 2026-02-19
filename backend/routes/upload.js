@@ -14,12 +14,14 @@ import { validateEmail } from "../utils/EmailValidator.js";
 import { validateFileMagicBytes } from "../utils/FileTypeValidator.js";
 import { validateHoneypot } from "../utils/HoneypotValidator.js";
 import { cleanMetadataMiddleware } from "../utils/MetadataCleaner.js";
+import { sendUploadSuccessMail } from "../services/messagingService.js";
 
 const router = express.Router();
 const pool = getDbPool();
 
 const MAX_VIDEO_SIZE_BYTES = 300 * 1024 * 1024;
 const MAX_SRT_SIZE_BYTES = 1024 * 1024;
+const VIDEO_UPLOAD_DIR = "uploads/videos";
 const POSTER_UPLOAD_DIR = "uploads/posters";
 const SUBTITLE_UPLOAD_DIR = "uploads/subtitles";
 const DEFAULT_POSTER_SEED = "marsai";
@@ -112,6 +114,12 @@ function cleanupFile(filePath) {
   }
 }
 
+function getBackendBaseUrl() {
+  return String(
+    process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`,
+  ).replace(/\/$/, "");
+}
+
 function toSlug(value) {
   const source = String(value || "").trim().toLowerCase();
   if (!source) return DEFAULT_POSTER_SEED;
@@ -123,6 +131,115 @@ function toSlug(value) {
     .replace(/(^-|-$)/g, "");
 
   return normalized || DEFAULT_POSTER_SEED;
+}
+
+function toSafeExternalUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://${raw}`;
+}
+
+function parseSocialLinks(rawValue) {
+  if (!rawValue) return {};
+
+  let source = rawValue;
+  if (typeof rawValue === "string") {
+    try {
+      source = JSON.parse(rawValue);
+    } catch {
+      return {};
+    }
+  }
+
+  if (!source || typeof source !== "object") return {};
+
+  const normalized = {};
+  const website = toSafeExternalUrl(source.website);
+  const instagram = toSafeExternalUrl(source.instagram);
+  const facebook = toSafeExternalUrl(source.facebook);
+  const x = toSafeExternalUrl(source.x || source.twitter);
+
+  if (website) normalized.website = website;
+  if (instagram) normalized.instagram = instagram;
+  if (facebook) normalized.facebook = facebook;
+  if (x) normalized.x = x;
+
+  return normalized;
+}
+
+function parseCastEntries(rawValue) {
+  if (!rawValue) return [];
+
+  let source = rawValue;
+  if (typeof rawValue === "string") {
+    try {
+      source = JSON.parse(rawValue);
+    } catch {
+      return [];
+    }
+  }
+
+  if (!Array.isArray(source)) return [];
+
+  return source
+    .map((entry) => {
+      const name = String(entry?.name || "").trim();
+      const role = String(entry?.role || "").trim();
+      const avatarUrl = String(entry?.avatarUrl || entry?.img || "").trim();
+
+      if (!name && !role && !avatarUrl) return null;
+
+      return {
+        name,
+        role,
+        avatarUrl,
+      };
+    })
+    .filter((entry) => entry && entry.name)
+    .slice(0, 10);
+}
+
+function buildYoutubeDescription({ description, bio, socialLinks }) {
+  const sections = [];
+
+  const socialEntries = [];
+  if (socialLinks.instagram) socialEntries.push(`[Instagram] ${socialLinks.instagram}`);
+  if (socialLinks.facebook) socialEntries.push(`[Facebook] ${socialLinks.facebook}`);
+  if (socialLinks.x) socialEntries.push(`[X] ${socialLinks.x}`);
+  if (socialLinks.website) socialEntries.push(`[Site web] ${socialLinks.website}`);
+  if (socialEntries.length > 0) {
+    sections.push(socialEntries.join("\n"));
+  }
+
+  const cleanedBio = String(bio || "").trim();
+  if (cleanedBio) {
+    sections.push(`Bio:\n${cleanedBio}`);
+  }
+
+  const cleanedDescription = String(description || "").trim();
+  if (cleanedDescription) {
+    sections.push(`Description:\n${cleanedDescription}`);
+  }
+
+  return sections.join("\n\n").trim() || "Video uploadee via MarsAI";
+}
+
+function toCountryFlagPath(flagPath, alpha2) {
+  const alpha2Value = String(alpha2 || "").trim().toLowerCase();
+  const fallbackPath = alpha2Value ? `/images/flags/${alpha2Value}.png` : "";
+  const raw = String(flagPath || "").trim();
+  if (!raw) return fallbackPath;
+  if (/^https?:\/\//i.test(raw)) return raw;
+
+  let normalized = raw.startsWith("/") ? raw : `/${raw}`;
+  normalized = normalized.replace(/\/images\/flags\/png100px\//i, "/images/flags/");
+
+  if (!/\.(png|jpg|jpeg|webp|svg)$/i.test(normalized) && alpha2Value) {
+    normalized = `/images/flags/${alpha2Value}.png`;
+  }
+
+  return normalized || fallbackPath;
 }
 
 function validateSrtContent(filePath) {
@@ -190,6 +307,42 @@ router.get("/youtube/status/:id", async (req, res) => {
   }
 });
 
+router.get("/countries", async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `
+        SELECT
+          id,
+          alpha2,
+          name_fr,
+          name_eng,
+          flag_path
+        FROM countries
+        ORDER BY name_fr ASC, name_eng ASC, alpha2 ASC
+      `,
+    );
+
+    const countries = (Array.isArray(rows) ? rows : []).map((row) => {
+      const alpha2 = String(row.alpha2 || "").trim().toUpperCase();
+      return {
+        id: Number(row.id),
+        alpha2,
+        nameFr: String(row.name_fr || "").trim(),
+        nameEn: String(row.name_eng || "").trim(),
+        flagPath: toCountryFlagPath(row.flag_path, alpha2),
+      };
+    });
+
+    return res.json({ ok: true, countries });
+  } catch (error) {
+    console.error("[UPLOAD] countries error:", error.message);
+    return res.status(500).json({
+      error: "Impossible de charger les pays.",
+      details: error.message,
+    });
+  }
+});
+
 router.post(
   "/youtube",
   ipLimiter,
@@ -209,6 +362,17 @@ router.post(
   async (req, res) => {
     const title = String(req.body?.title || "").trim();
     const description = String(req.body?.description || "").trim();
+    const bio = req.body?.bio ? String(req.body.bio).trim() : "";
+    const parsedSocialLinks = parseSocialLinks(req.body?.socialLinks ? String(req.body.socialLinks) : null);
+    const socialLinks = Object.keys(parsedSocialLinks).length > 0
+      ? JSON.stringify(parsedSocialLinks)
+      : null;
+    const castEntries = parseCastEntries(req.body?.cast ? String(req.body.cast) : null);
+    const youtubeDescription = buildYoutubeDescription({
+      description,
+      bio,
+      socialLinks: parsedSocialLinks,
+    });
     const videoFile = req.files?.video?.[0];
     const subtitleFile = req.files?.subtitle?.[0];
     const posterFile = req.files?.poster?.[0];
@@ -227,6 +391,7 @@ router.post(
       }
     }
 
+    let persistedVideoPath = "";
     try {
       const metadata = await analyzeVideo(videoFile.path);
       const validation = validateVideoData(metadata);
@@ -251,7 +416,7 @@ router.post(
         requestBody: {
           snippet: {
             title: title || "Upload MarsAI",
-            description: description || "Video uploadee via MarsAI",
+            description: youtubeDescription,
           },
           status: {
             privacyStatus: "private",
@@ -269,6 +434,14 @@ router.post(
 
       const youtubeUrl = `https://www.youtube.com/watch?v=${youtubeId}`;
       const slug = toSlug(title);
+      const backendBase = getBackendBaseUrl();
+
+      ensureDirectory(VIDEO_UPLOAD_DIR);
+      const videoName = `${slug}-${youtubeId}.mp4`;
+      const videoDest = path.join(VIDEO_UPLOAD_DIR, videoName);
+      fs.renameSync(videoFile.path, videoDest);
+      persistedVideoPath = videoDest;
+      const localVideoUrl = `${backendBase}/uploads/videos/${videoName}`;
 
       let posterUrl = `https://picsum.photos/seed/${slug}-${youtubeId}/600/900`;
       if (posterFile) {
@@ -278,10 +451,6 @@ router.post(
         const posterDest = path.join(POSTER_UPLOAD_DIR, posterName);
         fs.renameSync(posterFile.path, posterDest);
 
-        const backendBase = String(
-          process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`,
-        ).replace(/\/$/, "");
-
         posterUrl = `${backendBase}/uploads/posters/${posterName}`;
       }
 
@@ -290,8 +459,7 @@ router.post(
       const countryAlpha2 = String(req.body?.countryAlpha2 || "").trim().toUpperCase();
       const language = String(req.body?.language || "").trim();
       const aiTools = String(req.body?.aiTools || "").trim();
-      const bio = req.body?.bio ? String(req.body.bio) : null;
-      const socialLinks = req.body?.socialLinks ? String(req.body.socialLinks) : null;
+      const dbBio = bio || null;
       const duration = Math.max(1, Math.round(Number(metadata?.duration || 0)));
       const releaseYear = new Date().getFullYear();
 
@@ -301,7 +469,7 @@ router.post(
       );
 
       if (!Array.isArray(countryRows) || countryRows.length === 0) {
-        cleanupFile(videoFile.path);
+        cleanupFile(persistedVideoPath);
         cleanupFile(subtitleFile?.path);
         return res.status(400).json({ error: "Code pays introuvable dans la base." });
       }
@@ -315,7 +483,7 @@ router.post(
         [
           title || "Sans titre",
           Number.parseInt(req.body?.age, 10),
-          bio,
+          dbBio,
           socialLinks,
           description,
           duration,
@@ -325,7 +493,7 @@ router.post(
           null,
           aiTools,
           posterUrl,
-          youtubeUrl,
+          localVideoUrl,
           youtubeUrl,
           0,
           submittedBy,
@@ -335,10 +503,50 @@ router.post(
 
       const movieId = Number(insertResult?.insertId || 0);
 
+      if (movieId > 0 && castEntries.length > 0) {
+        try {
+          for (const [index, member] of castEntries.entries()) {
+            await pool.query(
+              `INSERT INTO movie_cast (movie_id, person_name, role_name, avatar_url, sort_order)
+               VALUES (?, ?, ?, ?, ?)`,
+              [
+                movieId,
+                member.name,
+                member.role || null,
+                member.avatarUrl || null,
+                index + 1,
+              ],
+            );
+          }
+        } catch (castError) {
+          if (String(castError?.code || "") === "ER_NO_SUCH_TABLE") {
+            console.warn("[UPLOAD] Table movie_cast absente, casting ignore.");
+          } else {
+            throw castError;
+          }
+        }
+      }
+
       if (subtitleFile && movieId > 0) {
         ensureDirectory(SUBTITLE_UPLOAD_DIR);
         const subtitleDest = path.join(SUBTITLE_UPLOAD_DIR, `${movieId}.srt`);
         fs.renameSync(subtitleFile.path, subtitleDest);
+      }
+
+      let confirmationEmailSent = false;
+      let confirmationEmailError = "";
+      try {
+        await sendUploadSuccessMail({
+          toEmail: String(req.body?.email || "").trim(),
+          firstName: String(req.body?.firstName || "").trim(),
+          lastName: String(req.body?.lastName || "").trim(),
+          movieTitle: title || "Sans titre",
+          videoUrl: youtubeUrl,
+        });
+        confirmationEmailSent = true;
+      } catch (mailError) {
+        confirmationEmailError = String(mailError?.message || "Echec envoi confirmation email");
+        console.error("[UPLOAD] confirmation email error:", confirmationEmailError);
       }
 
       return res.status(200).json({
@@ -346,11 +554,15 @@ router.post(
         message: "Upload reussi !",
         videoId: youtubeId,
         movieId,
-        videoUrl: youtubeUrl,
+        videoUrl: localVideoUrl,
+        youtubeUrl,
         statusEndpoint: `/api/upload/youtube/status/${youtubeId}`,
+        confirmationEmailSent,
+        ...(confirmationEmailSent ? {} : { confirmationEmailError }),
       });
     } catch (error) {
       console.error("[UPLOAD] Erreur:", error.message);
+      cleanupFile(persistedVideoPath);
       if (!res.headersSent) {
         return res.status(500).json({
           error: "Erreur interne du serveur",

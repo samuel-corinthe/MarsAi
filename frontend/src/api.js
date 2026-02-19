@@ -54,7 +54,43 @@ function appendDeploymentPathCandidates(urls) {
   return extended;
 }
 
-async function fetchWith404Fallback(urls, options = {}, errorContext = "API") {
+function isObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasNonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isLikelyMoviePayload(payload) {
+  const candidate = isObject(payload?.movie) ? payload.movie : payload;
+  if (!isObject(candidate)) return false;
+
+  const hasId = Number.isFinite(Number(candidate.id));
+  const hasTitle = hasNonEmptyString(candidate.title);
+  const hasMovieFields = [
+    hasNonEmptyString(candidate.director),
+    hasNonEmptyString(candidate.submittedBy),
+    hasNonEmptyString(candidate.submitted_by),
+    hasNonEmptyString(candidate.country),
+    hasNonEmptyString(candidate.country_name_fr),
+    hasNonEmptyString(candidate.releaseDate),
+    hasNonEmptyString(candidate.release_date),
+    hasNonEmptyString(candidate.duration),
+    Number.isFinite(Number(candidate.duration)),
+    Number.isFinite(Number(candidate.countryId)),
+    Number.isFinite(Number(candidate.country_id)),
+  ].some(Boolean);
+
+  return hasId && hasTitle && hasMovieFields;
+}
+
+async function fetchWith404Fallback(
+  urls,
+  options = {},
+  errorContext = "API",
+  validatePayload = null,
+) {
   const withDeploymentPaths = appendDeploymentPathCandidates(urls);
   const candidates = appendLocalCandidates(withDeploymentPaths);
 
@@ -82,6 +118,9 @@ async function fetchWith404Fallback(urls, options = {}, errorContext = "API") {
       if (res.ok) {
         // Avoid treating HTML pages as valid API payloads.
         if (!isJson) {
+          continue;
+        }
+        if (typeof validatePayload === "function" && !validatePayload(payload)) {
           continue;
         }
         return { payload, status: res.status };
@@ -141,6 +180,7 @@ export async function getMovieById(movieId) {
     [`/api/movies/${movieId}`, `/api/movie/${movieId}`],
     { cache: "no-store" },
     "Movie details API",
+    isLikelyMoviePayload,
   );
 
   if (payload?.movie && typeof payload.movie === "object") return payload.movie;

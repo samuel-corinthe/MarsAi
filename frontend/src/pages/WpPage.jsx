@@ -9,6 +9,157 @@ import NotFound from "./NotFound";
 import LegalPage from "./LegalPage";
 import CallForProject from "./Appel a projet";
 
+const normalizeAgendaTagKey = (value = "") =>
+  String(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+const stripHtml = (html) =>
+  (html || "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const extractAgendaTerms = (embeddedTerms, agendaCategoryId) => {
+  const termGroups = Array.isArray(embeddedTerms) ? embeddedTerms : [];
+  const flattened = termGroups.flatMap((group) =>
+    Array.isArray(group) ? group : [],
+  );
+
+  const relevant = flattened.filter((term) => {
+    if (!term || typeof term !== "object") return false;
+    const taxonomy = String(term.taxonomy || "");
+    if (taxonomy === "category") return term.id !== agendaCategoryId;
+    if (taxonomy === "post_tag") return true;
+    if (taxonomy === "post_format") return false;
+    return Boolean(term.slug || term.name);
+  });
+
+  const uniqueByKey = new Map();
+  relevant.forEach((term) => {
+    const taxonomy = String(term.taxonomy || "term");
+    const key =
+      term.id != null
+        ? `${taxonomy}:${term.id}`
+        : `${taxonomy}:${String(term.slug || term.name || "").toLowerCase()}`;
+    if (!uniqueByKey.has(key)) uniqueByKey.set(key, term);
+  });
+
+  return Array.from(uniqueByKey.values());
+};
+
+const inferAgendaFallbackTerms = (post, existingTerms) => {
+  if (Array.isArray(existingTerms) && existingTerms.length > 0) {
+    return existingTerms;
+  }
+
+  const seed = [
+    post?.title?.rendered || "",
+    post?.excerpt?.rendered || "",
+    post?.content?.rendered || "",
+  ]
+    .map((part) => stripHtml(part))
+    .join(" ");
+
+  const normalized = normalizeAgendaTagKey(seed);
+  if (
+    normalized.includes("home_and_coffee_networking") ||
+    (normalized.includes("coffee") && normalized.includes("network"))
+  ) {
+    return [
+      {
+        id: `fallback-home-coffee-${post?.id || "x"}`,
+        slug: "home-and-coffee-networking",
+        name: "Home and coffee Networking",
+        taxonomy: "fallback_tag",
+      },
+    ];
+  }
+
+  if (normalized.includes("networking")) {
+    return [
+      {
+        id: `fallback-networking-${post?.id || "x"}`,
+        slug: "networking",
+        name: "Networking",
+        taxonomy: "fallback_tag",
+      },
+    ];
+  }
+
+  return [];
+};
+
+const buildTranslationSignature = (translations) => {
+  if (!translations || typeof translations !== "object") return "";
+  const ids = Object.values(translations)
+    .map((id) => Number(id))
+    .filter((id) => Number.isFinite(id))
+    .sort((a, b) => a - b);
+  return ids.length ? ids.join("-") : "";
+};
+
+const findMatchingAgendaArticle = (previousArticle, items, targetLanguage) => {
+  if (!previousArticle || !Array.isArray(items) || items.length === 0) return null;
+
+  const previousTranslations = previousArticle.translations;
+  if (
+    previousTranslations &&
+    typeof previousTranslations === "object" &&
+    previousTranslations[targetLanguage]
+  ) {
+    const targetId = Number(previousTranslations[targetLanguage]);
+    const matchByTranslatedId = items.find(
+      (item) => Number(item.id) === targetId,
+    );
+    if (matchByTranslatedId) return matchByTranslatedId;
+  }
+
+  if (previousArticle.translationSignature) {
+    const matchBySignature = items.find(
+      (item) =>
+        item.translationSignature &&
+        item.translationSignature === previousArticle.translationSignature,
+    );
+    if (matchBySignature) return matchBySignature;
+  }
+
+  if (previousArticle.slug) {
+    const matchBySlug = items.find((item) => item.slug === previousArticle.slug);
+    if (matchBySlug) return matchBySlug;
+  }
+
+  if (previousArticle.date && previousArticle.heure) {
+    const matchByDateHour = items.find(
+      (item) =>
+        item.date === previousArticle.date && item.heure === previousArticle.heure,
+    );
+    if (matchByDateHour) return matchByDateHour;
+  }
+
+  const previousTitleKey = normalizeAgendaTagKey(
+    stripHtml(previousArticle.titleText || previousArticle.titre || ""),
+  );
+  if (previousTitleKey) {
+    const matchByTitle = items.find(
+      (item) =>
+        normalizeAgendaTagKey(stripHtml(item.titleText || item.titre || "")) ===
+        previousTitleKey,
+    );
+    if (matchByTitle) return matchByTitle;
+  }
+
+  if (previousArticle.date) {
+    const matchByDate = items.find((item) => item.date === previousArticle.date);
+    if (matchByDate) return matchByDate;
+  }
+
+  return null;
+};
+
 export default function WpPage({ isHome = false, fixedSlug = null }) {
   const { slug: routeSlug } = useParams();
   const { t, i18n } = useTranslation();
@@ -89,26 +240,54 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     return colors[catId] || colors.default;
   };
 
-  const normalizeAgendaTagKey = (value = "") =>
-    String(value)
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "");
+  const agendaTagAliases = {
+    event: "event",
+    events: "events",
+    evenement: "event",
+    evenements: "events",
+    screening: "screening",
+    screenings: "screenings",
+    projection: "projection",
+    projections: "projections",
+    workshop: "workshop",
+    workshops: "workshops",
+    atelier: "workshop",
+    ateliers: "workshops",
+    masterclass: "masterclass",
+    masterclasses: "masterclasses",
+    conference: "conference",
+    conferences: "conferences",
+    panel: "panel",
+    panels: "panels",
+    table_ronde: "panel",
+    tables_rondes: "panels",
+    round_table: "panel",
+    round_tables: "panels",
+    networking: "networking",
+    reseautage: "networking",
+    social: "social",
+    socials: "socials",
+    social_event: "social",
+    social_events: "socials",
+    coffee_networking: "social",
+    home_and_coffee: "social",
+    home_and_coffee_networking: "social",
+    competition: "competition",
+    competitions: "competitions",
+    concours: "competition",
+  };
 
   const getAgendaTagLabel = (category) => {
     const fallback = String(category?.name || "").trim();
-    const key = normalizeAgendaTagKey(category?.slug || fallback);
-    if (!key) return fallback;
+    const rawKey = normalizeAgendaTagKey(category?.slug || fallback);
+    if (!rawKey) return fallback;
+    const derivedKey =
+      rawKey.includes("coffee") && rawKey.includes("network")
+        ? "social"
+        : rawKey;
+    const key = agendaTagAliases[derivedKey] || derivedKey;
     return t(`agenda.tags.${key}`, { defaultValue: fallback });
   };
-
-  const stripHtml = (html) =>
-    (html || "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
 
   const truncate = (text, max = 160) =>
     text.length > max ? `${text.slice(0, max).trim()}...` : text;
@@ -175,7 +354,11 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               if (allPosts && Array.isArray(allPosts)) {
                 const timeLocale = i18n.language === "fr" ? "fr-FR" : "en-GB";
                 const formattedEvents = allPosts.map((post) => {
-                  const categoriesData = post._embedded?.["wp:term"]?.[0] || [];
+                  const rawTermsData = extractAgendaTerms(
+                    post._embedded?.["wp:term"],
+                    agendaCategoryId,
+                  );
+                  const termsData = inferAgendaFallbackTerms(post, rawTermsData);
                   const dateOnly = post.date.split("T")[0];
                   const excerpt =
                     post.excerpt?.rendered || post.content?.rendered || "";
@@ -184,8 +367,18 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                     null;
                   return {
                     id: post.id,
+                    slug: String(post.slug || ""),
+                    translations:
+                      post?.translations && typeof post.translations === "object"
+                        ? post.translations
+                        : null,
+                    translationSignature: buildTranslationSignature(
+                      post?.translations,
+                    ),
+                    language: String(post.lang || i18n.language || ""),
                     date: dateOnly,
                     titre: post.title.rendered,
+                    titleText: stripHtml(post.title.rendered || ""),
                     contenu: post.content.rendered,
                     resume: truncate(stripHtml(excerpt), 180),
                     image: featured,
@@ -194,9 +387,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                       minute: "2-digit",
                     }),
                     lieu: t("agenda.place_default"),
-                    subCategories: categoriesData.filter(
-                      (cat) => cat.id !== agendaCategoryId,
-                    ),
+                    subCategories: termsData,
                   };
                 });
                 setAgendaItems(formattedEvents);
@@ -206,7 +397,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
             }
           }
         }
-      } catch (err) {
+      } catch {
         if (!cancelled) {
           setError(true);
           setPage(null);
@@ -218,7 +409,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     return () => {
       cancelled = true;
     };
-  }, [slug, i18n.language]);
+  }, [slug, i18n.language, t]);
 
   const dateOptions = useMemo(() => {
     const unique = Array.from(new Set(agendaItems.map((item) => item.date)));
@@ -285,6 +476,32 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   }, [canPaginateDates, datePage, datePageCount, dateOptions, selectedDate]);
 
   const activeEvents = agendaItems.filter((item) => item.date === selectedDate);
+
+  useEffect(() => {
+    if (!selectedArticle) return;
+    if (loading) return;
+    if (!agendaItems.length) {
+      setSelectedArticle(null);
+      return;
+    }
+
+    const mapped = findMatchingAgendaArticle(
+      selectedArticle,
+      agendaItems,
+      i18n.language,
+    );
+    if (!mapped) {
+      setSelectedArticle(null);
+      return;
+    }
+
+    if (
+      String(mapped.id) !== String(selectedArticle.id) ||
+      String(mapped.language || "") !== String(selectedArticle.language || "")
+    ) {
+      setSelectedArticle(mapped);
+    }
+  }, [agendaItems, i18n.language, loading, selectedArticle]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

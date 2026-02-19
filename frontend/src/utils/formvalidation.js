@@ -307,7 +307,7 @@ export const validateForm = (formData) => {
 
   
   const urlPattern = /^https?:\/\/.+/;
-  for (const key of ['socialWebsite', 'socialInstagram', 'socialX']) {
+  for (const key of ['socialWebsite', 'socialInstagram', 'socialFacebook', 'socialX']) {
     if (formData[key] && formData[key].trim()) {
       if (!urlPattern.test(formData[key].trim())) {
         errors[key] = "L\'URL est invalide (elle doit commencer par https://)";
@@ -317,6 +317,45 @@ export const validateForm = (formData) => {
     } else {
       cleanedData[key] = '';
     }
+  }
+
+  const castMembers = Array.isArray(formData.castMembers) ? formData.castMembers : [];
+  if (castMembers.length > 10) {
+    errors.castMembers = "Maximum 10 membres de casting.";
+  } else {
+    const cleanedCastMembers = [];
+    for (const member of castMembers) {
+      const name = sanitizeInput(member?.name || '');
+      const role = sanitizeInput(member?.role || '');
+      const avatarUrl = sanitizeInput(member?.avatarUrl || '');
+
+      if (!name && !role && !avatarUrl) {
+        continue;
+      }
+
+      if (!name) {
+        errors.castMembers = "Chaque membre du casting doit avoir un nom.";
+        break;
+      }
+
+      if (name.length > 120 || role.length > 120) {
+        errors.castMembers = "Nom/role de casting trop long (max 120 caracteres).";
+        break;
+      }
+
+      if (avatarUrl && !urlPattern.test(avatarUrl)) {
+        errors.castMembers = "URL avatar invalide dans le casting (https:// obligatoire).";
+        break;
+      }
+
+      cleanedCastMembers.push({
+        name,
+        role,
+        avatarUrl,
+      });
+    }
+
+    cleanedData.castMembers = cleanedCastMembers;
   }
 
   return {

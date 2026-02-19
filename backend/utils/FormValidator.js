@@ -286,7 +286,7 @@ export const validateFormData = (req, res, next) => {
 
  
   const socialLinks = {};
-  for (const key of ['socialWebsite', 'socialInstagram', 'socialX']) {
+  for (const key of ['socialWebsite', 'socialInstagram', 'socialFacebook', 'socialX']) {
     if (req.body?.[key] && req.body[key].trim()) {
       const url = req.body[key].trim();
       if (!validator.isURL(url, { require_protocol: true })) {

@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
+import MascotCameraPlayer from "../components/MascotCameraPlayer";
 import {
   deleteMyMovieRating,
   getCurrentSessionUser,
@@ -10,11 +11,75 @@ import {
   upsertMyMovieRating,
 } from "../api";
 
-function normalizeGenres(movie) {
-  if (!movie) return [];
-  if (Array.isArray(movie.genre)) return movie.genre;
-  if (typeof movie.genre === "string" && movie.genre.trim()) return [movie.genre.trim()];
-  return [];
+const SOCIAL_LINK_ORDER = [
+  { key: "instagram", label: "Instagram", icon: "📸" },
+  { key: "facebook", label: "Facebook", icon: "📘" },
+  { key: "x", label: "X", icon: "✖" },
+  { key: "website", label: "Website", icon: "🌐" },
+];
+const HERO_PREVIEW_SECONDS = 5;
+
+function toExternalUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://${raw}`;
+}
+
+function toFlagAssetPath(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (/^\/MarsAi\//i.test(raw)) return raw;
+
+  const withLeadingSlash = raw.startsWith("/") ? raw : `/${raw}`;
+  if (typeof window !== "undefined") {
+    const pathname = String(window.location?.pathname || "").toLowerCase();
+    if (pathname === "/marsai" || pathname.startsWith("/marsai/")) {
+      return `/MarsAi${withLeadingSlash}`;
+    }
+  }
+
+  return withLeadingSlash;
+}
+
+function toNonEmptyString(...values) {
+  for (const value of values) {
+    if (value == null) continue;
+    const normalized = String(value).trim();
+    if (normalized) return normalized;
+  }
+  return "";
+}
+
+function toDurationDisplay(value, fallbackLabel) {
+  if (value == null) return fallbackLabel;
+
+  if (typeof value === "string") {
+    const raw = value.trim();
+    if (!raw) return fallbackLabel;
+    if (/[a-zA-Z]/.test(raw)) return raw;
+    const numeric = Number(raw);
+    if (!Number.isFinite(numeric) || numeric <= 0) return fallbackLabel;
+    return `${Math.round(numeric)}min`;
+  }
+
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return fallbackLabel;
+  return `${Math.round(numeric)}min`;
+}
+
+function getSocialEntries(movie) {
+  const socialLinks = movie?.socialLinks;
+  if (!socialLinks || typeof socialLinks !== "object") return [];
+
+  return SOCIAL_LINK_ORDER
+    .map((entry) => {
+      const url = toExternalUrl(socialLinks[entry.key]);
+      if (!url) return null;
+      return { ...entry, url };
+    })
+    .filter(Boolean);
 }
 
 const MovieDetails = () => {
@@ -35,11 +100,49 @@ const MovieDetails = () => {
   const [tempComment, setTempComment] = useState("");
   const [ratingLoading, setRatingLoading] = useState(false);
   const [ratingError, setRatingError] = useState("");
+  const [isPlayerOpen, setIsPlayerOpen] = useState(false);
+  const heroVideoRef = useRef(null);
 
   const movieId = Number.parseInt(id, 10);
 
   const seoTitle = movie?.title || t("movie_details.not_found");
   const seoDescription = movie?.description || t("movie_details.back_to_gallery");
+
+  useEffect(() => {
+    setIsPlayerOpen(false);
+  }, [movieId]);
+
+  useEffect(() => {
+    const video = heroVideoRef.current;
+    if (!video || !movie?.videoUrl) return;
+
+    const handleLoadedMetadata = () => {
+      video.currentTime = 0;
+      const playPromise = video.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
+      }
+    };
+
+    const handleTimeUpdate = () => {
+      if (video.currentTime >= HERO_PREVIEW_SECONDS) {
+        video.currentTime = 0;
+      }
+    };
+
+    video.addEventListener("loadedmetadata", handleLoadedMetadata);
+    video.addEventListener("timeupdate", handleTimeUpdate);
+
+    if (video.readyState >= 1) {
+      handleLoadedMetadata();
+    }
+
+    return () => {
+      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      video.removeEventListener("timeupdate", handleTimeUpdate);
+      video.pause();
+    };
+  }, [movie?.videoUrl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -224,7 +327,29 @@ const MovieDetails = () => {
     );
   }
 
-  const movieGenres = normalizeGenres(movie);
+  const socialEntries = getSocialEntries(movie);
+  const fallbackNa = t("movie_details.na");
+  const directorName = toNonEmptyString(
+    movie.director,
+    movie.submittedBy,
+    movie.submitted_by,
+  ) || fallbackNa;
+  const countryName = toNonEmptyString(
+    movie.country,
+    movie.country_name_fr,
+    movie.country_name_eng,
+  ) || fallbackNa;
+  const countryAlpha2 = toNonEmptyString(
+    movie.countryAlpha2,
+    movie.country_alpha2,
+  ).toLowerCase();
+  const rawCountryFlagPath =
+    toNonEmptyString(movie.countryFlagPath, movie.country_flag_path) ||
+    (countryAlpha2 ? `/images/flags/${countryAlpha2}.png` : "");
+  const countryFlagPath = toFlagAssetPath(rawCountryFlagPath);
+  const releaseDateDisplay =
+    toNonEmptyString(movie.releaseDate, movie.release_date, movie.release_year) || fallbackNa;
+  const durationDisplay = toDurationDisplay(movie.duration, fallbackNa);
 
   return (
     <>
@@ -255,6 +380,18 @@ const MovieDetails = () => {
         </div>
 
         <section className="relative w-full pt-20 md:pt-32 pb-20 overflow-hidden bg-gradient-to-b from-blue-900 to-blue-950">
+          {movie.videoUrl && (
+            <video
+              ref={heroVideoRef}
+              className="absolute inset-0 h-full w-full object-cover"
+              src={movie.videoUrl}
+              muted
+              playsInline
+              preload="metadata"
+            />
+          )}
+          <div className="absolute inset-0 bg-blue-950/60" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-blue-800/60 via-blue-900/75 to-blue-950" />
           <div className="relative z-10 container mx-auto px-6">
             <div className="flex flex-col md:flex-row gap-10 md:gap-16 items-center md:items-start">
               <div className="w-64 h-70 md:w-80 shrink-0 shadow-2xl rounded-[40px] overflow-hidden border-4 border-white/10">
@@ -266,36 +403,32 @@ const MovieDetails = () => {
               </div>
 
               <div className="flex-1 text-center md:text-left">
-                <div className="flex justify-center md:justify-start gap-2 mb-6">
-                  {movieGenres.map((genre) => (
-                    <span
-                      key={genre}
-                      className="px-3 py-1 bg-cyan-500/20 border border-cyan-500/50 text-cyan-300 text-xs font-bold rounded-full uppercase tracking-wider"
-                    >
-                      {t(`genres.${genre.toLowerCase()}`, genre)}
-                    </span>
-                  ))}
-                </div>
                 <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-6 leading-none uppercase">
                   {movie.title}
                 </h1>
 
                 <div className="flex justify-center md:justify-start items-center gap-6 text-slate-300 font-medium mb-10 text-lg">
-                  <span className="flex items-center gap-2">
-                    <span className="text-yellow-400 text-2xl">&#9733;</span>
-                    {officialRating
-                      ? `${officialRating}/5`
-                      : t("movie_details.na")}
-                  </span>
+                  <span>{releaseDateDisplay}</span>
                   <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></span>
-                  <span>{movie.releaseDate}</span>
-                  <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></span>
-                  <span>{movie.duration}</span>
+                  <span>{durationDisplay}</span>
                 </div>
 
-                <button className="bg-cyan-500 hover:bg-cyan-400 text-blue-950 font-black px-12 py-5 rounded-2xl transition-all shadow-lg shadow-cyan-500/20 mx-auto md:mx-0 uppercase tracking-widest text-sm">
-                  {t("movie_details.watch_movie")}
-                </button>
+                {movie.videoUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsPlayerOpen(true)}
+                    className="inline-block bg-cyan-500 hover:bg-cyan-400 text-blue-950 font-black px-12 py-5 rounded-2xl transition-all shadow-lg shadow-cyan-500/20 mx-auto md:mx-0 uppercase tracking-widest text-sm"
+                  >
+                    {t("movie_details.watch_movie")}
+                  </button>
+                ) : (
+                  <button
+                    className="bg-slate-500 text-white font-black px-12 py-5 rounded-2xl transition-all mx-auto md:mx-0 uppercase tracking-widest text-sm cursor-not-allowed"
+                    disabled
+                  >
+                    {t("movie_details.watch_movie")}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -305,6 +438,14 @@ const MovieDetails = () => {
           <div className="container mx-auto px-6 md:px-20 pt-20">
             <div className="grid lg:grid-cols-3 gap-16">
               <div className="lg:col-span-2">
+                {movie.videoUrl && isPlayerOpen && (
+                  <MascotCameraPlayer
+                    src={movie.videoUrl}
+                    title={movie.title}
+                    onClose={() => setIsPlayerOpen(false)}
+                  />
+                )}
+
                 <div className="mb-12">
                   <h2 className="text-3xl font-black mb-6 flex items-center gap-3 uppercase tracking-tighter">
                     <span className="w-10 h-2 bg-blue-600 rounded-full"></span>{" "}
@@ -314,6 +455,41 @@ const MovieDetails = () => {
                     {movie.description || t("movie_details.na")}
                   </p>
                 </div>
+
+                {movie.bio && (
+                  <div className="mb-12">
+                    <h2 className="text-3xl font-black mb-6 flex items-center gap-3 uppercase tracking-tighter">
+                      <span className="w-10 h-2 bg-indigo-500 rounded-full"></span>{" "}
+                      {t("movie_details.creator_bio")}
+                    </h2>
+                    <p className="text-lg text-slate-600 leading-relaxed font-medium">
+                      {movie.bio}
+                    </p>
+                  </div>
+                )}
+
+                {socialEntries.length > 0 && (
+                  <div className="mb-12">
+                    <h2 className="text-3xl font-black mb-6 flex items-center gap-3 uppercase tracking-tighter">
+                      <span className="w-10 h-2 bg-blue-500 rounded-full"></span>{" "}
+                      {t("movie_details.social_links")}
+                    </h2>
+                    <div className="flex flex-wrap gap-3">
+                      {socialEntries.map((entry) => (
+                        <a
+                          key={entry.key}
+                          href={entry.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-blue-900 transition hover:bg-white hover:shadow-md"
+                        >
+                          <span>{entry.icon}</span>
+                          <span>{entry.label}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="mb-12">
                   <h2 className="text-3xl font-black mb-6 flex items-center gap-3 uppercase tracking-tighter">
@@ -408,25 +584,32 @@ const MovieDetails = () => {
                 </h3>
                 <div className="space-y-6">
                   <DetailRow
-                    label={t("movie_details.global_rating")}
-                    value={
-                      officialRating
-                        ? `${officialRating} / 5`
-                        : t("movie_details.na")
-                    }
-                    isStar
+                    label={t("movie_details.director")}
+                    value={directorName}
                   />
                   <DetailRow
-                    label={t("movie_details.director")}
-                    value={movie.director}
+                    label={t("movie_details.country")}
+                    value={(
+                      <span className="inline-flex items-center gap-2">
+                        {countryFlagPath && (
+                          <img
+                            src={countryFlagPath}
+                            alt={`Drapeau ${countryName}`}
+                            className="h-4 w-6 rounded-sm border border-slate-200 object-cover"
+                            loading="lazy"
+                          />
+                        )}
+                        <span>{countryName}</span>
+                      </span>
+                    )}
                   />
                   <DetailRow
                     label={t("movie_details.release_date")}
-                    value={movie.releaseDate}
+                    value={releaseDateDisplay}
                   />
                   <DetailRow
                     label={t("movie_details.duration")}
-                    value={movie.duration}
+                    value={durationDisplay}
                     last
                   />
                 </div>

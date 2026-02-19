@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { getVideoMetadata, validateVideoFrontend, VIDEO_CONSTRAINTS } from '../utils/videoValidation';
 import { validateForm, FORM_CONSTRAINTS, exceedsMaxLength } from '../utils/formvalidation';
+import { useTranslation } from 'react-i18next';
 import 'altcha';
 
 function normalizeBasePath(value = '') {
@@ -33,6 +34,24 @@ const YOUTUBE_STATUS_POLL_INTERVAL_MS = 15000;
 const YOUTUBE_STATUS_MAX_POLLS = 20;
 const ALTCHA_CHALLENGE_URL = buildApiPath('/api/altcha/challenge');
 const YOUTUBE_UPLOAD_URL = buildApiPath('/api/upload/youtube');
+const UPLOAD_COUNTRIES_URL = buildApiPath('/api/upload/countries');
+
+function buildFlagAssetPath(path) {
+    const raw = String(path || '').trim();
+    if (!raw) return '';
+    if (/^https?:\/\//i.test(raw)) return raw;
+    if (/^\/MarsAi\//i.test(raw)) return raw;
+
+    const normalizedPath = raw.startsWith('/') ? raw : `/${raw}`;
+    if (typeof window !== 'undefined') {
+        const pathname = String(window.location?.pathname || '').toLowerCase();
+        if (pathname === '/marsai' || pathname.startsWith('/marsai/')) {
+            return `/MarsAi${normalizedPath}`;
+        }
+    }
+
+    return normalizedPath;
+}
 
 function buildYoutubeStatusUrl(videoId) {
     return buildApiPath(`/api/upload/youtube/status/${videoId}`);
@@ -48,6 +67,7 @@ function isTerminalYoutubeStatus(status) {
 }
 
 export default function YoutubeUpload() {
+    const { t } = useTranslation();
     const [file, setFile] = useState(null);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -65,12 +85,16 @@ export default function YoutubeUpload() {
     const [honeypotToken, setHoneypotToken] = useState('');
     const [honeypotValue, setHoneypotValue] = useState('');
     const [countryAlpha2, setCountryAlpha2] = useState('');
+    const [countries, setCountries] = useState([]);
+    const [countriesLoading, setCountriesLoading] = useState(false);
     const [language, setLanguage] = useState('');
     const [aiTools, setAiTools] = useState('');
     const [bio, setBio] = useState('');
     const [socialWebsite, setSocialWebsite] = useState('');
     const [socialInstagram, setSocialInstagram] = useState('');
+    const [socialFacebook, setSocialFacebook] = useState('');
     const [socialX, setSocialX] = useState('');
+    const [castMembers, setCastMembers] = useState([{ name: '', role: '', avatarUrl: '' }]);
     const [subtitleFile, setSubtitleFile] = useState(null);
     const [posterFile, setPosterFile] = useState(null);
     const [posterPreview, setPosterPreview] = useState(null);
@@ -103,6 +127,51 @@ export default function YoutubeUpload() {
     }, []);
 
     useEffect(() => {
+        let cancelled = false;
+
+        const loadCountries = async () => {
+            setCountriesLoading(true);
+            try {
+                const response = await axios.get(UPLOAD_COUNTRIES_URL);
+                if (cancelled) return;
+                const rows = Array.isArray(response?.data?.countries)
+                    ? response.data.countries
+                    : [];
+
+                const normalized = rows
+                    .map((row) => {
+                        const alpha2 = String(row?.alpha2 || '').trim().toUpperCase();
+                        if (!alpha2) return null;
+                        return {
+                            alpha2,
+                            nameFr: String(row?.nameFr || row?.name_fr || '').trim(),
+                            nameEn: String(row?.nameEn || row?.name_eng || '').trim(),
+                            flagPath: buildFlagAssetPath(row?.flagPath || row?.flag_path || ''),
+                        };
+                    })
+                    .filter(Boolean);
+
+                setCountries(normalized);
+            } catch (error) {
+                if (!cancelled) {
+                    console.error('[UPLOAD] Impossible de charger la liste des pays:', error);
+                    setCountries([]);
+                }
+            } finally {
+                if (!cancelled) {
+                    setCountriesLoading(false);
+                }
+            }
+        };
+
+        loadCountries();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
         return () => {
             if (youtubeStatusPollRef.current) {
                 clearInterval(youtubeStatusPollRef.current);
@@ -131,7 +200,10 @@ export default function YoutubeUpload() {
             setYoutubeStatus(statusData);
             return statusData;
         } catch (error) {
-            const details = error?.response?.data?.error || error?.message || 'Impossible de recuperer le statut YouTube.';
+            const details =
+                error?.response?.data?.error ||
+                error?.message ||
+                t('upload.youtube_status.fetch_failed');
             setYoutubeStatusError(details);
             return null;
         } finally {
@@ -169,7 +241,7 @@ export default function YoutubeUpload() {
 
         
         if (selectedFile.type !== 'video/mp4') {
-            const error = "Seul le format MP4 est accepté.";
+            const error = t('upload.errors.format_mp4');
             setStatus({ type: 'error', message: error });
             setErrors(prev => ({ ...prev, file: error }));
             setFile(null);
@@ -179,7 +251,7 @@ export default function YoutubeUpload() {
        
         const maxSize = VIDEO_CONSTRAINTS.FILE.MAX_SIZE;
         if (selectedFile.size > maxSize) {
-            const error = `Le fichier est trop lourd (max ${maxSize / (1024 * 1024)}Mo).`;
+            const error = t('upload.errors.file_size', { size: maxSize / (1024 * 1024) });
             setStatus({ type: 'error', message: error });
             setErrors(prev => ({ ...prev, file: error }));
             setFile(null);
@@ -196,7 +268,7 @@ export default function YoutubeUpload() {
 
             if (!validation.isValid) {
                 setFile(null);
-                const errorMessage = `Vidéo non conforme : ${validation.errors.join(' ')}`;
+                const errorMessage = `${t('upload.errors.not_compliant')}: ${validation.errors.join(' ')}`;
                 setStatus({
                     type: 'error',
                     message: errorMessage
@@ -206,7 +278,7 @@ export default function YoutubeUpload() {
             }
 
             setFile(selectedFile);
-            setStatus({ type: 'success', message: "Vidéo validée ! Prête pour l'envoi." });
+            setStatus({ type: 'success', message: t('upload.status.video_validated') });
 
 
             setTimeout(() => {
@@ -216,7 +288,7 @@ export default function YoutubeUpload() {
         } catch (err) {
             console.error(err);
             setFile(null);
-            const errorMessage = typeof err === 'string' ? err : "Erreur lors de l'analyse du fichier.";
+            const errorMessage = typeof err === 'string' ? err : t('upload.errors.analysis_failed');
             setStatus({ type: 'error', message: errorMessage });
             setErrors(prev => ({ ...prev, file: errorMessage }));
         } finally {
@@ -245,24 +317,26 @@ export default function YoutubeUpload() {
             bio,
             socialWebsite,
             socialInstagram,
-            socialX
+            socialFacebook,
+            socialX,
+            castMembers
         });
 
         if (!validation.isValid) {
             setErrors(validation.errors);
-            setStatus({ type: 'error', message: 'Veuillez corriger les erreurs dans le formulaire' });
+            setStatus({ type: 'error', message: t('upload.errors.form_invalid') });
             return;
         }
 
         if (!file) {
-            setErrors({ file: "Veuillez sélectionner une vidéo" });
-            setStatus({ type: 'error', message: 'Veuillez sélectionner une vidéo' });
+            setErrors({ file: t('upload.errors.select_video') });
+            setStatus({ type: 'error', message: t('upload.errors.select_video') });
             return;
         }
 
         if (!altchaPayload) {
-            setErrors({ altcha: "Veuillez compléter la vérification anti-robot" });
-            setStatus({ type: 'error', message: 'Veuillez compléter la vérification anti-robot' });
+            setErrors({ altcha: t('upload.errors.altcha_missing') });
+            setStatus({ type: 'error', message: t('upload.errors.altcha_missing') });
             return;
         }
 
@@ -281,7 +355,11 @@ export default function YoutubeUpload() {
         if (validation.cleanedData.bio) formData.append('bio', validation.cleanedData.bio);
         if (validation.cleanedData.socialWebsite) formData.append('socialWebsite', validation.cleanedData.socialWebsite);
         if (validation.cleanedData.socialInstagram) formData.append('socialInstagram', validation.cleanedData.socialInstagram);
+        if (validation.cleanedData.socialFacebook) formData.append('socialFacebook', validation.cleanedData.socialFacebook);
         if (validation.cleanedData.socialX) formData.append('socialX', validation.cleanedData.socialX);
+        if (Array.isArray(validation.cleanedData.castMembers) && validation.cleanedData.castMembers.length > 0) {
+            formData.append('cast', JSON.stringify(validation.cleanedData.castMembers));
+        }
         if (subtitleFile) formData.append('subtitle', subtitleFile);
         if (posterFile) formData.append('poster', posterFile);
         formData.append('altcha', altchaPayload);
@@ -303,6 +381,8 @@ export default function YoutubeUpload() {
             });
 
             const responsePayload = res?.data || {};
+            const confirmationEmailSent = responsePayload?.confirmationEmailSent !== false;
+            const confirmationEmailError = String(responsePayload?.confirmationEmailError || '').trim();
             const uploadedVideoId = String(responsePayload.videoId || '').trim();
             if (uploadedVideoId) {
                 setYoutubeVideoId(uploadedVideoId);
@@ -311,12 +391,16 @@ export default function YoutubeUpload() {
                 startYoutubeStatusPolling(uploadedVideoId);
                 setStatus({
                     type: 'success',
-                    message: 'Votre video a ete mise en ligne. Verification YouTube en cours.'
+                    message: confirmationEmailSent
+                        ? t('upload.status.video_uploaded_checking')
+                        : `${t('upload.status.video_uploaded_email_failed')}${confirmationEmailError ? ` (${confirmationEmailError})` : ''}`
                 });
             } else {
                 setStatus({
                     type: 'success',
-                    message: 'Votre video a ete mise en ligne avec succes !'
+                    message: confirmationEmailSent
+                        ? t('upload.status.upload_success')
+                        : `${t('upload.status.video_uploaded_email_failed')}${confirmationEmailError ? ` (${confirmationEmailError})` : ''}`
                 });
             }
 
@@ -333,7 +417,9 @@ export default function YoutubeUpload() {
             setBio('');
             setSocialWebsite('');
             setSocialInstagram('');
+            setSocialFacebook('');
             setSocialX('');
+            setCastMembers([{ name: '', role: '', avatarUrl: '' }]);
             setSubtitleFile(null);
             setPosterFile(null);
             setPosterPreview(null);
@@ -348,7 +434,7 @@ export default function YoutubeUpload() {
             console.error(err);
             setStatus({
                 type: 'error',
-                message: err.response?.data?.error || "Une erreur est survenue lors de l'upload."
+                message: err.response?.data?.error || t('upload.errors.upload_failed')
             });
         } finally {
             setUploading(false);
@@ -360,12 +446,50 @@ export default function YoutubeUpload() {
         setErrors(prev => ({ ...prev, [field]: '' }));
     };
 
+    const updateCastMember = (index, field, value) => {
+        setCastMembers((prev) => prev.map((member, i) => (
+            i === index ? { ...member, [field]: value } : member
+        )));
+        clearError('castMembers');
+    };
+
+    const addCastMember = () => {
+        setCastMembers((prev) => {
+            if (prev.length >= 10) return prev;
+            return [...prev, { name: '', role: '', avatarUrl: '' }];
+        });
+        clearError('castMembers');
+    };
+
+    const removeCastMember = (index) => {
+        setCastMembers((prev) => {
+            if (prev.length <= 1) return [{ name: '', role: '', avatarUrl: '' }];
+            return prev.filter((_, i) => i !== index);
+        });
+        clearError('castMembers');
+    };
+
+    const selectedCountryCode = String(countryAlpha2 || '').trim().toUpperCase();
+    const selectedCountry = countries.find((country) => country.alpha2 === selectedCountryCode) || null;
+    const selectedCountryName = selectedCountry
+        ? (selectedCountry.nameFr || selectedCountry.nameEn || selectedCountry.alpha2)
+        : '';
+    const requiredLabel = t('upload.form.required');
+    const optionalLabel = t('upload.form.optional');
+    const altchaStrings = JSON.stringify({
+        label: t('altcha.label'),
+        verifying: t('altcha.verifying'),
+        verified: t('altcha.verified'),
+        error: t('altcha.error'),
+        expired: t('altcha.expired')
+    });
+
     return (
         <div className="section app-container py-12">
             <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
                 <div className="bg-slate-900 p-8 text-white">
-                    <h1 className="text-3xl font-bold">Concours MarsAI 2026</h1>
-                    <p className="text-slate-400 mt-2">Partagez votre vision d'un futur souhaitable.</p>
+                    <h1 className="text-3xl font-bold">{t('upload.page_title')}</h1>
+                    <p className="text-slate-400 mt-2">{t('upload.page_subtitle')}</p>
                 </div>
 
                 <form onSubmit={handleUpload} className="p-8 space-y-6" noValidate>
@@ -376,7 +500,7 @@ export default function YoutubeUpload() {
                                 htmlFor="email-input"
                                 className="block text-sm font-semibold text-slate-700"
                             >
-                                Votre Email <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                                {t('upload.form.email_label')} <abbr title={requiredLabel} className="text-red-600 no-underline">*</abbr>
                             </label>
                             <span className={`text-xs ${email.length > FORM_CONSTRAINTS.EMAIL.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
                                 {email.length}/{FORM_CONSTRAINTS.EMAIL.MAX_LENGTH}
@@ -385,7 +509,7 @@ export default function YoutubeUpload() {
                         <input
                             id="email-input"
                             type="email"
-                            placeholder="votre@email.com"
+                            placeholder={t('upload.form.email_placeholder')}
                             maxLength={FORM_CONSTRAINTS.EMAIL.MAX_LENGTH}
                             className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.email ? 'border-red-500 bg-red-50' : 'border-slate-200'
                                 }`}
@@ -407,7 +531,7 @@ export default function YoutubeUpload() {
                             </p>
                         )}
                         <span id="email-hint" className="text-xs text-slate-500 block">
-                            Nous vous contacterons à cette adresse
+                            {t('upload.form.email_hint')}
                         </span>
                     </div>
 
@@ -419,7 +543,7 @@ export default function YoutubeUpload() {
                                     htmlFor="firstname-input"
                                     className="block text-sm font-semibold text-slate-700"
                                 >
-                                    Votre Prénom <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                                    {t('upload.form.first_name_label')} <abbr title={requiredLabel} className="text-red-600 no-underline">*</abbr>
                                 </label>
                                 <span className={`text-xs ${firstName.length > FORM_CONSTRAINTS.FIRST_NAME.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
                                     {firstName.length}/{FORM_CONSTRAINTS.FIRST_NAME.MAX_LENGTH}
@@ -428,7 +552,7 @@ export default function YoutubeUpload() {
                             <input
                                 id="firstname-input"
                                 type="text"
-                                placeholder="Votre prénom"
+                                placeholder={t('upload.form.first_name_placeholder')}
                                 maxLength={FORM_CONSTRAINTS.FIRST_NAME.MAX_LENGTH}
                                 className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.firstName ? 'border-red-500 bg-red-50' : 'border-slate-200'
                                     }`}
@@ -458,7 +582,7 @@ export default function YoutubeUpload() {
                                     htmlFor="lastname-input"
                                     className="block text-sm font-semibold text-slate-700"
                                 >
-                                    Votre Nom <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                                    {t('upload.form.last_name_label')} <abbr title={requiredLabel} className="text-red-600 no-underline">*</abbr>
                                 </label>
                                 <span className={`text-xs ${lastName.length > FORM_CONSTRAINTS.LAST_NAME.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
                                     {lastName.length}/{FORM_CONSTRAINTS.LAST_NAME.MAX_LENGTH}
@@ -467,7 +591,7 @@ export default function YoutubeUpload() {
                             <input
                                 id="lastname-input"
                                 type="text"
-                                placeholder="Votre nom"
+                                placeholder={t('upload.form.last_name_placeholder')}
                                 maxLength={FORM_CONSTRAINTS.LAST_NAME.MAX_LENGTH}
                                 className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.lastName ? 'border-red-500 bg-red-50' : 'border-slate-200'
                                     }`}
@@ -498,13 +622,13 @@ export default function YoutubeUpload() {
                                 htmlFor="age-input"
                                 className="block text-sm font-semibold text-slate-700"
                             >
-                                Votre Âge <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                                {t('upload.form.age_label')} <abbr title={requiredLabel} className="text-red-600 no-underline">*</abbr>
                             </label>
                         </div>
                         <input
                             id="age-input"
                             type="number"
-                            placeholder="Votre âge"
+                            placeholder={t('upload.form.age_placeholder')}
                             min="18"
                             className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.age ? 'border-red-500 bg-red-50' : 'border-slate-200'
                                 }`}
@@ -524,7 +648,7 @@ export default function YoutubeUpload() {
                             </p>
                         )}
                         <span id="age-hint" className="text-xs text-slate-500 block">
-                            Vous devez avoir au moins 18 ans pour participer
+                            {t('upload.form.age_hint')}
                         </span>
                     </div>
 
@@ -535,7 +659,7 @@ export default function YoutubeUpload() {
                                 htmlFor="title-input"
                                 className="block text-sm font-semibold text-slate-700"
                             >
-                                Titre de votre film <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                                {t('upload.form.movie_title_label')} <abbr title={requiredLabel} className="text-red-600 no-underline">*</abbr>
                             </label>
                             <span className={`text-xs ${title.length > FORM_CONSTRAINTS.TITLE.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
                                 {title.length}/{FORM_CONSTRAINTS.TITLE.MAX_LENGTH}
@@ -544,7 +668,7 @@ export default function YoutubeUpload() {
                         <input
                             id="title-input"
                             type="text"
-                            placeholder="Ex: Ma vie sur Mars"
+                            placeholder={t('upload.form.movie_title_placeholder')}
                             maxLength={FORM_CONSTRAINTS.TITLE.MAX_LENGTH}
                             className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.title ? 'border-red-500 bg-red-50' : 'border-slate-200'
                                 }`}
@@ -566,7 +690,7 @@ export default function YoutubeUpload() {
                             </p>
                         )}
                         <span id="title-hint" className="text-xs text-slate-500 block">
-                            Le titre qui apparaîtra sur YouTube et le site du concours
+                            {t('upload.form.movie_title_hint')}
                         </span>
                     </div>
 
@@ -577,7 +701,7 @@ export default function YoutubeUpload() {
                                 htmlFor="description-input"
                                 className="block text-sm font-semibold text-slate-700"
                             >
-                                Description <span className="text-slate-500 font-normal">(optionnel)</span>
+                                {t('upload.form.description_label')} <span className="text-slate-500 font-normal">({optionalLabel})</span>
                             </label>
                             <span className={`text-xs ${description.length > FORM_CONSTRAINTS.DESCRIPTION.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
                                 {description.length}/{FORM_CONSTRAINTS.DESCRIPTION.MAX_LENGTH}
@@ -585,7 +709,7 @@ export default function YoutubeUpload() {
                         </div>
                         <textarea
                             id="description-input"
-                            placeholder="Expliquez brièvement votre projet..."
+                            placeholder={t('upload.form.description_placeholder')}
                             maxLength={FORM_CONSTRAINTS.DESCRIPTION.MAX_LENGTH}
                             className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all h-32 resize-y ${errors.description ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
                             value={description}
@@ -604,14 +728,14 @@ export default function YoutubeUpload() {
                             </p>
                         )}
                         <span id="description-hint" className="text-xs text-slate-500 block">
-                            Cette description accompagnera votre vidéo sur YouTube
+                            {t('upload.form.description_hint')}
                         </span>
                     </div>
                     {/* Code pays */}
                     <div className="space-y-2">
                         <div className="flex justify-between items-center">
                             <label htmlFor="country-input" className="block text-sm font-semibold text-slate-700">
-                                Code pays (alpha-2) <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                                {t('upload.form.country_label')} <abbr title={requiredLabel} className="text-red-600 no-underline">*</abbr>
                             </label>
                             <span className={`text-xs ${countryAlpha2.length > FORM_CONSTRAINTS.COUNTRY_ALPHA2.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
                                 {countryAlpha2.length}/{FORM_CONSTRAINTS.COUNTRY_ALPHA2.MAX_LENGTH}
@@ -620,7 +744,8 @@ export default function YoutubeUpload() {
                         <input
                             id="country-input"
                             type="text"
-                            placeholder="Ex: FR, US, MA"
+                            placeholder={t('upload.form.country_placeholder')}
+                            list="upload-country-options"
                             maxLength={FORM_CONSTRAINTS.COUNTRY_ALPHA2.MAX_LENGTH}
                             className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all uppercase ${errors.countryAlpha2 ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
                             value={countryAlpha2}
@@ -633,19 +758,46 @@ export default function YoutubeUpload() {
                             aria-invalid={!!errors.countryAlpha2}
                             aria-describedby={errors.countryAlpha2 ? "country-error" : "country-hint"}
                         />
+                        <datalist id="upload-country-options">
+                            {countries.map((country) => (
+                                <option
+                                    key={country.alpha2}
+                                    value={country.alpha2}
+                                    label={`${country.alpha2} - ${country.nameFr || country.nameEn || country.alpha2}`}
+                                />
+                            ))}
+                        </datalist>
                         {errors.countryAlpha2 && (
                             <p id="country-error" className="text-red-600 text-sm mt-1" role="alert">{errors.countryAlpha2}</p>
                         )}
                         <span id="country-hint" className="text-xs text-slate-500 block">
-                            Code ISO 3166-1 alpha-2 de votre pays (2 lettres)
+                            {t('upload.form.country_hint')}
                         </span>
+                        {countriesLoading && (
+                            <p className="text-xs text-slate-400">{t('upload.form.country_loading')}</p>
+                        )}
+                        {!countriesLoading && selectedCountry && (
+                            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                                {selectedCountry.flagPath && (
+                                    <img
+                                        src={selectedCountry.flagPath}
+                                        alt={`${t('upload.form.flag_alt')} ${selectedCountryName}`}
+                                        className="h-4 w-6 rounded-sm border border-slate-200 object-cover"
+                                        loading="lazy"
+                                    />
+                                )}
+                                <span className="text-xs font-semibold text-slate-600">
+                                    {selectedCountryName} ({selectedCountry.alpha2})
+                                </span>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Langue du film */}
+                    {/* {t('upload.form.language_label')} */}
                     <div className="space-y-2">
                         <div className="flex justify-between items-center">
                             <label htmlFor="language-input" className="block text-sm font-semibold text-slate-700">
-                                Langue du film <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                                {t('upload.form.language_label')} <abbr title={requiredLabel} className="text-red-600 no-underline">*</abbr>
                             </label>
                             <span className={`text-xs ${language.length > FORM_CONSTRAINTS.LANGUAGE.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
                                 {language.length}/{FORM_CONSTRAINTS.LANGUAGE.MAX_LENGTH}
@@ -654,7 +806,7 @@ export default function YoutubeUpload() {
                         <input
                             id="language-input"
                             type="text"
-                            placeholder="Ex: Français"
+                            placeholder={t('upload.form.language_placeholder')}
                             maxLength={FORM_CONSTRAINTS.LANGUAGE.MAX_LENGTH}
                             className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.language ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
                             value={language}
@@ -678,7 +830,7 @@ export default function YoutubeUpload() {
                     <div className="space-y-2">
                         <div className="flex justify-between items-center">
                             <label htmlFor="aitools-input" className="block text-sm font-semibold text-slate-700">
-                                Outils IA utilisés <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                                {t('upload.form.ai_tools_label')} <abbr title={requiredLabel} className="text-red-600 no-underline">*</abbr>
                             </label>
                             <span className={`text-xs ${aiTools.length > FORM_CONSTRAINTS.AI_TOOLS.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
                                 {aiTools.length}/{FORM_CONSTRAINTS.AI_TOOLS.MAX_LENGTH}
@@ -687,7 +839,7 @@ export default function YoutubeUpload() {
                         <input
                             id="aitools-input"
                             type="text"
-                            placeholder="Ex: Runway, DALL·E, Suno"
+                            placeholder={t('upload.form.ai_tools_placeholder')}
                             maxLength={FORM_CONSTRAINTS.AI_TOOLS.MAX_LENGTH}
                             className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.aiTools ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
                             value={aiTools}
@@ -706,7 +858,7 @@ export default function YoutubeUpload() {
                             <p id="aitools-error" className="text-red-600 text-sm mt-1" role="alert">{errors.aiTools}</p>
                         )}
                         <span id="aitools-hint" className="text-xs text-slate-500 block">
-                            Séparez les outils par des virgules (5 maximum)
+                            {t('upload.form.ai_tools_hint')}
                         </span>
                     </div>
 
@@ -714,7 +866,7 @@ export default function YoutubeUpload() {
                     <div className="space-y-2">
                         <div className="flex justify-between items-center">
                             <label htmlFor="bio-input" className="block text-sm font-semibold text-slate-700">
-                                Bio du réalisateur <span className="text-slate-500 font-normal">(optionnel)</span>
+                                {t('upload.form.bio_label')} <span className="text-slate-500 font-normal">({optionalLabel})</span>
                             </label>
                             <span className={`text-xs ${bio.length > FORM_CONSTRAINTS.BIO.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
                                 {bio.length}/{FORM_CONSTRAINTS.BIO.MAX_LENGTH}
@@ -722,7 +874,7 @@ export default function YoutubeUpload() {
                         </div>
                         <textarea
                             id="bio-input"
-                            placeholder="Quelques mots sur vous..."
+                            placeholder={t('upload.form.bio_placeholder')}
                             maxLength={FORM_CONSTRAINTS.BIO.MAX_LENGTH}
                             className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all h-24 resize-y ${errors.bio ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
                             value={bio}
@@ -740,12 +892,12 @@ export default function YoutubeUpload() {
                         )}
                     </div>
 
-                    {/* Réseaux sociaux */}
+                    {/* {t('upload.form.social_links_label')} */}
                     <div className="space-y-4">
-                        <p className="text-sm font-semibold text-slate-700">Réseaux sociaux <span className="text-slate-500 font-normal">(optionnel)</span></p>
+                        <p className="text-sm font-semibold text-slate-700">{t('upload.form.social_links_label')} <span className="text-slate-500 font-normal">({optionalLabel})</span></p>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="space-y-1">
-                                <label htmlFor="social-website" className="text-xs text-slate-600">Site web</label>
+                                <label htmlFor="social-website" className="text-xs text-slate-600">{t('upload.form.website_label')}</label>
                                 <input
                                     id="social-website"
                                     type="url"
@@ -757,7 +909,7 @@ export default function YoutubeUpload() {
                                 {errors.socialWebsite && <p className="text-red-600 text-xs" role="alert">{errors.socialWebsite}</p>}
                             </div>
                             <div className="space-y-1">
-                                <label htmlFor="social-instagram" className="text-xs text-slate-600">Instagram</label>
+                                <label htmlFor="social-instagram" className="text-xs text-slate-600">{t('upload.form.instagram_label')}</label>
                                 <input
                                     id="social-instagram"
                                     type="url"
@@ -769,7 +921,19 @@ export default function YoutubeUpload() {
                                 {errors.socialInstagram && <p className="text-red-600 text-xs" role="alert">{errors.socialInstagram}</p>}
                             </div>
                             <div className="space-y-1">
-                                <label htmlFor="social-x" className="text-xs text-slate-600">X (Twitter)</label>
+                                <label htmlFor="social-facebook" className="text-xs text-slate-600">{t('upload.form.facebook_label')}</label>
+                                <input
+                                    id="social-facebook"
+                                    type="url"
+                                    placeholder="https://facebook.com/..."
+                                    className={`w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none ${errors.socialFacebook ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
+                                    value={socialFacebook}
+                                    onChange={(e) => { setSocialFacebook(e.target.value); clearError('socialFacebook'); }}
+                                />
+                                {errors.socialFacebook && <p className="text-red-600 text-xs" role="alert">{errors.socialFacebook}</p>}
+                            </div>
+                            <div className="space-y-1">
+                                <label htmlFor="social-x" className="text-xs text-slate-600">{t('upload.form.x_label')}</label>
                                 <input
                                     id="social-x"
                                     type="url"
@@ -783,10 +947,78 @@ export default function YoutubeUpload() {
                         </div>
                     </div>
 
-                    {/* Image poster */}
+                    {/* {t('upload.form.casting_label')} */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <p className="text-sm font-semibold text-slate-700">
+                                {t('upload.form.casting_label')} <span className="text-slate-500 font-normal">({optionalLabel})</span>
+                            </p>
+                            <button
+                                type="button"
+                                onClick={addCastMember}
+                                className="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                            >
+                                + {t('upload.form.add_cast_member')}
+                            </button>
+                        </div>
+
+                        <div className="space-y-3">
+                            {castMembers.map((member, index) => (
+                                <div key={`cast-${index}`} className="rounded-lg border border-slate-200 p-3 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                                            {t('upload.form.cast_member')} #{index + 1}
+                                        </p>
+                                        {castMembers.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => removeCastMember(index)}
+                                                className="text-xs text-red-600 hover:text-red-700"
+                                            >
+                                                {t('upload.form.remove_cast_member')}
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder={t('upload.form.cast_name_placeholder')}
+                                            className="w-full border border-slate-200 p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                            value={member.name}
+                                            onChange={(e) => updateCastMember(index, 'name', e.target.value)}
+                                        />
+                                        <input
+                                            type="text"
+                                            placeholder={t('upload.form.cast_role_placeholder')}
+                                            className="w-full border border-slate-200 p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                            value={member.role}
+                                            onChange={(e) => updateCastMember(index, 'role', e.target.value)}
+                                        />
+                                        <input
+                                            type="url"
+                                            placeholder={t('upload.form.cast_avatar_placeholder')}
+                                            className="w-full border border-slate-200 p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                            value={member.avatarUrl}
+                                            onChange={(e) => updateCastMember(index, 'avatarUrl', e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {errors.castMembers && (
+                            <p className="text-red-600 text-sm" role="alert">{errors.castMembers}</p>
+                        )}
+                        <span className="text-xs text-slate-500 block">
+                            {t('upload.form.casting_hint')}
+                        </span>
+                    </div>
+
+                    {/* {t('upload.form.poster_label')} */}
                     <div className="space-y-2">
                         <label className="block text-sm font-semibold text-slate-700">
-                            Image poster <span className="text-slate-500 font-normal">(optionnel)</span>
+                            {t('upload.form.poster_label')} <span className="text-slate-500 font-normal">({optionalLabel})</span>
                         </label>
                         <input
                             type="file"
@@ -796,13 +1028,13 @@ export default function YoutubeUpload() {
                                 if (selected) {
                                     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
                                     if (!allowedTypes.includes(selected.type)) {
-                                        setErrors(prev => ({ ...prev, poster: 'Formats acceptés : JPG, PNG ou WebP' }));
+                                        setErrors(prev => ({ ...prev, poster: t('upload.errors.poster_format') }));
                                         setPosterFile(null);
                                         setPosterPreview(null);
                                         return;
                                     }
                                     if (selected.size > 5 * 1024 * 1024) {
-                                        setErrors(prev => ({ ...prev, poster: 'L\'image  est trop lourde (max 5 Mo)' }));
+                                        setErrors(prev => ({ ...prev, poster: t('upload.errors.poster_too_large') }));
                                         setPosterFile(null);
                                         setPosterPreview(null);
                                         return;
@@ -817,7 +1049,7 @@ export default function YoutubeUpload() {
                         {posterPreview && (
                             <img
                                 src={posterPreview}
-                                alt="Aperçu du poster"
+                                alt={t('upload.form.poster_preview_alt')}
                                 className="mt-2 max-h-48 rounded-lg border border-slate-200"
                             />
                         )}
@@ -825,14 +1057,14 @@ export default function YoutubeUpload() {
                             <p className="text-red-600 text-sm mt-1" role="alert">{errors.poster}</p>
                         )}
                         <span className="text-xs text-slate-500 block">
-                            JPG, PNG ou WebP, max 5 Mo. Cette image sera utilisée comme affiche de votre film.
+                            {t('upload.form.poster_hint')}
                         </span>
                     </div>
 
                     {/* Fichier sous-titres SRT */}
                     <div className="space-y-2">
                         <label className="block text-sm font-semibold text-slate-700">
-                            Sous-titres (fichier .srt) <span className="text-slate-500 font-normal">(optionnel)</span>
+                            {t('upload.form.subtitle_label')} <span className="text-slate-500 font-normal">({optionalLabel})</span>
                         </label>
                         <input
                             type="file"
@@ -841,12 +1073,12 @@ export default function YoutubeUpload() {
                                 const selected = e.target.files[0];
                                 if (selected) {
                                     if (!selected.name.toLowerCase().endsWith('.srt')) {
-                                        setErrors(prev => ({ ...prev, subtitle: 'Seul le format .srt est accepté' }));
+                                        setErrors(prev => ({ ...prev, subtitle: t('upload.errors.subtitle_format') }));
                                         setSubtitleFile(null);
                                         return;
                                     }
                                     if (selected.size > 1024 * 1024) {
-                                        setErrors(prev => ({ ...prev, subtitle: 'Fichier SRT trop lourd (max 1 Mo)' }));
+                                        setErrors(prev => ({ ...prev, subtitle: t('upload.errors.subtitle_too_large') }));
                                         setSubtitleFile(null);
                                         return;
                                     }
@@ -877,7 +1109,7 @@ export default function YoutubeUpload() {
                             aria-hidden="true"
                         >
                             <label htmlFor={honeypotFieldName}>
-                                Website (ne pas remplir si vous êtes humain)
+                                {t('upload.form.honeypot_label')}
                             </label>
                             <input
                                 id={honeypotFieldName}
@@ -896,7 +1128,7 @@ export default function YoutubeUpload() {
                     {/* Fichier vidéo */}
                     <div className="space-y-2">
                         <label className="block text-sm font-semibold text-slate-700">
-                            Fichier vidéo (MP4 uniquement) <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                            {t('upload.form.video_label')} <abbr title={requiredLabel} className="text-red-600 no-underline">*</abbr>
                         </label>
                         <div className={`border-2 border-dashed rounded-lg p-8 transition-colors ${errors.file ? 'border-red-500 bg-red-50' : 'border-slate-200 hover:border-blue-400'
                             }`}>
@@ -909,7 +1141,7 @@ export default function YoutubeUpload() {
                                     aria-controls="video-upload"
                                     aria-describedby="video-requirements"
                                 >
-                                    {isValidating ? 'Analyse en cours...' : 'Choisir une vidéo'}
+                                    {isValidating ? t('upload.button.analyzing_short') : t('upload.button.choose_video')}
                                 </button>
                                 <input
                                     id="video-upload"
@@ -918,7 +1150,7 @@ export default function YoutubeUpload() {
                                     accept="video/mp4"
                                     onChange={handleFileChange}
                                     className="sr-only"
-                                    aria-label="Sélectionnez votre fichier vidéo MP4"
+                                    aria-label={t('upload.form.video_input_aria')}
                                     aria-required="true"
                                     aria-invalid={!!errors.file}
                                     aria-describedby="video-requirements"
@@ -929,7 +1161,7 @@ export default function YoutubeUpload() {
                                     </p>
                                 )}
                                 <p id="video-requirements" className="text-xs text-slate-500 text-center">
-                                    Taille max : 300Mo • Format : 16:9 obligatoire • Durée : 45-100 secondes
+                                    {t('upload.form.video_requirements')}
                                 </p>
                             </div>
                         </div>
@@ -940,22 +1172,16 @@ export default function YoutubeUpload() {
                         )}
                     </div>
 
-                    {/* Vérification anti-robot Altcha */}
+                    {/* {t('upload.form.antispam_label')} Altcha */}
                     <div className="space-y-2">
                         <label className="block text-sm font-semibold text-slate-700">
-                            Vérification anti-robot <abbr title="requis" className="text-red-600 no-underline">*</abbr>
+                            {t('upload.form.antispam_label')} <abbr title={requiredLabel} className="text-red-600 no-underline">*</abbr>
                         </label>
                         <div className={`${errors.altcha ? 'border-2 border-red-500 rounded-lg p-2' : ''}`}>
                             <altcha-widget
                                 challengeurl={ALTCHA_CHALLENGE_URL}
                                 hidefooter="true"
-                                strings={JSON.stringify({
-                                    label: 'I am not a robot',
-                                    verifying: 'Verifying...',
-                                    verified: 'Verified',
-                                    error: 'Verification failed',
-                                    expired: 'Verification expired'
-                                })}
+                                strings={altchaStrings}
                                 ref={(el) => {
                                     if (el) {
                                         el.addEventListener('statechange', (ev) => {
@@ -974,19 +1200,19 @@ export default function YoutubeUpload() {
                             </p>
                         )}
                         <span className="text-xs text-slate-500 block">
-                            Cette vérification nous aide à protéger le concours contre les robots
+                            {t('upload.form.antispam_hint')}
                         </span>
                     </div>
 
                     {/* Barre de progression */}
                     {uploading && (
-                        <div className="space-y-2" role="region" aria-label="Progression de l'envoi">
+                        <div className="space-y-2" role="region" aria-label={t('upload.progress.region_aria')}>
                             <div
                                 role="progressbar"
                                 aria-valuenow={progress}
                                 aria-valuemin="0"
                                 aria-valuemax="100"
-                                aria-label={`Progression de l'envoi : ${progress} pourcent`}
+                                aria-label={t('upload.progress.bar_aria', { progress })}
                                 className="w-full bg-slate-100 rounded-full h-3 overflow-hidden"
                             >
                                 <div
@@ -995,7 +1221,7 @@ export default function YoutubeUpload() {
                                 />
                             </div>
                             <p className="text-sm font-medium text-slate-600 text-center" aria-live="polite">
-                                Envoi en cours... {progress}%
+                                {t('upload.progress.uploading_with_progress', { progress })}
                             </p>
                         </div>
                     )}
@@ -1003,22 +1229,22 @@ export default function YoutubeUpload() {
                     {youtubeVideoId && (
                         <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-2">
                             <div className="flex items-center justify-between gap-2">
-                                <p className="text-sm font-semibold text-slate-800">Statut YouTube</p>
+                                <p className="text-sm font-semibold text-slate-800">{t('upload.youtube_status.title')}</p>
                                 <button
                                     type="button"
                                     className="text-xs text-slate-500 hover:text-slate-800"
                                     onClick={stopYoutubeStatusPolling}
                                 >
-                                    Stop refresh
+                                    {t('upload.youtube_status.stop_refresh')}
                                 </button>
                             </div>
-                            <p className="text-xs text-slate-500 break-all">Video ID: {youtubeVideoId}</p>
+                            <p className="text-xs text-slate-500 break-all">{t('upload.youtube_status.video_id_label')}:  {youtubeVideoId}</p>
                             <p className="text-sm text-slate-700">
                                 {youtubeStatus
-                                    ? `Etat: ${youtubeStatus.processingStatus || youtubeStatus.uploadStatus || 'inconnu'}`
+                                    ? `${t('upload.youtube_status.state_label')}: ${youtubeStatus.processingStatus || youtubeStatus.uploadStatus || t('upload.youtube_status.unknown')}`
                                     : isCheckingYoutubeStatus
-                                        ? 'Verification en cours...'
-                                        : 'En attente du statut YouTube'}
+                                        ? t('upload.youtube_status.checking')
+                                        : t('upload.youtube_status.waiting')}
                             </p>
                             {youtubeStatusError && (
                                 <p className="text-sm text-red-600">{youtubeStatusError}</p>
@@ -1029,7 +1255,7 @@ export default function YoutubeUpload() {
                                 onClick={() => fetchYoutubeStatus(youtubeVideoId)}
                                 disabled={isCheckingYoutubeStatus}
                             >
-                                Rafraichir maintenant
+                                {t('upload.youtube_status.refresh_now')}
                             </button>
                         </div>
                     )}
@@ -1059,17 +1285,21 @@ export default function YoutubeUpload() {
                         aria-disabled={uploading || isValidating || !file}
                         className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-slate-800 transition-all disabled:bg-slate-300 disabled:cursor-not-allowed shadow-lg active:scale-95 focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
                     >
-                        {isValidating ? 'Analyse de la vidéo...' :
-                            uploading ? `Traitement en cours... ${progress}%` :
-                                'Soumettre ma participation'}
+                        {isValidating
+                            ? t('upload.button.analyzing')
+                            : uploading
+                                ? t('upload.button.processing_with_progress', { progress })
+                                : t('upload.button.submit_participation')}
                     </button>
 
                     {/* Aide contextuelle pour le bouton (masquée visuellement) */}
                     {(!file || uploading || isValidating) && (
                         <p className="sr-only" aria-live="polite">
-                            {!file ? 'Veuillez d\'abord sélectionner une vidéo pour activer le bouton de soumission' :
-                                isValidating ? 'Validation de la vidéo en cours, veuillez patienter' :
-                                    'Envoi de la vidéo en cours, veuillez patienter'}
+                            {!file
+                                ? t('upload.sr.need_file')
+                                : isValidating
+                                    ? t('upload.sr.validating')
+                                    : t('upload.sr.uploading')}
                         </p>
                     )}
                 </form>
@@ -1077,4 +1307,12 @@ export default function YoutubeUpload() {
         </div>
     );
 }
+
+
+
+
+
+
+
+
 

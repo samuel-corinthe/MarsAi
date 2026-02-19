@@ -60,6 +60,60 @@ function getSenderAddress() {
   return process.env.EMAIL_FROM || process.env.EMAIL_USER;
 }
 
+function getSenderCandidates() {
+  const candidates = [
+    String(process.env.EMAIL_FROM || "").trim(),
+    String(process.env.EMAIL_USER || "").trim(),
+  ].filter(Boolean);
+  return [...new Set(candidates)];
+}
+
+async function sendWithSmtpCandidates({
+  senderName,
+  senderCandidates,
+  toEmail,
+  replyToEmail,
+  subject,
+  textContent,
+  htmlContent,
+}) {
+  const candidates = [...new Set((senderCandidates || []).filter(Boolean))];
+  if (!candidates.length) {
+    throw new Error("Aucun expediteur SMTP valide configure.");
+  }
+
+  let lastError = null;
+  for (const senderAddress of candidates) {
+    try {
+      const mailOptions = {
+        from: `"${senderName || "marsAI Festival"}" <${senderAddress}>`,
+        to: toEmail,
+        subject,
+        text: textContent || "",
+      };
+
+      if (htmlContent) mailOptions.html = htmlContent;
+      if (replyToEmail) mailOptions.replyTo = replyToEmail;
+
+      await createSmtpTransporter().sendMail(mailOptions);
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (lastError) throw lastError;
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 async function sendWithBrevoApi({
   senderName,
   toEmail,
@@ -72,23 +126,33 @@ async function sendWithBrevoApi({
     throw new Error("BREVO_API_KEY manquante: envoi Brevo impossible.");
   }
 
-  const senderAddress = getSenderAddress();
-  if (!senderAddress) {
+  const senderCandidates = getSenderCandidates();
+  if (!senderCandidates.length) {
     throw new Error("EMAIL_FROM ou EMAIL_USER manquant pour l'envoi Brevo.");
   }
 
-  const payload = new SibApiV3Sdk.SendSmtpEmail();
-  payload.sender = {
-    name: senderName || "marsAI Festival",
-    email: senderAddress,
-  };
-  payload.to = [{ email: toEmail }];
-  payload.subject = subject;
-  payload.textContent = textContent || "";
-  if (htmlContent) payload.htmlContent = htmlContent;
-  if (replyToEmail) payload.replyTo = { email: replyToEmail };
+  let lastError = null;
+  for (const senderAddress of senderCandidates) {
+    try {
+      const payload = new SibApiV3Sdk.SendSmtpEmail();
+      payload.sender = {
+        name: senderName || "marsAI Festival",
+        email: senderAddress,
+      };
+      payload.to = [{ email: toEmail }];
+      payload.subject = subject;
+      payload.textContent = textContent || "";
+      if (htmlContent) payload.htmlContent = htmlContent;
+      if (replyToEmail) payload.replyTo = { email: replyToEmail };
 
-  await transactionalApi.sendTransacEmail(payload);
+      await transactionalApi.sendTransacEmail(payload);
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (lastError) throw lastError;
 }
 
 export async function validateEmailAddress(email) {
@@ -126,6 +190,86 @@ export async function sendContactMail({ name, email, subject, message }) {
   };
 
   await createSmtpTransporter().sendMail(mailOptions);
+}
+
+export async function sendUploadSuccessMail({
+  toEmail,
+  firstName,
+  lastName,
+  movieTitle,
+  videoUrl,
+}) {
+  assertMailConfig();
+  const senderAddress = getSenderAddress();
+  const senderCandidates = getSenderCandidates();
+
+  const safeToEmail = String(toEmail || "").trim();
+  if (!safeToEmail) {
+    throw new Error("Email destinataire manquant pour la confirmation d'upload.");
+  }
+
+  const nameParts = [firstName, lastName]
+    .map((part) => String(part || "").trim())
+    .filter(Boolean);
+  const recipientName = nameParts.length ? nameParts.join(" ") : "participant";
+  const safeMovieTitle = String(movieTitle || "votre film").trim();
+  const safeVideoUrl = String(videoUrl || "").trim();
+  const recipientNameHtml = escapeHtml(recipientName);
+  const safeMovieTitleHtml = escapeHtml(safeMovieTitle);
+  const safeVideoUrlHtml = escapeHtml(safeVideoUrl);
+
+  const subject = "Upload MarsAI recu avec succes";
+  const textContent = [
+    `Bonjour ${recipientName},`,
+    "",
+    `Votre upload pour "${safeMovieTitle}" a bien ete recu et envoye sur YouTube.`,
+    safeVideoUrl ? `Lien video: ${safeVideoUrl}` : "",
+    "",
+    "Le film est maintenant en cours de verification par l'equipe.",
+    "",
+    "Merci,",
+    "marsAI Festival",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const htmlContent = [
+    `<p>Bonjour ${recipientNameHtml},</p>`,
+    `<p>Votre upload pour <strong>${safeMovieTitleHtml}</strong> a bien ete recu et envoye sur YouTube.</p>`,
+    safeVideoUrl
+      ? `<p>Lien video: <a href="${safeVideoUrlHtml}" target="_blank" rel="noopener noreferrer">${safeVideoUrlHtml}</a></p>`
+      : "",
+    "<p>Le film est maintenant en cours de verification par l'equipe.</p>",
+    "<p>Merci,<br/>marsAI Festival</p>",
+  ]
+    .filter(Boolean)
+    .join("");
+
+  if (hasBrevoApiKey()) {
+    try {
+      await sendWithBrevoApi({
+        senderName: "marsAI Festival",
+        toEmail: safeToEmail,
+        subject,
+        textContent,
+        htmlContent,
+      });
+      return;
+    } catch (error) {
+      if (!hasSmtpCredentials()) throw error;
+    }
+  }
+
+  await sendWithSmtpCandidates({
+    senderName: "marsAI Festival",
+    senderCandidates: senderCandidates.length
+      ? senderCandidates
+      : [String(senderAddress || "").trim(), String(process.env.EMAIL_USER || "").trim()],
+    toEmail: safeToEmail,
+    subject,
+    textContent,
+    htmlContent,
+  });
 }
 
 export async function createOrUpdateBrevoContact({ firstName, email, safePreferences }) {

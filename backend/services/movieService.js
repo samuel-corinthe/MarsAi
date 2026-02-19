@@ -8,6 +8,19 @@ import {
 
 const FALLBACK_POSTER_PREFIX = "https://picsum.photos/seed/marsai-movie-";
 
+function decodeHtmlEntities(value) {
+  const raw = String(value ?? "");
+  if (!raw) return "";
+
+  return raw
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#39;/g, "'");
+}
+
 function toArray(value) {
   if (Array.isArray(value)) {
     return value
@@ -56,11 +69,73 @@ function toCast(value) {
   }
 }
 
+function toSocialLinks(value) {
+  if (!value) return {};
+
+  let source = value;
+  if (typeof value === "string") {
+    try {
+      source = JSON.parse(value);
+    } catch {
+      return {};
+    }
+  }
+
+  if (!source || typeof source !== "object") return {};
+
+  const pick = (entry) => {
+    const raw = String(entry || "").trim();
+    if (!raw) return "";
+    return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  };
+
+  const normalized = {};
+  const website = pick(source.website);
+  const instagram = pick(source.instagram);
+  const facebook = pick(source.facebook);
+  const x = pick(source.x || source.twitter);
+
+  if (website) normalized.website = website;
+  if (instagram) normalized.instagram = instagram;
+  if (facebook) normalized.facebook = facebook;
+  if (x) normalized.x = x;
+
+  return normalized;
+}
+
+function toCountryFlagPath(flagPath, alpha2) {
+  const alpha2Value = String(alpha2 || "").trim().toLowerCase();
+  const fallbackPath = alpha2Value ? `/images/flags/${alpha2Value}.png` : "";
+  const raw = String(flagPath || "").trim();
+  if (!raw) return fallbackPath;
+  if (/^https?:\/\//i.test(raw)) return raw;
+
+  let normalized = raw.startsWith("/") ? raw : `/${raw}`;
+  normalized = normalized.replace(/\/images\/flags\/png100px\//i, "/images/flags/");
+
+  if (!/\.(png|jpg|jpeg|webp|svg)$/i.test(normalized) && alpha2Value) {
+    normalized = `/images/flags/${alpha2Value}.png`;
+  }
+
+  return normalized || fallbackPath;
+}
+
+function isServerHostedVideoUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return false;
+
+  if (/^\/(?:MarsAi\/)?uploads\/videos\/.+\.mp4$/i.test(raw)) {
+    return true;
+  }
+
+  return /^https?:\/\/[^/]+\/(?:MarsAi\/)?uploads\/videos\/.+\.mp4$/i.test(raw);
+}
+
 function normalizeCastEntry(entry, index) {
   if (!entry || typeof entry !== "object") return null;
 
-  const name = String(entry.name ?? entry.person_name ?? "").trim();
-  const role = String(entry.role ?? entry.role_name ?? "").trim();
+  const name = decodeHtmlEntities(entry.name ?? entry.person_name ?? "").trim();
+  const role = decodeHtmlEntities(entry.role ?? entry.role_name ?? "").trim();
   const img = String(entry.img ?? entry.avatar_url ?? "").trim();
 
   if (!name && !role && !img) return null;
@@ -125,18 +200,18 @@ async function loadCastByMovieId(pool, movieId) {
 }
 
 function toDurationLabel(rawValue) {
-  const duration = Number(rawValue);
-  if (!Number.isFinite(duration) || duration <= 0) {
+  const durationSeconds = Number(rawValue);
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
     return "N/A";
   }
 
-  const wholeMinutes = Math.floor(duration);
-  const hours = Math.floor(wholeMinutes / 60);
-  const minutes = wholeMinutes % 60;
+  const totalSeconds = Math.round(durationSeconds);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
 
-  if (hours <= 0) return `${wholeMinutes} min`;
-  if (minutes <= 0) return `${hours}h`;
-  return `${hours}h ${minutes}min`;
+  if (minutes <= 0) return `${totalSeconds}s`;
+  if (seconds <= 0) return `${minutes}min`;
+  return `${minutes}min ${seconds}s`;
 }
 
 function toReleaseDateLabel(rawReleaseDate, rawReleaseYear) {
@@ -176,21 +251,38 @@ function toPosterUrl(row) {
 
 function mapMovieRow(row) {
   const movieId = Number(row.id);
+  const countryCode = String(row.country_alpha2 || "").trim().toUpperCase();
+  const countryFlagPath = toCountryFlagPath(row.country_flag_path, countryCode);
+  const localVideoUrl = String(row.video_url || "").trim();
+  const youtubeUrl = String(row.youtube_url || "").trim();
+  const playbackVideoUrl = isServerHostedVideoUrl(localVideoUrl) ? localVideoUrl : "";
 
   return {
     id: Number.isFinite(movieId) && movieId > 0 ? movieId : 0,
-    title: String(row.title || "Film sans titre"),
-    description: String(row.synopsis || row.description || ""),
+    title: decodeHtmlEntities(row.title || "Film sans titre"),
+    description: decodeHtmlEntities(row.synopsis || row.description || ""),
     genre: toGenreList(row),
-    director: String(row.director || "Inconnu"),
+    director: decodeHtmlEntities(row.submitted_by || row.director || "Inconnu"),
     releaseDate: toReleaseDateLabel(row.release_date || row.releaseDate, row.release_year),
     duration: toDurationLabel(row.duration),
     img: toPosterUrl(row),
     aiTools: toArray(row.ai_tools || row.aiTools),
     cast: normalizeCast(row.cast),
-    country: String(row.country_name_fr || row.country_name_eng || ""),
+    bio: decodeHtmlEntities(row.bio || ""),
+    socialLinks: toSocialLinks(row.social_links || row.socialLinks),
+    language: String(row.language || ""),
+    subtitleLanguage: String(row.subtitle_language || ""),
+    age: Number.isFinite(Number(row.age)) ? Number(row.age) : null,
+    country: decodeHtmlEntities(row.country_name_fr || row.country_name_eng || ""),
+    countryAlpha2: countryCode,
+    countryFlagPath,
+    countryId: Number.isFinite(Number(row.country_id)) ? Number(row.country_id) : null,
+    viewCount: Number.isFinite(Number(row.view_count)) ? Number(row.view_count) : 0,
+    submittedBy: decodeHtmlEntities(row.submitted_by || ""),
     submissionStatus: String(row.submission_status || ""),
-    videoUrl: String(row.youtube_url || row.video_url || ""),
+    videoUrl: playbackVideoUrl,
+    youtubeUrl,
+    rawVideoUrl: localVideoUrl,
   };
 }
 

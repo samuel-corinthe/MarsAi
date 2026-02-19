@@ -60,6 +60,7 @@ const verifyOrigin = (req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static("uploads"));
+app.use("/MarsAi/uploads", express.static("uploads"));
 
 app.use(publicRoutes);
 app.use("/api", publicRoutes);
@@ -72,6 +73,11 @@ app.use("/api/movie", movieRoutes);
 app.use("/api/altcha", altchaRoutes);
 app.use("/api/upload", verifyOrigin, uploadRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/MarsAi/api/movies", movieRoutes);
+app.use("/MarsAi/api/movie", movieRoutes);
+app.use("/MarsAi/api/altcha", altchaRoutes);
+app.use("/MarsAi/api/upload", verifyOrigin, uploadRoutes);
+app.use("/MarsAi/api/auth", authRoutes);
 app.use("/api/dashboard", requireAuth, requireRole(["admin", "superadmin"]), dashboardRoutes);
 app.use("/api/assignments", requireAuth, requireRole(["admin", "superadmin"]), assignmentRoutes);
 app.use("/api/ratings", requireAuth, requireRole(["admin", "superadmin"]), ratingRoutes);
