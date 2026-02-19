@@ -13,6 +13,7 @@ import Gallery from "./pages/Gallery";
 import MovieDetails from "./pages/MovieDetails";
 import DashboardEntry from "./pages/DashboardEntry";
 import TestCountdown from "./pages/TestCountdown";
+import FaqChatbot from "./components/chatbot";
 
 export default function App() {
   const location = useLocation();
@@ -71,6 +72,7 @@ export default function App() {
       </div>
       {!hideChrome && <CookieModal />}
       {!hideChrome && <Footer />}
+      {!hideChrome && <FaqChatbot />}
     </div>
   );
 }
