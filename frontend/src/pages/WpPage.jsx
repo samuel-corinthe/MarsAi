@@ -89,6 +89,21 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     return colors[catId] || colors.default;
   };
 
+  const normalizeAgendaTagKey = (value = "") =>
+    String(value)
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+
+  const getAgendaTagLabel = (category) => {
+    const fallback = String(category?.name || "").trim();
+    const key = normalizeAgendaTagKey(category?.slug || fallback);
+    if (!key) return fallback;
+    return t(`agenda.tags.${key}`, { defaultValue: fallback });
+  };
+
   const stripHtml = (html) =>
     (html || "")
       .replace(/<[^>]+>/g, " ")
@@ -178,7 +193,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                       hour: "2-digit",
                       minute: "2-digit",
                     }),
-                    lieu: "Marseille",
+                    lieu: t("agenda.place_default"),
                     subCategories: categoriesData.filter(
                       (cat) => cat.id !== agendaCategoryId,
                     ),
@@ -588,7 +603,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                 className="text-xs uppercase tracking-[0.4em] text-cyan-200 mt-2"
                 style={{ fontFamily: "'Space Mono', monospace" }}
               >
-                Schedule
+                {t("agenda.subtitle")}
               </p>
             </div>
 
@@ -600,7 +615,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                   style={{ fontFamily: "'Space Mono', monospace" }}
                 >
                   <span>&larr;</span>
-                  Retour a l'agenda
+                  {t("agenda.back_to_agenda")}
                 </button>
 
                 <div className="max-w-4xl mx-auto">
@@ -639,10 +654,10 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                       style={{ fontFamily: "'Space Mono', monospace" }}
                     >
                       <span className="px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30">
-                        Heure: {selectedArticle.heure}
+                        {t("agenda.hour_label")}: {selectedArticle.heure}
                       </span>
                       <span className="px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30">
-                        Lieu: {selectedArticle.lieu}
+                        {t("agenda.place_label")}: {selectedArticle.lieu}
                       </span>
                       {selectedArticle.subCategories?.map((cat) => (
                         <span
@@ -653,7 +668,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                             borderColor: getCategoryColor(cat.id),
                           }}
                         >
-                          {cat.name}
+                          {getAgendaTagLabel(cat)}
                         </span>
                       ))}
                     </div>
@@ -682,9 +697,9 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                         }
                         disabled={datePage === 0}
                         className="px-3 py-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                        aria-label="Dates précédentes"
+                        aria-label={t("agenda.previous_dates_aria")}
                       >
-                        Précédent
+                        {t("prev")}
                       </button>
                       <span>
                         {datePage + 1} / {datePageCount}
@@ -698,9 +713,9 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                         }
                         disabled={datePage >= datePageCount - 1}
                         className="px-3 py-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                        aria-label="Dates suivantes"
+                        aria-label={t("agenda.next_dates_aria")}
                       >
-                        Suivant
+                        {t("next")}
                       </button>
                     </div>
                   )}
@@ -748,11 +763,11 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                                     : "bg-cyan-500/20 text-cyan-100"
                                 }`}
                               >
-                                {eventCount} évènement
+                                {t("agenda.event_count", { count: eventCount })}
                               </span>
                             ) : (
                               <span className="text-[8px] sm:text-[9px] uppercase tracking-widest text-white/50">
-                                rien
+                                {t("agenda.no_events_short")}
                               </span>
                             )}
                           </button>
@@ -760,7 +775,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                       })
                     ) : (
                       <div className="text-white/70 text-sm py-6 px-4">
-                        Aucun evenement disponible.
+                        {t("agenda.no_events_available")}
                       </div>
                     )}
                   </div>
@@ -808,12 +823,12 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-white/60 text-xs uppercase tracking-widest">
-                              Event
+                              {t("agenda.event_badge")}
                             </div>
                           )}
                           <div className="absolute inset-0 bg-gradient-to-t from-[#051a4a]/80 via-black/10 to-transparent" />
                           <span className="absolute bottom-3 left-4 text-xs uppercase tracking-widest text-white/90">
-                            Event
+                            {t("agenda.event_badge")}
                           </span>
                         </div>
 
@@ -827,7 +842,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                                 borderColor: getCategoryColor(cat.id),
                               }}
                             >
-                              {cat.name}
+                              {getAgendaTagLabel(cat)}
                             </span>
                           ))}
                         </div>
@@ -843,25 +858,26 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
 
                         <div className="mt-4 flex flex-wrap gap-2 text-xs text-white/80">
                           <span className="px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30">
-                            Heure: {ev.heure}
+                            {t("agenda.hour_label")}: {ev.heure}
                           </span>
                           <span className="px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30">
-                            Lieu: {ev.lieu}
+                            {t("agenda.place_label")}: {ev.lieu}
                           </span>
                         </div>
 
                         <button
                           onClick={() => setSelectedArticle(ev)}
-                          className="mt-4 text-xs font-bold uppercase tracking-widest text-cyan-200 hover:text-white"
+                          className="mt-4 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-cyan-200 hover:text-white"
                           style={{ fontFamily: "'Space Mono', monospace" }}
                         >
-                          Lire l'article ?
+                          <span>{t("agenda.read_article")}</span>
+                          <span aria-hidden="true">➙</span>
                         </button>
                       </div>
                     ))
                   ) : (
                     <div className="col-span-full bg-white/10 border border-dashed border-white/20 rounded-3xl p-8 text-center text-white/70">
-                      Aucun evenement ce jour.
+                      {t("agenda.no_events_today")}
                     </div>
                   )}
                 </div>
