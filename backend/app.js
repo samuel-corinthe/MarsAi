@@ -59,6 +59,7 @@ const verifyOrigin = (req, res, next) => {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use("/uploads", express.static("uploads"));
 
 app.use(publicRoutes);
 app.use("/api/movies", movieRoutes);

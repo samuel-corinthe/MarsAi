@@ -4,6 +4,49 @@ import { getVideoMetadata, validateVideoFrontend, VIDEO_CONSTRAINTS } from '../u
 import { validateForm, FORM_CONSTRAINTS, exceedsMaxLength } from '../utils/formvalidation';
 import 'altcha';
 
+function normalizeBasePath(value = '') {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const withLeadingSlash = raw.startsWith('/') ? raw : `/${raw}`;
+    return withLeadingSlash.replace(/\/+$/, '');
+}
+
+function buildApiPath(path) {
+    const safePath = path.startsWith('/') ? path : `/${path}`;
+    const configuredBasePath = normalizeBasePath(import.meta.env.VITE_API_BASE_PATH || '');
+
+    if (configuredBasePath) {
+        return `${configuredBasePath}${safePath}`;
+    }
+
+    if (typeof window !== 'undefined') {
+        const pathname = String(window.location?.pathname || '').toLowerCase();
+        if (pathname === '/marsai' || pathname.startsWith('/marsai/')) {
+            return `/MarsAi${safePath}`;
+        }
+    }
+
+    return safePath;
+}
+
+const YOUTUBE_STATUS_POLL_INTERVAL_MS = 15000;
+const YOUTUBE_STATUS_MAX_POLLS = 20;
+const ALTCHA_CHALLENGE_URL = buildApiPath('/api/altcha/challenge');
+const YOUTUBE_UPLOAD_URL = buildApiPath('/api/upload/youtube');
+
+function buildYoutubeStatusUrl(videoId) {
+    return buildApiPath(`/api/upload/youtube/status/${videoId}`);
+}
+
+function isTerminalYoutubeStatus(status) {
+    const processingStatus = status?.processingStatus;
+    const uploadStatus = status?.uploadStatus;
+    return (
+        ['succeeded', 'failed', 'terminated'].includes(processingStatus) ||
+        ['processed', 'failed', 'rejected'].includes(uploadStatus)
+    );
+}
+
 export default function YoutubeUpload() {
     const [file, setFile] = useState(null);
     const [title, setTitle] = useState('');
@@ -31,16 +74,22 @@ export default function YoutubeUpload() {
     const [subtitleFile, setSubtitleFile] = useState(null);
     const [posterFile, setPosterFile] = useState(null);
     const [posterPreview, setPosterPreview] = useState(null);
+    const [youtubeVideoId, setYoutubeVideoId] = useState('');
+    const [youtubeStatus, setYoutubeStatus] = useState(null);
+    const [youtubeStatusError, setYoutubeStatusError] = useState('');
+    const [isCheckingYoutubeStatus, setIsCheckingYoutubeStatus] = useState(false);
 
 
     const fileInputRef = useRef(null);
     const statusRef = useRef(null);
+    const youtubeStatusPollRef = useRef(null);
+    const youtubeStatusPollCountRef = useRef(0);
 
     
     useEffect(() => {
         const loadChallenge = async () => {
             try {
-                const response = await axios.get('http://localhost:3000/api/altcha/challenge');
+                const response = await axios.get(ALTCHA_CHALLENGE_URL);
                 if (response.data.honeypot) {
                     setHoneypotFieldName(response.data.honeypot.fieldName);
                     setHoneypotToken(response.data.honeypot.token);
@@ -52,6 +101,67 @@ export default function YoutubeUpload() {
 
         loadChallenge();
     }, []);
+
+    useEffect(() => {
+        return () => {
+            if (youtubeStatusPollRef.current) {
+                clearInterval(youtubeStatusPollRef.current);
+                youtubeStatusPollRef.current = null;
+            }
+        };
+    }, []);
+
+    const stopYoutubeStatusPolling = () => {
+        if (youtubeStatusPollRef.current) {
+            clearInterval(youtubeStatusPollRef.current);
+            youtubeStatusPollRef.current = null;
+        }
+    };
+
+    const fetchYoutubeStatus = async (videoId) => {
+        if (!videoId) return null;
+
+        setIsCheckingYoutubeStatus(true);
+        setYoutubeStatusError('');
+
+        try {
+            const response = await axios.get(buildYoutubeStatusUrl(videoId));
+            const payload = response?.data || {};
+            const statusData = payload.status || null;
+            setYoutubeStatus(statusData);
+            return statusData;
+        } catch (error) {
+            const details = error?.response?.data?.error || error?.message || 'Impossible de recuperer le statut YouTube.';
+            setYoutubeStatusError(details);
+            return null;
+        } finally {
+            setIsCheckingYoutubeStatus(false);
+        }
+    };
+
+    const startYoutubeStatusPolling = async (videoId) => {
+        stopYoutubeStatusPolling();
+        youtubeStatusPollCountRef.current = 0;
+
+        const firstStatus = await fetchYoutubeStatus(videoId);
+        if (firstStatus && isTerminalYoutubeStatus(firstStatus)) {
+            return;
+        }
+
+        youtubeStatusPollRef.current = setInterval(async () => {
+            youtubeStatusPollCountRef.current += 1;
+
+            const statusData = await fetchYoutubeStatus(videoId);
+            if (statusData && isTerminalYoutubeStatus(statusData)) {
+                stopYoutubeStatusPolling();
+                return;
+            }
+
+            if (youtubeStatusPollCountRef.current >= YOUTUBE_STATUS_MAX_POLLS) {
+                stopYoutubeStatusPolling();
+            }
+        }, YOUTUBE_STATUS_POLL_INTERVAL_MS);
+    };
 
     const handleFileChange = async (e) => {
         const selectedFile = e.target.files[0];
@@ -117,6 +227,10 @@ export default function YoutubeUpload() {
     const handleUpload = async (e) => {
         e.preventDefault();
 
+        stopYoutubeStatusPolling();
+        setYoutubeVideoId('');
+        setYoutubeStatus(null);
+        setYoutubeStatusError('');
 
         const validation = validateForm({
             email,
@@ -181,17 +295,30 @@ export default function YoutubeUpload() {
             setUploading(true);
             setStatus({ type: '', message: '' });
 
-            const res = await axios.post('http://localhost:3000/api/upload/youtube', formData, {
+            const res = await axios.post(YOUTUBE_UPLOAD_URL, formData, {
                 onUploadProgress: (progressEvent) => {
                     const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                     setProgress(percent);
                 }
             });
 
-            setStatus({
-                type: 'success',
-                message: 'Votre vidéo a été mise en ligne avec succès !'
-            });
+            const responsePayload = res?.data || {};
+            const uploadedVideoId = String(responsePayload.videoId || '').trim();
+            if (uploadedVideoId) {
+                setYoutubeVideoId(uploadedVideoId);
+                setYoutubeStatus(null);
+                setYoutubeStatusError('');
+                startYoutubeStatusPolling(uploadedVideoId);
+                setStatus({
+                    type: 'success',
+                    message: 'Votre video a ete mise en ligne. Verification YouTube en cours.'
+                });
+            } else {
+                setStatus({
+                    type: 'success',
+                    message: 'Votre video a ete mise en ligne avec succes !'
+                });
+            }
 
             setFile(null);
             setEmail('');
@@ -820,7 +947,7 @@ export default function YoutubeUpload() {
                         </label>
                         <div className={`${errors.altcha ? 'border-2 border-red-500 rounded-lg p-2' : ''}`}>
                             <altcha-widget
-                                challengeurl="http://localhost:3000/api/altcha/challenge"
+                                challengeurl={ALTCHA_CHALLENGE_URL}
                                 hidefooter="true"
                                 strings={JSON.stringify({
                                     label: 'I am not a robot',
@@ -873,6 +1000,40 @@ export default function YoutubeUpload() {
                         </div>
                     )}
 
+                    {youtubeVideoId && (
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                                <p className="text-sm font-semibold text-slate-800">Statut YouTube</p>
+                                <button
+                                    type="button"
+                                    className="text-xs text-slate-500 hover:text-slate-800"
+                                    onClick={stopYoutubeStatusPolling}
+                                >
+                                    Stop refresh
+                                </button>
+                            </div>
+                            <p className="text-xs text-slate-500 break-all">Video ID: {youtubeVideoId}</p>
+                            <p className="text-sm text-slate-700">
+                                {youtubeStatus
+                                    ? `Etat: ${youtubeStatus.processingStatus || youtubeStatus.uploadStatus || 'inconnu'}`
+                                    : isCheckingYoutubeStatus
+                                        ? 'Verification en cours...'
+                                        : 'En attente du statut YouTube'}
+                            </p>
+                            {youtubeStatusError && (
+                                <p className="text-sm text-red-600">{youtubeStatusError}</p>
+                            )}
+                            <button
+                                type="button"
+                                className="text-xs font-semibold text-blue-700 hover:text-blue-900"
+                                onClick={() => fetchYoutubeStatus(youtubeVideoId)}
+                                disabled={isCheckingYoutubeStatus}
+                            >
+                                Rafraichir maintenant
+                            </button>
+                        </div>
+                    )}
+
                     {/* Messages de statut */}
                     {status.message && (
                         <div
@@ -916,3 +1077,4 @@ export default function YoutubeUpload() {
         </div>
     );
 }
+

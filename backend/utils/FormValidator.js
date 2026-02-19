@@ -49,7 +49,7 @@ LANGUAGE: {
 
 AI_TOOLS: {
     MIN_LENGTH: 2,
-    MAX_LENGTH: 25
+    MAX_LENGTH: 255
 },
 
 BIO: {
@@ -260,7 +260,7 @@ export const validateFormData = (req, res, next) => {
   }
   const aiToolsCleaned = sanitizeString(req.body.aiTools);
   if (aiToolsCleaned.length > FORM_CONSTRAINTS.AI_TOOLS.MAX_LENGTH) {
-    return res.status(400).json({ error: 'Le nom des outils IA est trop long (max 25 caractères)' });
+    return res.status(400).json({ error: 'Le nom des outils IA est trop long (max 255 caractères)' });
   }
   const toolsArray = aiToolsCleaned.split(',').map(t => t.trim()).filter(Boolean);
   if (toolsArray.length === 0) {
@@ -302,3 +302,4 @@ export const validateFormData = (req, res, next) => {
   console.log(' [VALIDATION] Formulaire validé avec succès');
   next();
 };
+
