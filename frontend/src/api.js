@@ -231,7 +231,7 @@ export async function loginWithWordPress({ email, username, password }) {
     });
   } catch {
     throw new Error(
-      "Impossible de joindre l'API backend (/api/auth/wordpress/login). Verifie que le serveur Node est demarre.",
+      "Impossible de joindre l'API backend (/api/auth/wordpress/login).",
     );
   }
 
