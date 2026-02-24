@@ -78,7 +78,7 @@ const Navbar = () => {
         en: "call-for-project",
         ar: "call-for-project",
       },
-      partners: { fr: "partenaires", en: "partners", ar: "partners" },
+      partners: { fr: "partenaires", en: "partners", ar: "شركاء" },
       jury: { fr: "jury", en: "jury", ar: "jury" },
     };
     return slugs[id][currentLang] || slugs[id]["fr"];
