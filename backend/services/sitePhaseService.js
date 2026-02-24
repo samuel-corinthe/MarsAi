@@ -111,6 +111,8 @@ function toSelectionMovie(row) {
     id: Number(row.id),
     title: String(row.title || "Sans titre"),
     posterUrl: String(row.poster_url || "").trim(),
+    videoUrl: String(row.video_url || "").trim(),
+    youtubeUrl: String(row.youtube_url || "").trim(),
     director: String(row.submitted_by || "Anonyme").trim() || "Anonyme",
     countryCode: String(row.country_alpha2 || "").trim().toLowerCase() || null,
     country: String(row.country_name_fr || "").trim() || "Inconnu",

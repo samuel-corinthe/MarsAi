@@ -46,6 +46,7 @@ const Gallery = () => {
   const [phase3EligibleMovieIds, setPhase3EligibleMovieIds] = useState(() => new Set());
   const [phase3EligibilityLoaded, setPhase3EligibilityLoaded] = useState(false);
   const [phase3WinnerMovieIds, setPhase3WinnerMovieIds] = useState(() => new Set());
+  const [phase3WinnerMoviesPreview, setPhase3WinnerMoviesPreview] = useState([]);
   const [phase2SelectionMinRequired, setPhase2SelectionMinRequired] = useState(50);
   const [phase2SelectionBusyMovieId, setPhase2SelectionBusyMovieId] = useState(null);
   const [phase2SelectionError, setPhase2SelectionError] = useState("");
@@ -56,6 +57,7 @@ const Gallery = () => {
   const [maxRating, setMaxRating] = useState(5);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [serverTotalPages, setServerTotalPages] = useState(1);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const searchRef = useRef(null);
   const topCarouselVideoRef = useRef(null);
@@ -95,7 +97,18 @@ const Gallery = () => {
   }, [toMovieIdSet]);
 
   const applyPhase3WinnersSnapshot = useCallback((payload) => {
-    setPhase3WinnerMovieIds(toMovieIdSet(payload?.selectedMovies));
+    const selectedMovies = Array.isArray(payload?.selectedMovies) ? payload.selectedMovies : [];
+    setPhase3WinnerMovieIds(toMovieIdSet(selectedMovies));
+    setPhase3WinnerMoviesPreview(
+      selectedMovies
+        .map((movie) => ({
+          id: Number(movie?.id),
+          title: String(movie?.title || "Sans titre"),
+          img: String(movie?.posterUrl || "").trim(),
+          videoUrl: String(movie?.videoUrl || "").trim(),
+        }))
+        .filter((movie) => Number.isFinite(movie.id) && movie.id > 0),
+    );
   }, [toMovieIdSet]);
 
   const phase2SelectedCount = phase2SelectedMovieIds.size;
@@ -105,8 +118,10 @@ const Gallery = () => {
     phase3WinnerMovieIds.has(Number(movie?.id)),
   );
   const topMovies =
-    showTopCarousel && phase3WinnerMovies.length > 0
-      ? phase3WinnerMovies.slice(0, 5)
+    showTopCarousel && phase3WinnerMoviesPreview.length > 0
+      ? phase3WinnerMoviesPreview.slice(0, 5)
+      : showTopCarousel && phase3WinnerMovies.length > 0
+        ? phase3WinnerMovies.slice(0, 5)
       : movies.slice(0, 5);
   const carouselShift = "clamp(90px, 18vw, 240px)";
   const carouselPositions = [
@@ -127,49 +142,13 @@ const Gallery = () => {
       ? topMovies[(carouselIndex + highlightedPositionIndex) % topMovies.length]
       : null;
 
-  const filteredMovies = movies
-    .filter((movie) => {
-      const matchesSearch = String(movie.title || "")
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
-      const movieRating = Number(movie?.rating || 0);
-      const matchesRating = movieRating >= minRating && movieRating <= maxRating;
-
-      return matchesSearch && matchesRating;
-    })
-    .sort((a, b) => {
-      if (sortBy === "title_asc") {
-        return String(a?.title || "").localeCompare(String(b?.title || ""), "fr");
-      }
-      if (sortBy === "title_desc") {
-        return String(b?.title || "").localeCompare(String(a?.title || ""), "fr");
-      }
-
-      if (sortBy === "year_desc") {
-        const yearA = Number(String(a?.releaseDate || "").match(/\d{4}/)?.[0] || 0);
-        const yearB = Number(String(b?.releaseDate || "").match(/\d{4}/)?.[0] || 0);
-        return yearB - yearA;
-      }
-      if (sortBy === "year_asc") {
-        const yearA = Number(String(a?.releaseDate || "").match(/\d{4}/)?.[0] || 0);
-        const yearB = Number(String(b?.releaseDate || "").match(/\d{4}/)?.[0] || 0);
-        return yearA - yearB;
-      }
-
-      return 0;
-    });
-
-  const suggestions = filteredMovies
+  const suggestions = movies
     .filter((movie) => searchQuery.length > 0 && String(movie.title || "")
       .toLowerCase()
       .includes(searchQuery.toLowerCase()))
     .slice(0, 5);
-
-  const totalPages = Math.max(1, Math.ceil(filteredMovies.length / pageSize));
-  const paginatedMovies = filteredMovies.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
-  );
+  const totalPages = Math.max(1, Number(serverTotalPages || 1));
+  const paginatedMovies = movies;
 
   useEffect(() => {
     let cancelled = false;
@@ -215,6 +194,7 @@ const Gallery = () => {
               applyPhase2SelectionSnapshot(selection, 50);
               setPhase3EligibleMovieIds(new Set());
               setPhase3WinnerMovieIds(new Set());
+              setPhase3WinnerMoviesPreview([]);
             }
           } catch {
             if (!cancelled) {
@@ -243,6 +223,7 @@ const Gallery = () => {
           } else if (!cancelled) {
             setPhase2SelectedMovieIds(new Set());
             setPhase2SelectionMinRequired(5);
+            setPhase3WinnerMoviesPreview([]);
           }
 
           if (
@@ -266,6 +247,7 @@ const Gallery = () => {
           } catch {
             if (!cancelled) {
               setPhase3WinnerMovieIds(new Set());
+              setPhase3WinnerMoviesPreview([]);
             }
           }
         } else if (!cancelled) {
@@ -274,6 +256,7 @@ const Gallery = () => {
           setPhase3EligibleMovieIds(new Set());
           setPhase3EligibilityLoaded(false);
           setPhase3WinnerMovieIds(new Set());
+          setPhase3WinnerMoviesPreview([]);
         }
       } catch (error) {
         if (cancelled) return;
@@ -301,12 +284,28 @@ const Gallery = () => {
       setMoviesError("");
 
       try {
-        const payload = await getMovies();
+        const payload = await getMovies({
+          page: currentPage,
+          pageSize,
+          search: searchQuery,
+          sortBy,
+          minRating,
+          maxRating,
+        });
         if (cancelled) return;
-        setMovies(Array.isArray(payload) ? payload : []);
+        const rows = Array.isArray(payload?.movies) ? payload.movies : [];
+        const nextTotalPages = Math.max(1, Number(payload?.pagination?.totalPages || 1));
+        const nextPage = Math.max(1, Number(payload?.pagination?.page || currentPage));
+
+        setMovies(rows);
+        setServerTotalPages(nextTotalPages);
+        if (nextPage !== currentPage) {
+          setCurrentPage(nextPage);
+        }
       } catch (error) {
         if (!cancelled) {
           setMovies([]);
+          setServerTotalPages(1);
           setMoviesError(error?.message || "Impossible de charger la galerie.");
         }
       } finally {
@@ -319,7 +318,7 @@ const Gallery = () => {
     return () => {
       cancelled = true;
     };
-  }, [accessLoading, isGalleryAllowed]);
+  }, [accessLoading, isGalleryAllowed, currentPage, searchQuery, sortBy, minRating, maxRating]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -699,7 +698,7 @@ const Gallery = () => {
                 <div className="py-20 text-center text-rose-500 font-black uppercase tracking-widest text-xl">
                   {moviesError}
                 </div>
-              ) : filteredMovies.length > 0 ? (
+              ) : paginatedMovies.length > 0 ? (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12">
                   {paginatedMovies.map((movie) => {
                     const countryCode = String(

@@ -215,16 +215,61 @@ export async function getAgendaPosts() {
   return await res.json();
 }
 
-export async function getMovies() {
+export async function getMoviesPaginated({
+  page,
+  pageSize,
+  search,
+  sortBy,
+  minRating,
+  maxRating,
+} = {}) {
+  const query = new URLSearchParams();
+  if (page != null && Number.isFinite(Number(page))) {
+    query.set("page", String(Math.max(1, Number(page))));
+  }
+  if (pageSize != null && Number.isFinite(Number(pageSize))) {
+    query.set("pageSize", String(Math.max(1, Number(pageSize))));
+  }
+  if (search != null && String(search).trim()) {
+    query.set("search", String(search).trim());
+  }
+  if (sortBy != null && String(sortBy).trim()) {
+    query.set("sortBy", String(sortBy).trim());
+  }
+  if (minRating != null && Number.isFinite(Number(minRating))) {
+    query.set("minRating", String(Number(minRating)));
+  }
+  if (maxRating != null && Number.isFinite(Number(maxRating))) {
+    query.set("maxRating", String(Number(maxRating)));
+  }
+
+  const querySuffix = query.toString() ? `?${query.toString()}` : "";
   const { payload } = await fetchWith404Fallback(
-    ["/api/movies", "/api/movie"],
+    [`/api/movies${querySuffix}`, `/api/movie${querySuffix}`],
     { cache: "no-store" },
     "Movies API",
   );
 
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.movies)) return payload.movies;
-  return [];
+  if (Array.isArray(payload)) {
+    return {
+      movies: payload,
+      pagination: null,
+    };
+  }
+  if (Array.isArray(payload?.movies)) {
+    return {
+      movies: payload.movies,
+      pagination: payload?.pagination || null,
+    };
+  }
+  return {
+    movies: [],
+    pagination: null,
+  };
+}
+
+export async function getMovies(options = {}) {
+  return getMoviesPaginated(options);
 }
 
 export async function getMovieById(movieId) {
