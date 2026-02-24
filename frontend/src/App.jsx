@@ -1,5 +1,11 @@
 import { useEffect } from "react";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  useLocation,
+  useParams,
+  Outlet,
+} from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CookieModal from "./components/CookieModal";
@@ -14,6 +20,20 @@ import MovieDetails from "./pages/MovieDetails";
 import DashboardEntry from "./pages/DashboardEntry";
 import TestCountdown from "./pages/TestCountdown";
 
+// Gestionnaire de Langue et Direction (RTL/LTR)
+const LangConfig = () => {
+  const { lang } = useParams();
+
+  useEffect(() => {
+    // Si lang est absent, on considère que c'est "fr"
+    const current = lang || "fr";
+    document.documentElement.lang = current;
+    document.documentElement.dir = current === "ar" ? "rtl" : "ltr";
+  }, [lang]);
+
+  return <Outlet />;
+};
+
 export default function App() {
   const location = useLocation();
   const hideChrome = location.pathname.startsWith("/dashboard");
@@ -26,46 +46,95 @@ export default function App() {
     }
   }, [location]);
 
+  // Définition commune des routes pour éviter la répétition
+  const routesDefinition = (
+    <>
+      {/* ACCUEIL */}
+      <Route index element={<WpPage isHome={true} />} />
+      <Route path="accueil" element={<WpPage isHome={true} />} />
+      <Route path="home" element={<WpPage isHome={true} />} />
+
+      {/* PAGES STATIQUES */}
+      <Route path="newsletter" element={<Newsletter />} />
+      <Route path="a-propos" element={<About />} />
+      <Route path="about" element={<About />} />
+
+      <Route path="partenaires" element={<Partenaires />} />
+      <Route path="partner" element={<Partenaires />} />
+      <Route path="partners" element={<Partenaires />} />
+
+      {/* FILMS / GALERIE */}
+      <Route path="films" element={<Gallery />} />
+      <Route path="movies" element={<Gallery />} />
+      <Route path="gallery" element={<Gallery />} />
+      <Route path="movie/:id" element={<MovieDetails />} />
+
+      {/* JURY & AGENDA */}
+      <Route path="jury" element={<WpPage fixedSlug="jury" />} />
+      <Route path="jury-eng" element={<WpPage fixedSlug="jury" />} />
+      <Route path="agenda" element={<WpPage fixedSlug="agenda" />} />
+      <Route path="schedule" element={<WpPage fixedSlug="schedule" />} />
+
+      {/* CONTACT */}
+      <Route path="contact" element={<WpPage fixedSlug="contact" />} />
+
+      {/* APPEL A PROJETS (Slug rectifié selon ta structure WP) */}
+      <Route
+        path="appel-a-projet"
+        element={<WpPage fixedSlug="appel-a-projet" />}
+      />
+      <Route
+        path="call-for-project"
+        element={<WpPage fixedSlug="call-for-project" />}
+      />
+
+      {/* SOUMISSION */}
+      <Route path="deposer-un-film" element={<YoutubeUpload />} />
+      <Route path="submit-film" element={<YoutubeUpload />} />
+      <Route path="submit-a-film" element={<YoutubeUpload />} />
+
+      {/* LEGAL */}
+      <Route path="cgv" element={<WpPage fixedSlug="cgv" />} />
+      <Route path="tos" element={<WpPage fixedSlug="tos" />} />
+      <Route
+        path="mentions-legales"
+        element={<WpPage fixedSlug="mentions-legales" />}
+      />
+      <Route
+        path="legal-notice"
+        element={<WpPage fixedSlug="legal-notice" />}
+      />
+
+      <Route path="testcountdown" element={<TestCountdown />} />
+
+      {/* WP DYNAMIQUE (Doit être en dernier) */}
+      <Route path=":slug" element={<WpPage />} />
+    </>
+  );
+
   return (
     <div className="min-h-screen flex flex-col">
       {!hideChrome && <Navbar />}
       <div className="flex-1">
         <Routes>
-          <Route path="/" element={<WpPage isHome={true} />} />
-          <Route path="/accueil" element={<WpPage isHome={true} />} />
-          <Route path="/home" element={<WpPage isHome={true} />} />
-          <Route path="/newsletter" element={<Newsletter />} />
-          <Route path="/a-propos" element={<About />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/partenaires" element={<Partenaires />} />
-          <Route path="/partner" element={<Partenaires />} />
-          <Route path="/partners" element={<Partenaires />} />
-          <Route path="/films" element={<Gallery />} />
-          <Route path="/movies" element={<Gallery />} />
-          <Route path="/movie/:id" element={<MovieDetails />} />
+          {/* Dashboard hors i18n */}
           <Route path="/dashboard" element={<DashboardEntry />} />
-          <Route path="/testcountdown" element={<TestCountdown />} />
-          <Route
-            path="/en/call-for-project"
-            element={<Navigate to="/call-for-project" replace />}
-          />
-          <Route
-            path="/en/call-for-projects"
-            element={<Navigate to="/call-for-project" replace />}
-          />
-          <Route
-            path="/call-for-project"
-            element={<WpPage fixedSlug="call-for-project" />}
-          />
-          <Route
-            path="/call-for-projects"
-            element={<WpPage fixedSlug="call-for-project" />}
-          />
-          <Route path="/deposer-un-film" element={<YoutubeUpload />} />
-          <Route path="/submit-a-film" element={<YoutubeUpload />} />
-          <Route path="/submit-film" element={<YoutubeUpload />} />
-          <Route path="/concours" element={<YoutubeUpload />} />
-          <Route path="/:slug" element={<WpPage />} />
+
+          {/* 1. ANGLAIS & ARABE (avec préfixe :lang) */}
+          <Route path="/:lang" element={<LangConfig />}>
+            {/* On filtre pour que ça ne match que 'en' ou 'ar' */}
+            {["en", "ar"].map((l) => (
+              <Route key={l} path="" element={<Outlet />}>
+                {routesDefinition}
+              </Route>
+            ))}
+          </Route>
+
+          {/* 2. FRANÇAIS (sans préfixe, à la racine) */}
+          <Route path="/" element={<LangConfig />}>
+            {routesDefinition}
+          </Route>
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
