@@ -3,6 +3,7 @@ const PHASE2_SELECTION_TABLE = "phase2_movie_selections";
 const PHASE3_SELECTION_TABLE = "phase3_winner_selections";
 const LEGACY_PHASE2_SELECTION_TABLE = "admin_selections";
 const LEGACY_PHASE3_SELECTION_TABLE = "admin_selections";
+const LEGACY_ADMIN_RATINGS_TABLE = "admin_ratings";
 
 export const SITE_PHASE_VALUES = ["phase_1", "phase_2", "phase_3"];
 export const SITE_PHASE_MODE_VALUES = ["manual", "timer"];
@@ -18,6 +19,11 @@ async function addColumnIfMissing(pool, columns, columnName, definitionSql) {
     `ALTER TABLE \`${SITE_PHASE_TABLE}\` ADD COLUMN \`${columnName}\` ${definitionSql}`,
   );
   columns.add(columnName);
+}
+
+async function tableExists(pool, tableName) {
+  const [rows] = await pool.query("SHOW TABLES LIKE ?", [tableName]);
+  return rows.length > 0;
 }
 
 async function ensurePrimaryKeyOnId(pool) {
@@ -290,6 +296,54 @@ export async function deletePhase2MovieSelection(pool, movieId) {
     [movieId],
   );
   return Number(result?.affectedRows || 0);
+}
+
+export async function pruneMoviesOutsidePhase2Selection(pool) {
+  const summary = {
+    deletedLegacyRatings: 0,
+    deletedLegacySelections: 0,
+    deletedMovies: 0,
+  };
+
+  const hasLegacySelections = await tableExists(pool, LEGACY_PHASE2_SELECTION_TABLE);
+  const hasLegacyRatings = await tableExists(pool, LEGACY_ADMIN_RATINGS_TABLE);
+
+  if (hasLegacySelections && hasLegacyRatings) {
+    const [legacyRatingsDeleteResult] = await pool.query(
+      `
+        DELETE ar
+        FROM \`${LEGACY_ADMIN_RATINGS_TABLE}\` ar
+        INNER JOIN \`${LEGACY_PHASE2_SELECTION_TABLE}\` s ON s.id = ar.selection_id
+        LEFT JOIN \`${PHASE2_SELECTION_TABLE}\` p2 ON p2.movie_id = s.movie_id
+        WHERE p2.movie_id IS NULL
+      `,
+    );
+    summary.deletedLegacyRatings = Number(legacyRatingsDeleteResult?.affectedRows || 0);
+  }
+
+  if (hasLegacySelections) {
+    const [legacySelectionsDeleteResult] = await pool.query(
+      `
+        DELETE s
+        FROM \`${LEGACY_PHASE2_SELECTION_TABLE}\` s
+        LEFT JOIN \`${PHASE2_SELECTION_TABLE}\` p2 ON p2.movie_id = s.movie_id
+        WHERE p2.movie_id IS NULL
+      `,
+    );
+    summary.deletedLegacySelections = Number(legacySelectionsDeleteResult?.affectedRows || 0);
+  }
+
+  const [moviesDeleteResult] = await pool.query(
+    `
+      DELETE m
+      FROM movies m
+      LEFT JOIN \`${PHASE2_SELECTION_TABLE}\` p2 ON p2.movie_id = m.id
+      WHERE p2.movie_id IS NULL
+    `,
+  );
+  summary.deletedMovies = Number(moviesDeleteResult?.affectedRows || 0);
+
+  return summary;
 }
 
 export async function setPhase2ReadyFlag(pool, { isReady, readyBy }) {

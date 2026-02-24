@@ -8,6 +8,7 @@ import {
   getCurrentSessionUser,
   getMovieById,
   getMyMovieRating,
+  getSitePhaseState,
   upsertMyMovieRating,
 } from "../api";
 
@@ -69,6 +70,47 @@ function toDurationDisplay(value, fallbackLabel) {
   return `${Math.round(numeric)}min`;
 }
 
+function toYoutubeEmbedUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  const directIdMatch = raw.match(/^[a-zA-Z0-9_-]{11}$/);
+  if (directIdMatch) {
+    return `https://www.youtube.com/embed/${directIdMatch[0]}`;
+  }
+
+  try {
+    const url = new URL(raw);
+    const host = String(url.hostname || "").toLowerCase();
+    const pathname = String(url.pathname || "");
+
+    if (host.includes("youtu.be")) {
+      const id = pathname.replace(/^\/+/, "").split("/")[0];
+      if (id) return `https://www.youtube.com/embed/${id}`;
+    }
+
+    if (host.includes("youtube.com")) {
+      if (pathname.startsWith("/embed/")) return raw;
+      const v = url.searchParams.get("v");
+      if (v) return `https://www.youtube.com/embed/${v}`;
+    }
+  } catch {
+    return "";
+  }
+
+  return "";
+}
+
+function toDirectPreviewVideoUrl(...values) {
+  for (const value of values) {
+    const raw = String(value || "").trim();
+    if (!raw) continue;
+    if (/^https?:\/\/[^?#]+\.(mp4)(?:[?#].*)?$/i.test(raw)) return raw;
+    if (/^\/(?:MarsAi\/)?uploads\/videos\/[^?#]+\.(mp4)(?:[?#].*)?$/i.test(raw)) return raw;
+  }
+  return "";
+}
+
 function getSocialEntries(movie) {
   const socialLinks = movie?.socialLinks;
   if (!socialLinks || typeof socialLinks !== "object") return [];
@@ -101,6 +143,7 @@ const MovieDetails = () => {
   const [ratingLoading, setRatingLoading] = useState(false);
   const [ratingError, setRatingError] = useState("");
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
+  const [activeSitePhase, setActiveSitePhase] = useState("phase_1");
   const heroVideoRef = useRef(null);
 
   const movieId = Number.parseInt(id, 10);
@@ -113,8 +156,32 @@ const MovieDetails = () => {
   }, [movieId]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const sitePhase = await getSitePhaseState();
+        if (cancelled) return;
+        setActiveSitePhase(String(sitePhase?.currentPhase || "phase_1").toLowerCase());
+      } catch {
+        if (!cancelled) {
+          setActiveSitePhase("phase_1");
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const shouldUseYoutubePlayer =
+    activeSitePhase === "phase_2" || activeSitePhase === "phase_3";
+  const heroPreviewVideoUrl = toDirectPreviewVideoUrl(movie?.videoUrl, movie?.rawVideoUrl);
+
+  useEffect(() => {
     const video = heroVideoRef.current;
-    if (!video || !movie?.videoUrl) return;
+    if (!video || !heroPreviewVideoUrl) return;
 
     const handleLoadedMetadata = () => {
       video.currentTime = 0;
@@ -142,7 +209,7 @@ const MovieDetails = () => {
       video.removeEventListener("timeupdate", handleTimeUpdate);
       video.pause();
     };
-  }, [movie?.videoUrl]);
+  }, [heroPreviewVideoUrl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -350,6 +417,10 @@ const MovieDetails = () => {
   const releaseDateDisplay =
     toNonEmptyString(movie.releaseDate, movie.release_date, movie.release_year) || fallbackNa;
   const durationDisplay = toDurationDisplay(movie.duration, fallbackNa);
+  const youtubeEmbedUrl = toYoutubeEmbedUrl(movie.youtubeUrl);
+  const canWatchMovie = shouldUseYoutubePlayer
+    ? Boolean(youtubeEmbedUrl)
+    : Boolean(movie.videoUrl);
 
   return (
     <>
@@ -380,11 +451,11 @@ const MovieDetails = () => {
         </div>
 
         <section className="relative w-full pt-20 md:pt-32 pb-20 overflow-hidden bg-gradient-to-b from-blue-900 to-blue-950">
-          {movie.videoUrl && (
+          {heroPreviewVideoUrl && (
             <video
               ref={heroVideoRef}
               className="absolute inset-0 h-full w-full object-cover"
-              src={movie.videoUrl}
+              src={heroPreviewVideoUrl}
               muted
               playsInline
               preload="metadata"
@@ -413,7 +484,7 @@ const MovieDetails = () => {
                   <span>{durationDisplay}</span>
                 </div>
 
-                {movie.videoUrl ? (
+                {canWatchMovie ? (
                   <button
                     type="button"
                     onClick={() => setIsPlayerOpen(true)}
@@ -438,12 +509,39 @@ const MovieDetails = () => {
           <div className="container mx-auto px-6 md:px-20 pt-20">
             <div className="grid lg:grid-cols-3 gap-16">
               <div className="lg:col-span-2">
-                {movie.videoUrl && isPlayerOpen && (
+                {!shouldUseYoutubePlayer && movie.videoUrl && isPlayerOpen && (
                   <MascotCameraPlayer
                     src={movie.videoUrl}
                     title={movie.title}
                     onClose={() => setIsPlayerOpen(false)}
                   />
+                )}
+
+                {shouldUseYoutubePlayer && youtubeEmbedUrl && isPlayerOpen && (
+                  <div className="mb-12 overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-xl">
+                    <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                      <p className="text-sm font-bold uppercase tracking-wider text-slate-700">
+                        YouTube Player
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setIsPlayerOpen(false)}
+                        className="rounded-lg px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                      >
+                        Fermer
+                      </button>
+                    </div>
+                    <div className="aspect-video w-full">
+                      <iframe
+                        title={`YouTube - ${movie.title}`}
+                        src={youtubeEmbedUrl}
+                        className="h-full w-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerPolicy="strict-origin-when-cross-origin"
+                        allowFullScreen
+                      />
+                    </div>
+                  </div>
                 )}
 
                 <div className="mb-12">

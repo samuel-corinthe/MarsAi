@@ -14,6 +14,7 @@ import {
   insertPhase3MovieSelection,
   isMovieSelectedForPhase2,
   isMovieSelectedForPhase3,
+  pruneMoviesOutsidePhase2Selection,
   setPhase2ReadyFlag,
   setPhase3ReadyFlag,
   updateCurrentSitePhase,
@@ -211,6 +212,13 @@ export async function togglePhase2Selection({
   if (shouldSelect) {
     const alreadySelected = await isMovieSelectedForPhase2(pool, safeMovieId);
     if (!alreadySelected) {
+      const selectedCount = await countPhase2SelectedMovies(pool);
+      if (selectedCount >= MIN_PHASE2_SELECTION) {
+        throw createHttpError(
+          400,
+          `Quota phase 2 atteint: ${selectedCount}/${MIN_PHASE2_SELECTION}. Retire un film avant d'en ajouter un autre.`,
+        );
+      }
       try {
         await insertPhase2MovieSelection(pool, {
           movieId: safeMovieId,
@@ -268,6 +276,13 @@ export async function togglePhase3Selection({
 
     const alreadySelected = await isMovieSelectedForPhase3(pool, safeMovieId);
     if (!alreadySelected) {
+      const selectedCount = await countPhase3SelectedMovies(pool);
+      if (selectedCount >= MIN_PHASE3_SELECTION) {
+        throw createHttpError(
+          400,
+          `Quota phase 3 atteint: ${selectedCount}/${MIN_PHASE3_SELECTION}. Retire un film avant d'en ajouter un autre.`,
+        );
+      }
       try {
         await insertPhase3MovieSelection(pool, {
           movieId: safeMovieId,
@@ -302,13 +317,13 @@ export async function validatePhase2Selection({ actorAdminId, actorRole }) {
   }
 
   const pool = getDbPool();
-  await getOrCreateCurrentState(pool);
+  const currentRow = await getOrCreateCurrentState(pool);
   const selectedCount = await countPhase2SelectedMovies(pool);
 
-  if (selectedCount < MIN_PHASE2_SELECTION) {
+  if (selectedCount !== MIN_PHASE2_SELECTION) {
     throw createHttpError(
       400,
-      `Selection insuffisante: ${selectedCount}/${MIN_PHASE2_SELECTION} films.`,
+      `Selection invalide: ${selectedCount}/${MIN_PHASE2_SELECTION}. Il faut exactement ${MIN_PHASE2_SELECTION} films.`,
     );
   }
 
@@ -317,7 +332,33 @@ export async function validatePhase2Selection({ actorAdminId, actorRole }) {
     readyBy: actorAdminId || null,
   });
 
-  return getPhase2SelectionStatus();
+  let phaseTransition = null;
+  let transitionErrorMessage = null;
+
+  try {
+    const currentPhaseKey = String(currentRow?.current_phase || "").toLowerCase();
+    if (currentPhaseKey === "phase_1" || currentPhaseKey === "phase_2") {
+      phaseTransition = await setSitePhaseState({
+        currentPhase: "phase_2",
+        mode: String(currentRow?.mode || "manual"),
+        updatedBy: actorAdminId || null,
+        actorRole,
+      });
+    }
+  } catch (transitionError) {
+    transitionErrorMessage = String(transitionError?.message || "Passage automatique en phase 2 impossible.");
+  }
+
+  const status = await getPhase2SelectionStatus();
+  if (phaseTransition || transitionErrorMessage) {
+    return {
+      ...status,
+      phaseTransition: phaseTransition || null,
+      phaseTransitionError: transitionErrorMessage,
+    };
+  }
+
+  return status;
 }
 
 export async function validatePhase3Selection({ actorAdminId, actorRole }) {
@@ -329,10 +370,10 @@ export async function validatePhase3Selection({ actorAdminId, actorRole }) {
   await getOrCreateCurrentState(pool);
   const selectedCount = await countPhase3SelectedMovies(pool);
 
-  if (selectedCount < MIN_PHASE3_SELECTION) {
+  if (selectedCount !== MIN_PHASE3_SELECTION) {
     throw createHttpError(
       400,
-      `Selection insuffisante: ${selectedCount}/${MIN_PHASE3_SELECTION} films.`,
+      `Selection invalide: ${selectedCount}/${MIN_PHASE3_SELECTION}. Il faut exactement ${MIN_PHASE3_SELECTION} films.`,
     );
   }
 
@@ -370,8 +411,16 @@ export async function setSitePhaseState({ currentPhase, mode, updatedBy, actorRo
   const nextMode = normalizedMode || currentRow.mode;
 
   const currentPhaseKey = String(currentRow.current_phase || "").toLowerCase();
-  if (nextPhase === "phase_2" && currentPhaseKey === "phase_1") {
+  const isPhase1ToPhase2 = nextPhase === "phase_2" && currentPhaseKey === "phase_1";
+  const isExplicitPhase2Refresh =
+    normalizedPhase === "phase_2"
+    && nextPhase === "phase_2"
+    && currentPhaseKey === "phase_2";
+  let phase2SelectedCountAtTransition = null;
+
+  if (isPhase1ToPhase2) {
     const selectedCount = await countPhase2SelectedMovies(pool);
+    phase2SelectedCountAtTransition = selectedCount;
     const isReadyBySuperadmin = Number(currentRow.phase_2_ready || 0) === 1;
     const phase1EndTs = toTimestamp(currentRow.phase_1_ends_at);
     const nowTs = Date.now();
@@ -388,10 +437,10 @@ export async function setSitePhaseState({ currentPhase, mode, updatedBy, actorRo
         `Impossible de passer en phase 2 avant la fin de phase 1 (${new Date(phase1EndTs).toISOString()}).`,
       );
     }
-    if (selectedCount < MIN_PHASE2_SELECTION) {
+    if (selectedCount !== MIN_PHASE2_SELECTION) {
       throw createHttpError(
         400,
-        `Impossible de passer en phase 2: ${selectedCount}/${MIN_PHASE2_SELECTION} films selectionnes.`,
+        `Impossible de passer en phase 2: ${selectedCount}/${MIN_PHASE2_SELECTION}. Il faut exactement ${MIN_PHASE2_SELECTION} films selectionnes.`,
       );
     }
     if (!isReadyBySuperadmin) {
@@ -426,10 +475,10 @@ export async function setSitePhaseState({ currentPhase, mode, updatedBy, actorRo
         `Impossible de passer en phase 3 avant la fin de phase 2 (${new Date(phase2EndTs).toISOString()}).`,
       );
     }
-    if (selectedCount < MIN_PHASE3_SELECTION) {
+    if (selectedCount !== MIN_PHASE3_SELECTION) {
       throw createHttpError(
         400,
-        `Impossible de passer en phase 3: ${selectedCount}/${MIN_PHASE3_SELECTION} films selectionnes.`,
+        `Impossible de passer en phase 3: ${selectedCount}/${MIN_PHASE3_SELECTION}. Il faut exactement ${MIN_PHASE3_SELECTION} films selectionnes.`,
       );
     }
     if (!isReadyBySuperadmin) {
@@ -446,12 +495,59 @@ export async function setSitePhaseState({ currentPhase, mode, updatedBy, actorRo
     }
   }
 
-  await updateCurrentSitePhase(pool, {
-    currentPhase: nextPhase,
-    mode: nextMode,
-    updatedBy,
-  });
+  if (isPhase1ToPhase2 && phase2SelectedCountAtTransition == null) {
+    phase2SelectedCountAtTransition = await countPhase2SelectedMovies(pool);
+  }
+  let shouldPruneMoviesForPhase2 =
+    isPhase1ToPhase2 && Number(phase2SelectedCountAtTransition || 0) > 0;
+
+  if (!shouldPruneMoviesForPhase2 && isExplicitPhase2Refresh) {
+    const selectedCount = await countPhase2SelectedMovies(pool);
+    const isReadyBySuperadmin = Number(currentRow.phase_2_ready || 0) === 1;
+    const canForcePrune =
+      String(actorRole || "") === "superadmin"
+      && isReadyBySuperadmin
+      && selectedCount === MIN_PHASE2_SELECTION;
+
+    if (canForcePrune) {
+      phase2SelectedCountAtTransition = selectedCount;
+      shouldPruneMoviesForPhase2 = true;
+    }
+  }
+
+  const connection = await pool.getConnection();
+  let phase2PruneSummary = null;
+
+  try {
+    await connection.beginTransaction();
+
+    await updateCurrentSitePhase(connection, {
+      currentPhase: nextPhase,
+      mode: nextMode,
+      updatedBy,
+    });
+
+    if (shouldPruneMoviesForPhase2) {
+      phase2PruneSummary = await pruneMoviesOutsidePhase2Selection(connection);
+    }
+
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
 
   const updatedRow = await fetchCurrentSitePhase(pool);
-  return mapSitePhaseRow(updatedRow);
+  const mappedState = mapSitePhaseRow(updatedRow);
+
+  if (phase2PruneSummary) {
+    return {
+      ...mappedState,
+      phase2PruneSummary,
+    };
+  }
+
+  return mappedState;
 }

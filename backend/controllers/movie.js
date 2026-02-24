@@ -1,5 +1,5 @@
 import { getMovieDetails, listMovies, toMovieId } from "../services/movieService.js";
-import { getSitePhaseState } from "../services/sitePhaseService.js";
+import { getPhase2SelectionStatus, getSitePhaseState } from "../services/sitePhaseService.js";
 import { getSessionFromRequest } from "../services/authService.js";
 
 function isAdminSession(session) {
@@ -20,10 +20,38 @@ async function enforceMovieAccessForCurrentPhase(req) {
   throw error;
 }
 
+async function getVisibleMovieIdsForCurrentPhase() {
+  const sitePhase = await getSitePhaseState();
+  const phaseKey = String(sitePhase?.currentPhase || "").toLowerCase();
+
+  if (phaseKey === "phase_2" || phaseKey === "phase_3") {
+    const selection = await getPhase2SelectionStatus();
+    const visibleIds = new Set(
+      (Array.isArray(selection?.selectedMovies) ? selection.selectedMovies : [])
+        .map((movie) => Number(movie?.id))
+        .filter((movieId) => Number.isFinite(movieId) && movieId > 0),
+    );
+    return { phaseKey, visibleIds };
+  }
+
+  return { phaseKey, visibleIds: null };
+}
+
 export async function getAllMovies(req, res) {
   try {
     await enforceMovieAccessForCurrentPhase(req);
-    const movies = await listMovies();
+    const [movies, visibility] = await Promise.all([
+      listMovies(),
+      getVisibleMovieIdsForCurrentPhase(),
+    ]);
+
+    if (visibility.visibleIds) {
+      const filteredMovies = movies.filter((movie) =>
+        visibility.visibleIds.has(Number(movie?.id)),
+      );
+      return res.json({ ok: true, movies: filteredMovies });
+    }
+
     return res.json({ ok: true, movies });
   } catch (error) {
     if (error?.statusCode) {
@@ -45,8 +73,14 @@ export async function getMovieById(req, res) {
 
   try {
     await enforceMovieAccessForCurrentPhase(req);
-    const movie = await getMovieDetails({ movieId });
+    const [movie, visibility] = await Promise.all([
+      getMovieDetails({ movieId }),
+      getVisibleMovieIdsForCurrentPhase(),
+    ]);
     if (!movie) {
+      return res.status(404).json({ error: "Film introuvable." });
+    }
+    if (visibility.visibleIds && !visibility.visibleIds.has(movieId)) {
       return res.status(404).json({ error: "Film introuvable." });
     }
 

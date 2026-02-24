@@ -417,6 +417,12 @@ const Gallery = () => {
 
     const safeMovieId = Number(movieId);
     if (!Number.isFinite(safeMovieId) || safeMovieId <= 0) return;
+    if (!currentSelected && phase2SelectedCount >= phaseSelectionMinRequired) {
+      setPhase2SelectionError(
+        `Quota atteint: ${phase2SelectedCount}/${phaseSelectionMinRequired}. Retire un film avant d'en ajouter un autre.`,
+      );
+      return;
+    }
     if (
       canManagePhase3Selection
       && phase3EligibilityEnforced
@@ -713,8 +719,12 @@ const Gallery = () => {
                       !canManagePhase3Selection
                       || !phase3EligibilityEnforced
                       || phase3EligibleMovieIds.has(movieId);
+                    const isQuotaReachedForAdd =
+                      !isSelectedForPhase2
+                      && phase2SelectedCount >= phaseSelectionMinRequired;
                     const isSelectionDisabled =
-                      canManagePhase3Selection && !isSelectedForPhase2 && !isEligibleForPhase3;
+                      isQuotaReachedForAdd
+                      || (canManagePhase3Selection && !isSelectedForPhase2 && !isEligibleForPhase3);
 
                     return (
                       <div key={movie.id} className="group space-y-3">
@@ -765,7 +775,7 @@ const Gallery = () => {
                             {isSelectionBusy
                               ? "..."
                               : isSelectionDisabled
-                                ? "Non retenu phase 2"
+                                ? (isQuotaReachedForAdd ? "Quota atteint" : "Non retenu phase 2")
                               : isSelectedForPhase2
                                 ? (canManagePhase2Selection ? "Retirer de la phase 2" : "Retirer de la phase 3")
                                 : (canManagePhase2Selection ? "Selectionner pour phase 2" : "Selectionner pour phase 3")}

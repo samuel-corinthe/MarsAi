@@ -12,6 +12,7 @@ const Navbar = () => {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [hideGalleryForVisitors, setHideGalleryForVisitors] = useState(false);
   const [hideSubmitForVisitors, setHideSubmitForVisitors] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -76,6 +77,26 @@ const Navbar = () => {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const sessionPayload = await getCurrentSessionUser();
+        if (cancelled) return;
+        setHasSession(
+          Boolean(sessionPayload?.authenticated) || Boolean(sessionPayload?.user),
+        );
+      } catch {
+        if (!cancelled) setHasSession(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [location.pathname]);
 
   const routeAliases = {
     "/accueil": "/home",
@@ -224,6 +245,7 @@ const Navbar = () => {
   const homePath = i18n.language === "en" ? "/home" : "/accueil";
   const submitFilmPath =
     i18n.language === "en" ? "/submit-film" : "/deposer-un-film";
+  const profileLabel = i18n.language === "en" ? "Profile" : "Profil";
 
   return (
     <>
@@ -336,6 +358,31 @@ const Navbar = () => {
                   EN
                 </button>
               </div>
+
+              {hasSession && (
+                <Link
+                  to="/dashboard"
+                  className="group inline-flex items-center justify-center text-cyan-300 hover:text-white transition-colors duration-200"
+                  style={{ fontFamily: "'Inter', sans-serif" }}
+                  aria-label={profileLabel}
+                  title={profileLabel}
+                >
+                  <svg
+                    className="w-6 h-6"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.118a7.5 7.5 0 0115 0A17.94 17.94 0 0112 21.75a17.94 17.94 0 01-7.5-1.632z"
+                    />
+                  </svg>
+                </Link>
+              )}
 
               {!hideSubmitForVisitors && (
                 <Link
@@ -454,8 +501,34 @@ const Navbar = () => {
 
               <div className="h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent my-4"></div>
 
-              {!hideSubmitForVisitors && (
+              {(hasSession || !hideSubmitForVisitors) && (
                 <div className="px-4 space-y-3">
+                  {hasSession && (
+                    <Link
+                      to="/dashboard"
+                      className="mx-auto flex items-center justify-center text-cyan-200 hover:text-white transition-colors duration-200"
+                      style={{ fontFamily: "'Inter', sans-serif" }}
+                      aria-label={profileLabel}
+                      title={profileLabel}
+                    >
+                      <svg
+                        className="w-7 h-7"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15.75 7.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.118a7.5 7.5 0 0115 0A17.94 17.94 0 0112 21.75a17.94 17.94 0 01-7.5-1.632z"
+                        />
+                      </svg>
+                    </Link>
+                  )}
+
+                  {!hideSubmitForVisitors && (
                   <Link
                     to={submitFilmPath}
                     className="flex items-center justify-center space-x-2 w-full px-4 py-3 text-base font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg hover:shadow-lg hover:shadow-green-500/50 transition-all duration-300"
@@ -476,6 +549,7 @@ const Navbar = () => {
                     </svg>
                     <span>{t("nav.submitFilm")}</span>
                   </Link>
+                  )}
                 </div>
               )}
             </div>

@@ -136,6 +136,7 @@ function FilmRow({
   onRate,
   canManagePhase2Selection,
   isPhase2Selected,
+  isSelectionQuotaReached,
   isSelectionDisabled,
   selectionDisabledLabel,
   onTogglePhase2Select,
@@ -263,10 +264,12 @@ function FilmRow({
               <button
                 className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10 disabled:opacity-60"
                 onClick={() => onTogglePhase2Select?.(movieId, Boolean(isPhase2Selected))}
-                disabled={!hasMovieId || isPhase2SelectionBusy || isSelectionDisabled}
+                disabled={!hasMovieId || isPhase2SelectionBusy || isSelectionDisabled || isSelectionQuotaReached}
               >
                 {isPhase2SelectionBusy
                   ? "..."
+                  : isSelectionQuotaReached
+                    ? "Quota atteint"
                   : isSelectionDisabled
                     ? (selectionDisabledLabel || "Indisponible")
                   : isPhase2Selected
@@ -592,6 +595,12 @@ export default function Dashboard() {
       && !phase3EligibleMovieIds.has(safeMovieId)
     );
   };
+  const isSelectionQuotaReachedForMovie = (movieId) => {
+    const safeMovieId = Number(movieId);
+    if (!Number.isFinite(safeMovieId) || safeMovieId <= 0) return false;
+    if (phase2SelectionCount < phase2SelectionMinRequired) return false;
+    return !phase2SelectedMovieIds.has(safeMovieId);
+  };
 
   const handleNav = (href) => {
     if (!isDashboardSection(href)) return;
@@ -870,8 +879,13 @@ export default function Dashboard() {
         currentPhase: phaseKey,
         mode: "manual",
       });
-      setSitePhase(payload);
-      setAssignmentInfoSuccess(`Phase active: ${SITE_PHASE_LABELS[phaseKey]}.`);
+      await refreshDashboardAndAssignments();
+
+      const deletedMovies = Number(payload?.phase2PruneSummary?.deletedMovies || 0);
+      const pruneSuffix = deletedMovies > 0
+        ? ` ${deletedMovies} film(s) hors selection phase 2 supprime(s).`
+        : "";
+      setAssignmentInfoSuccess(`Phase active: ${SITE_PHASE_LABELS[phaseKey]}.${pruneSuffix}`);
     } catch (error) {
       setAssignmentInfoError(error?.message || "Impossible de mettre a jour la phase.");
     } finally {
@@ -884,6 +898,12 @@ export default function Dashboard() {
     const safeMovieId = Number(movieId);
     if (!Number.isFinite(safeMovieId) || safeMovieId <= 0) return;
     if (phase2SelectionBusyMovieId != null) return;
+    if (!currentSelected && phase2SelectionCount >= phase2SelectionMinRequired) {
+      setAssignmentInfoError(
+        `Quota atteint: ${phase2SelectionCount}/${phase2SelectionMinRequired}. Retire un film avant d'en ajouter un autre.`,
+      );
+      return;
+    }
     if (
       isSelectionForPhase3
       && phase3EligibilityEnforced
@@ -934,11 +954,44 @@ export default function Dashboard() {
         ? await validatePhase3Selection()
         : await validatePhase2Selection();
       applyPhase2SelectionSnapshot(payload, isSelectionForPhase3 ? 5 : 50);
-      const siteState = await getSitePhaseState();
-      setSitePhase(siteState);
-      setAssignmentInfoSuccess(
-        `Selection ${isSelectionForPhase2 ? "phase 2" : "phase 3"} validee par superadmin.`,
-      );
+
+      const targetPhase = isSelectionForPhase2 ? "phase_2" : (isSelectionForPhase3 ? "phase_3" : null);
+      let transitionErrorMessage = "";
+      let transitionPayload = null;
+
+      if (targetPhase) {
+        try {
+          transitionPayload = await updateSitePhaseState({
+            currentPhase: targetPhase,
+            mode: "manual",
+          });
+        } catch (transitionError) {
+          transitionErrorMessage = String(
+            transitionError?.message
+            || `Passage en ${SITE_PHASE_LABELS[targetPhase]} impossible pour le moment.`,
+          );
+        }
+      }
+
+      await refreshDashboardAndAssignments();
+
+      if (transitionPayload) {
+        const deletedMovies = Number(transitionPayload?.phase2PruneSummary?.deletedMovies || 0);
+        const pruneSuffix = deletedMovies > 0
+          ? ` ${deletedMovies} film(s) hors selection phase 2 supprime(s).`
+          : "";
+        setAssignmentInfoSuccess(
+          `Selection ${isSelectionForPhase2 ? "phase 2" : "phase 3"} validee et passage en ${SITE_PHASE_LABELS[targetPhase]}.${pruneSuffix}`,
+        );
+      } else if (transitionErrorMessage) {
+        setAssignmentInfoSuccess(
+          `Selection ${isSelectionForPhase2 ? "phase 2" : "phase 3"} validee. ${transitionErrorMessage}`,
+        );
+      } else {
+        setAssignmentInfoSuccess(
+          `Selection ${isSelectionForPhase2 ? "phase 2" : "phase 3"} validee par superadmin.`,
+        );
+      }
     } catch (error) {
       setAssignmentInfoError(
         error?.message
@@ -1191,7 +1244,6 @@ export default function Dashboard() {
               >
                 Réinitialiser
               </button>
-              {canManagePhase && <span className="text-xs text-amber-200/90">Session admin : changement de phase autorise</span>}
             </div>
             {profileSaveError && <p className="text-sm text-rose-200">{profileSaveError}</p>}
             {profileSaveSuccess && <p className="text-sm text-emerald-200">{profileSaveSuccess}</p>}
@@ -1481,6 +1533,7 @@ export default function Dashboard() {
                     onRate={handleOpenRatingModal}
                     canManagePhase2Selection={canManageSelectionForCurrentPhase}
                     isPhase2Selected={phase2SelectedMovieIds.has(Number(compactFilm.id))}
+                    isSelectionQuotaReached={isSelectionQuotaReachedForMovie(compactFilm.id)}
                     isSelectionDisabled={isSelectionDisabledForMovie(compactFilm.id)}
                     selectionDisabledLabel={selectionDisabledLabel}
                     onTogglePhase2Select={handleTogglePhase2Movie}
@@ -1501,6 +1554,7 @@ export default function Dashboard() {
                     onRate={handleOpenRatingModal}
                     canManagePhase2Selection={canManageSelectionForCurrentPhase}
                     isPhase2Selected={phase2SelectedMovieIds.has(Number(film.id))}
+                    isSelectionQuotaReached={isSelectionQuotaReachedForMovie(film.id)}
                     isSelectionDisabled={isSelectionDisabledForMovie(film.id)}
                     selectionDisabledLabel={selectionDisabledLabel}
                     onTogglePhase2Select={handleTogglePhase2Movie}

@@ -1711,6 +1711,25 @@ export default function YoutubeUpload() {
                         </div>
                     )}
 
+                    </section>
+
+                    {/* Messages de statut */}
+                    {status.message && (
+                        <div
+                            ref={statusRef}
+                            role="alert"
+                            aria-live="polite"
+                            aria-atomic="true"
+                            tabIndex="-1"
+                            className={`p-4 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 ${status.type === 'success'
+                                ? 'bg-green-50 text-green-700 border border-green-200 focus:ring-green-500'
+                                : 'bg-red-50 text-red-700 border border-red-200 focus:ring-red-500'
+                                }`}
+                        >
+                            {status.message}
+                        </div>
+                    )}
+
                     {youtubeVideoId && (
                         <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-2">
                             <div className="flex items-center justify-between gap-2">
@@ -1742,25 +1761,6 @@ export default function YoutubeUpload() {
                             >
                                 {t('upload.youtube_status.refresh_now')}
                             </button>
-                        </div>
-                    )}
-
-                    </section>
-
-                    {/* Messages de statut */}
-                    {status.message && (
-                        <div
-                            ref={statusRef}
-                            role="alert"
-                            aria-live="polite"
-                            aria-atomic="true"
-                            tabIndex="-1"
-                            className={`p-4 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 ${status.type === 'success'
-                                ? 'bg-green-50 text-green-700 border border-green-200 focus:ring-green-500'
-                                : 'bg-red-50 text-red-700 border border-red-200 focus:ring-red-500'
-                                }`}
-                        >
-                            {status.message}
                         </div>
                     )}
 
