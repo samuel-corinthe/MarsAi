@@ -70,7 +70,7 @@ const Navbar = () => {
   // 5. Configuration dynamique du Menu (Gère FR, EN, AR)
   const getSlug = (id) => {
     const slugs = {
-      about: { fr: "a-propos", en: "about", ar: "about" },
+      about: { fr: "a-propos", en: "about", ar: "حول" },
       films: { fr: "films", en: "movies", ar: "movies" },
       agenda: { fr: "agenda", en: "schedule", ar: "schedule" },
       call: {
