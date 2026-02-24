@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Seo from "../components/Seo";
+import { BreadcrumbSchema } from "../components/Schema";
 import { useTranslation } from "react-i18next";
 import { subscribeNewsletterForm } from "../api";
 
@@ -54,6 +55,16 @@ const Newsletter = () => {
       label: t("newsletter.stats.frequency"),
     },
     { number: "95%", label: t("newsletter.stats.open_rate") },
+  ];
+  const breadcrumbItems = [
+    {
+      name: t("common.home", "Accueil"),
+      url: "/",
+    },
+    {
+      name: t("newsletter.hero.badge", "Newsletter"),
+      url: "/newsletter",
+    },
   ];
 
   // Mappage des avantages (Benefits)
@@ -120,6 +131,7 @@ const Newsletter = () => {
         title={t("newsletter.hero.badge")}
         description={t("newsletter.hero.description")}
       />
+      <BreadcrumbSchema items={breadcrumbItems} />
       <div className="min-h-screen bg-black">
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 px-4 overflow-hidden">

@@ -2,6 +2,7 @@
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
+import { BreadcrumbSchema, ArticleSchema } from "../components/Schema";
 import { getPageBySlug, sendContactForm } from "../api";
 import Home from "./Home";
 import JuryWpage from "./jury";
@@ -534,6 +535,22 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   const seoTitle = page?.title?.rendered || slug;
   const seoDescription = page?.excerpt?.rendered || page?.content?.rendered || "";
   const seoLang = i18n.language;
+  const homePath = i18n.language === "en" ? "/home" : "/accueil";
+  const getPageName = () => {
+    if (slug === "agenda" || slug === "schedule") return "Agenda";
+    if (slug === "contact") return "Contact";
+    return page?.title?.rendered?.replace(/<[^>]+>/g, "") || slug;
+  };
+  const breadcrumbItems = [
+    {
+      name: i18n.language === "en" ? "Home" : "Accueil",
+      url: homePath,
+    },
+    {
+      name: getPageName(),
+      url: `/${slug}`,
+    },
+  ];
 
   if (slug === "appel-a-projet" || slug === "call-for-project") {
     return <CallForProject page={page} />;
@@ -556,6 +573,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white relative overflow-hidden">
         <Seo title={seoTitle} description={seoDescription} lang={seoLang} />
+        <BreadcrumbSchema items={breadcrumbItems} />
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-32 -right-24 w-72 h-72 bg-cyan-500/10 blur-3xl rounded-full"></div>
           <div className="absolute top-40 -left-24 w-72 h-72 bg-purple-500/10 blur-3xl rounded-full"></div>
@@ -762,6 +780,15 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
       }
     >
       <Seo title={seoTitle} description={seoDescription} lang={seoLang} />
+      <BreadcrumbSchema items={breadcrumbItems} />
+      {!isAgenda && (
+        <ArticleSchema
+          headline={page?.title?.rendered}
+          description={seoDescription}
+          datePublished={page?.date}
+          dateModified={page?.modified}
+        />
+      )}
       {isAgenda && (
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-32 -right-24 w-72 h-72 bg-cyan-500/10 blur-3xl rounded-full"></div>

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
+import { MovieSchema, BreadcrumbSchema } from "../components/Schema";
 import MascotCameraPlayer from "../components/MascotCameraPlayer";
 import {
   deleteMyMovieRating,
@@ -70,6 +71,23 @@ function toDurationDisplay(value, fallbackLabel) {
   return `${Math.round(numeric)}min`;
 }
 
+function extractDurationMinutes(value) {
+  if (value == null) return undefined;
+
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return Math.round(value);
+  }
+
+  const raw = String(value).trim();
+  if (!raw) return undefined;
+
+  const match = raw.match(/(\d+)/);
+  if (!match) return undefined;
+
+  const parsed = Number.parseInt(match[1], 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 function toYoutubeEmbedUrl(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -127,6 +145,7 @@ function getSocialEntries(movie) {
 const MovieDetails = () => {
   const { id } = useParams();
   const { t, i18n } = useTranslation();
+  const homePath = i18n.language === "en" ? "/home" : "/accueil";
   const galleryPath = i18n.language === "en" ? "/movies" : "/films";
 
   const [movie, setMovie] = useState(null);
@@ -421,10 +440,36 @@ const MovieDetails = () => {
   const canWatchMovie = shouldUseYoutubePlayer
     ? Boolean(youtubeEmbedUrl)
     : Boolean(movie.videoUrl);
+  const movieSchemaDurationMinutes = extractDurationMinutes(movie.duration);
+  const movieGenreList = Array.isArray(movie.genre) ? movie.genre : [];
+  const breadcrumbItems = [
+    {
+      name: i18n.language === "en" ? "Home" : "Accueil",
+      url: homePath,
+    },
+    {
+      name: t("nav.films", "Films"),
+      url: galleryPath,
+    },
+    {
+      name: movie.title,
+      url: `/movie/${movie.id}`,
+    },
+  ];
 
   return (
     <>
       <Seo title={seoTitle} description={seoDescription} />
+      <MovieSchema
+        title={movie.title}
+        description={movie.description || seoDescription}
+        director={directorName}
+        datePublished={releaseDateDisplay}
+        image={movie.img}
+        duration={movieSchemaDurationMinutes}
+        genre={movieGenreList}
+      />
+      <BreadcrumbSchema items={breadcrumbItems} />
       <div className="min-h-screen bg-blue-950 text-white font-sans relative">
         <div className="sticky top-0 z-30 border-b border-white/10 bg-blue-950/85 backdrop-blur-md">
           <div className="mx-auto w-full max-w-7xl px-4 py-3 sm:px-6">

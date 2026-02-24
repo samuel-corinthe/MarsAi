@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
+import { BreadcrumbSchema } from "../components/Schema";
 import {
   getCurrentSessionUser,
   getMovies,
@@ -472,6 +473,16 @@ const Gallery = () => {
     "gallery.top_movies_subtitle",
     "Decouvrez les films selectionnes du festival marsAI.",
   );
+  const breadcrumbItems = [
+    {
+      name: i18n.language === "en" ? "Home" : "Accueil",
+      url: i18n.language === "en" ? "/home" : "/accueil",
+    },
+    {
+      name: t("nav.films", "Films"),
+      url: i18n.language === "en" ? "/movies" : "/films",
+    },
+  ];
   const activeSortLabel =
     sortOptions.find((option) => option.value === sortBy)?.label || "Defaut";
 
@@ -485,6 +496,7 @@ const Gallery = () => {
   return (
     <>
       <Seo title={seoTitle} description={seoDescription} />
+      <BreadcrumbSchema items={breadcrumbItems} />
       <div className="min-h-screen bg-blue-950 flex flex-col font-sans text-slate-800">
         <section className="relative w-full pb-36 md:pb-40 pt-10">
           {showTopCarousel && activeTopMovie?.videoUrl && (
