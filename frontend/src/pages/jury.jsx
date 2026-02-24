@@ -1,14 +1,67 @@
-import React, {
-  useMemo,
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
+import { useTheme } from "../context/ThemeContext";
 
-// --- Helpers ---
+const THEMES = {
+  dark: {
+    pageBg: "bg-gradient-to-b from-[#020617] via-[#0b1732] to-[#020617]",
+    pageText: "text-slate-100",
+    glowA: "bg-cyan-500/15",
+    glowB: "bg-indigo-500/12",
+    badge: "border-cyan-300/45 bg-cyan-400/10 text-cyan-200",
+    switchBtn:
+      "border-slate-500/60 bg-slate-900/70 text-slate-200 hover:border-cyan-300/60 hover:text-cyan-100",
+    iconWrap: "border-cyan-400/70",
+    iconColor: "text-cyan-200",
+    title: "text-white",
+    subtitle: "text-slate-300",
+    card: "border-slate-500/35 bg-slate-900/45 hover:border-cyan-300/45",
+    cardSelected: "border-cyan-300/55",
+    cardDim: "opacity-35",
+    name: "text-white",
+    role: "text-cyan-200",
+    empty: "border-slate-500/35 bg-slate-900/45 text-slate-300",
+    modalOverlay: "bg-slate-950/70 backdrop-blur-sm",
+    modalPanel: "border-slate-500/40 bg-slate-900/95",
+    modalBorder: "border-slate-500/25",
+    modalLabel: "text-cyan-200",
+    modalTitle: "text-white",
+    modalClose:
+      "border-slate-500/45 bg-slate-950/70 text-slate-200 hover:border-cyan-300/55 hover:text-cyan-100",
+    prose:
+      "prose-invert prose-headings:text-white prose-p:text-slate-200 prose-a:text-cyan-200 prose-strong:text-white",
+  },
+  light: {
+    pageBg: "bg-gradient-to-b from-[#f4fbff] via-[#ebf6ff] to-[#f8fcff]",
+    pageText: "text-slate-900",
+    glowA: "bg-sky-400/20",
+    glowB: "bg-cyan-300/20",
+    badge: "border-sky-300/70 bg-sky-100 text-sky-800",
+    switchBtn:
+      "border-sky-200 bg-white/95 text-slate-700 hover:border-sky-400 hover:text-sky-700",
+    iconWrap: "border-sky-400/70",
+    iconColor: "text-sky-700",
+    title: "text-slate-900",
+    subtitle: "text-slate-600",
+    card: "border-sky-200/90 bg-white/90 hover:border-sky-400",
+    cardSelected: "border-sky-500/80 ring-1 ring-sky-300/60",
+    cardDim: "opacity-55",
+    name: "text-slate-900",
+    role: "text-sky-700",
+    empty: "border-sky-200 bg-white/90 text-slate-600",
+    modalOverlay: "bg-slate-900/35 backdrop-blur-sm",
+    modalPanel: "border-sky-200 bg-white/95",
+    modalBorder: "border-sky-200/80",
+    modalLabel: "text-sky-700",
+    modalTitle: "text-slate-900",
+    modalClose:
+      "border-sky-200 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700",
+    prose:
+      "prose-slate prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-sky-700 prose-strong:text-slate-900",
+  },
+};
+
 const createSlug = (text, lang = "fr") => {
   const baseSlug =
     text
@@ -18,18 +71,19 @@ const createSlug = (text, lang = "fr") => {
       .replace(/[\u0300-\u036f]/g, "")
       .trim()
       .replace(/\s+/g, "-")
-      .replace(/[^\w\-]+/g, "")
-      .replace(/\-\-+/g, "-") || "";
+      .replace(/[^\w-]+/g, "")
+      .replace(/--+/g, "-") || "";
 
-  // Si la langue est l'anglais, on ajoute le suffixe utilisé dans tes slugs WP
   if (lang === "en" && baseSlug) {
     return `${baseSlug}-eng`;
   }
+
   return baseSlug;
 };
 
 const parseJuryData = (html, lang) => {
   if (typeof window === "undefined") return [];
+
   return Array.from(
     new DOMParser().parseFromString(html, "text/html").querySelectorAll("li"),
   )
@@ -37,64 +91,91 @@ const parseJuryData = (html, lang) => {
       const img = li.querySelector("img");
       const strong = li.querySelector("strong") || li.querySelector("b");
       const name = strong ? strong.textContent : "";
+
       return {
-        // Priorité au data-slug si présent, sinon génération auto avec suffixe langue
-        slug:
-          li.getAttribute("data-slug") || createSlug(name || img?.alt, lang),
+        slug: li.getAttribute("data-slug") || createSlug(name || img?.alt, lang),
         name,
         role: (li.textContent || "").replace(name, "").trim(),
         imgSrc: img?.src,
       };
     })
-    .filter((i) => i.slug);
+    .filter((item) => item.slug);
 };
 
 const articleCache = new Map();
 
-// --- Components ---
-const Background = () => (
-  <div className="fixed inset-0 pointer-events-none z-0">
-    <div className="absolute inset-0 bg-gradient-to-br from-[#020617] via-[#1e3a8a] to-[#172554]" />
-    <div className="absolute top-[-10%] left-[-10%] w-[800px] h-[800px] bg-blue-600/20 rounded-full blur-[120px] mix-blend-screen opacity-40" />
-    <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-indigo-500/10 rounded-full blur-[100px] opacity-30" />
-    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay" />
-  </div>
-);
+function Background({ theme }) {
+  return (
+    <div className="pointer-events-none fixed inset-0 z-0">
+      <div className={`absolute inset-0 ${theme.pageBg}`} />
+      <div className={`absolute -right-20 -top-28 h-72 w-72 rounded-full blur-3xl ${theme.glowA}`} />
+      <div className={`absolute -left-20 top-48 h-72 w-72 rounded-full blur-3xl ${theme.glowB}`} />
+    </div>
+  );
+}
 
-const GavelIcon = () => (
-  <div className="mb-8 p-5 bg-[#1e293b]/50 backdrop-blur-md rounded-full shadow-[0_0_30px_rgba(37,99,235,0.2)] border border-white/10 ring-1 ring-blue-500/30">
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="w-10 h-10 text-blue-400"
+function GavelIcon({ theme }) {
+  return (
+    <div
+      className={`mb-7 inline-flex h-16 w-16 items-center justify-center rounded-full border-4 shadow-[0_10px_30px_rgba(0,0,0,0.35)] ${theme.iconWrap}`}
     >
-      <path d="m14.5 12.5-8 8a2.119 2.119 0 1 1-3-3l8-8m9.5 3.5 6-6m-14 14 6-6m-5 5 8 8m12 4-8-8" />
-    </svg>
-  </div>
-);
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={`h-7 w-7 ${theme.iconColor}`}
+      >
+        <path d="m14.5 12.5-8 8a2.119 2.119 0 1 1-3-3l8-8m9.5 3.5 6-6m-14 14 6-6m-5 5 8 8m12 4-8-8" />
+      </svg>
+    </div>
+  );
+}
 
 export default function JuryWpage({ page }) {
   const { t, i18n } = useTranslation();
+  const { themeMode } = useTheme();
+
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
-  const scrollRef = useRef(null);
   const abortRef = useRef(null);
+
+  useEffect(() => {
+    if (!selected || typeof window === "undefined") return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setSelected(null);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selected]);
+
+  const theme = themeMode === "light" ? THEMES.light : THEMES.dark;
 
   const openArticle = useCallback(
     async (slug) => {
       if (!slug) return;
 
       const cacheKey = `${slug}_${i18n.language}`;
-      if (articleCache.has(cacheKey))
-        return setSelected(articleCache.get(cacheKey));
+      if (articleCache.has(cacheKey)) {
+        setLoading(false);
+        setSelected(articleCache.get(cacheKey));
+        return;
+      }
 
       setLoading(true);
-      // État temporaire pour déclencher l'affichage du bloc
       setSelected({
         slug,
         title: { rendered: t("jury.loading") },
@@ -106,23 +187,23 @@ export default function JuryWpage({ page }) {
       abortRef.current = new AbortController();
 
       try {
-        const res = await fetch(
+        const response = await fetch(
           `https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_fields=id,title,content,excerpt,slug&lang=${i18n.language}`,
           { signal: abortRef.current.signal },
         );
-        const data = await res.json();
+
+        const data = await response.json();
 
         if (data && data.length > 0) {
           articleCache.set(cacheKey, data[0]);
           setSelected(data[0]);
-        } else {
-          // Si rien n'est trouvé, on ferme pour éviter le blocage sur "loading"
-          console.warn(`Aucun post trouvé pour le slug: ${slug}`);
-          setSelected(null);
+          return;
         }
-      } catch (e) {
-        if (e.name !== "AbortError") {
-          console.error(e);
+
+        setSelected(null);
+      } catch (error) {
+        if (error?.name !== "AbortError") {
+          console.error(error);
           setSelected(null);
         }
       } finally {
@@ -132,26 +213,12 @@ export default function JuryWpage({ page }) {
     [i18n.language, t],
   );
 
-  useEffect(() => {
-    if (selected && scrollRef.current)
-      setTimeout(
-        () =>
-          scrollRef.current.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          }),
-        100,
-      );
-  }, [selected]);
-
-  // On régénère les membres quand la langue change pour mettre à jour les slugs
   const members = useMemo(
     () => parseJuryData(page?.content?.rendered || "", i18n.language),
     [page, i18n.language],
   );
 
   const title = page?.title?.rendered || t("jury.jury_title");
-
   const seoTitle = page?.title?.rendered || t("jury.jury_title");
   const seoDescription = t(
     "jury.jury_subtitle",
@@ -161,127 +228,136 @@ export default function JuryWpage({ page }) {
   return (
     <>
       <Seo title={seoTitle} description={seoDescription} />
-      <main className="min-h-screen w-full bg-[#0f172a] text-white font-['Montserrat'] flex flex-col items-center py-20 px-4 relative overflow-x-hidden selection:bg-[#38bdf8] selection:text-[#0f172a]">
-      <Background />
 
-      <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 mix-blend-overlay pointer-events-none z-[60]"></div>
+      <main className={`relative min-h-screen overflow-x-hidden px-4 pb-20 pt-14 ${theme.pageBg} ${theme.pageText}`}>
+        <Background theme={theme} />
 
-      {/* Header */}
-      <div className="relative z-10 text-center mb-16 max-w-4xl flex flex-col items-center pt-10">
-        <GavelIcon />
-        <h1
-          className="text-5xl md:text-7xl font-black text-white mb-6 tracking-tighter drop-shadow-2xl uppercase"
-          dangerouslySetInnerHTML={{ __html: title }}
-        />
-        <p className="text-[#cbd5e1] text-lg md:text-xl max-w-2xl font-medium leading-relaxed">
-          {t(
-            "jury.jury_subtitle",
-            "Rencontrez les experts visionnaires de notre sélection officielle.",
-          )}
-        </p>
-      </div>
+        <div className="relative z-10 mx-auto w-full max-w-6xl">
+          <header className="mb-12 text-center sm:mb-14">
+            <p
+              className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] ${theme.badge}`}
+            >
+              {t("jury.jury_profile_label", "Profil jury")}
+            </p>
 
-      {/* Article Detail */}
-      {selected && (
-        <div
-          ref={scrollRef}
-          className="relative z-20 w-full max-w-4xl mb-24 animate-in fade-in slide-in-from-bottom-8 duration-500"
-        >
-          <div className="bg-[#1e293b] rounded-[2.5rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.6)] border border-[#334155]">
-            <div className="bg-[#1e293b] p-8 md:p-10 border-b border-white/5 flex justify-between items-start">
-              <div>
-                <span className="text-[#38bdf8] font-black uppercase text-[10px] tracking-[0.2em] mb-3 block">
-                  {selected.isLoading
-                    ? t("jury.jury.loading")
-                    : t("jury.jury_profile_label", "Profil Jury")}
-                </span>
-                <h2
-                  className="text-3xl md:text-4xl font-black text-white leading-none uppercase tracking-tight"
-                  dangerouslySetInnerHTML={{ __html: selected.title.rendered }}
-                />
-              </div>
-              <button
-                onClick={() => setSelected(null)}
-                className="flex items-center justify-center w-12 h-12 rounded-full bg-white/5 hover:bg-[#38bdf8] border border-white/10 transition-all text-white hover:text-[#0f172a]"
-              >
-                <span className="text-2xl leading-none">×</span>
-              </button>
+            <div className="mt-4">
+              <GavelIcon theme={theme} />
             </div>
 
-            <div className="p-8 md:p-14 bg-[#1e293b]">
-              {loading ? (
-                <div className="flex flex-col items-center justify-center py-20">
-                  <div className="w-12 h-12 border-4 border-white/10 border-t-[#38bdf8] rounded-full animate-spin mb-6" />
-                </div>
-              ) : (
-                <div
-                  className="prose prose-lg prose-invert max-w-none 
-                                prose-p:text-[#cbd5e1] prose-p:leading-relaxed 
-                                prose-headings:text-white prose-headings:font-black 
-                                prose-a:text-[#38bdf8] prose-strong:text-white
-                                prose-img:rounded-3xl"
-                  dangerouslySetInnerHTML={{
-                    __html: selected.content.rendered,
-                  }}
-                />
-              )}
-            </div>
+            <h1
+              className={`text-3xl font-black uppercase tracking-tight sm:text-5xl ${theme.title}`}
+              dangerouslySetInnerHTML={{ __html: title }}
+            />
+            <p className={`mx-auto mt-3 max-w-3xl text-sm leading-relaxed sm:text-base ${theme.subtitle}`}>
+              {seoDescription}
+            </p>
+          </header>
 
-            <div className="bg-[#0f172a]/30 p-6 text-center border-t border-white/5">
-              <button
-                onClick={() => setSelected(null)}
-                className="text-[10px] uppercase tracking-[0.2em] font-black text-[#94a3b8] hover:text-[#38bdf8] transition-colors"
-              >
-                {t("jury.close_profile", "Fermer le profil")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          <section className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
+            {members.map((member) => {
+              const isSelected = selected && !selected.isLoading && selected.slug === member.slug;
+              const isDimmed = selected && !isSelected;
 
-      {/* Grid */}
-      <div className="relative z-10 w-full max-w-5xl px-4 md:px-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 justify-items-center">
-          {members.map((m) => {
-            const isSelected =
-              selected && !selected.isLoading && selected.slug === m.slug;
-            const isDimmed = selected && !isSelected;
-
-            return (
-              <div
-                key={m.slug}
-                onClick={() => openArticle(m.slug)}
-                className={`group relative flex items-center gap-8 p-8 w-full max-w-md rounded-[2rem] border cursor-pointer transition-all duration-500 ease-out bg-[#1e293b] shadow-xl
-                  ${!isDimmed ? "hover:bg-[#24334d] hover:border-[#38bdf8]/40 hover:-translate-y-2" : ""}
-                  ${isDimmed ? "opacity-30 grayscale blur-[2px]" : "opacity-100 border-white/5"}
-                  ${isSelected ? "border-[#38bdf8] ring-2 ring-[#38bdf8]/20" : ""}`}
-              >
-                <div className="relative flex-shrink-0">
+              return (
+                <article
+                  key={member.slug}
+                  onClick={() => openArticle(member.slug)}
+                  className={`group flex cursor-pointer items-center gap-4 rounded-[24px] border p-4 shadow-[0_18px_40px_rgba(0,0,0,0.2)] transition duration-300 sm:gap-6 sm:rounded-[28px] sm:p-6 ${theme.card} ${isSelected ? theme.cardSelected : ""} ${isDimmed ? theme.cardDim : "opacity-100"}`}
+                >
                   <img
-                    src={m.imgSrc || "https://via.placeholder.com/150"}
-                    alt={m.name}
-                    className={`w-24 h-24 md:w-28 md:h-28 object-cover rounded-full bg-[#0f172a] ring-4 ring-white/5 transition-all duration-500 ${!isDimmed && "group-hover:ring-[#38bdf8] group-hover:scale-105"}`}
+                    src={member.imgSrc || "https://via.placeholder.com/150"}
+                    alt={member.name}
+                    className="h-20 w-20 shrink-0 rounded-full border-4 border-current/20 object-cover sm:h-24 sm:w-24"
+                    loading="lazy"
+                  />
+
+                  <div className="min-w-0">
+                    <h3 className={`truncate text-lg font-black uppercase tracking-tight sm:text-xl ${theme.name}`}>
+                      {member.name}
+                    </h3>
+                    <p className={`mt-1 text-[10px] font-black uppercase tracking-[0.18em] sm:text-xs ${theme.role}`}>
+                      {member.role}
+                    </p>
+                  </div>
+                </article>
+              );
+            })}
+          </section>
+
+          {members.length === 0 && (
+            <div
+              className={`rounded-[24px] border p-8 text-center text-sm font-black uppercase tracking-[0.2em] sm:rounded-[28px] ${theme.empty}`}
+            >
+              {t("jury.no_members", "Aucun membre detecte.")}
+            </div>
+          )}
+        </div>
+
+        {selected && (
+          <div className={`fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-6 ${theme.modalOverlay}`}>
+            <button
+              type="button"
+              onClick={() => setSelected(null)}
+              className="absolute inset-0"
+              aria-label={t("jury.close_profile", "Fermer le profil")}
+            />
+
+            <article
+              role="dialog"
+              aria-modal="true"
+              aria-label={t("jury.jury_profile_label", "Profil jury")}
+              className={`relative flex max-h-[94vh] w-full max-w-4xl flex-col overflow-hidden rounded-[26px] border shadow-[0_30px_80px_rgba(2,6,23,0.4)] sm:rounded-[30px] ${theme.modalPanel}`}
+            >
+              <div className={`flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-7 sm:py-6 ${theme.modalBorder}`}>
+                <div>
+                  <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${theme.modalLabel}`}>
+                    {selected.isLoading
+                      ? t("jury.jury.loading")
+                      : t("jury.jury_profile_label", "Profil jury")}
+                  </p>
+                  <h2
+                    className={`mt-2 text-xl font-black uppercase tracking-tight sm:text-3xl ${theme.modalTitle}`}
+                    dangerouslySetInnerHTML={{ __html: selected.title.rendered }}
                   />
                 </div>
-                <div className="flex flex-col">
-                  <h3 className="text-xl md:text-2xl font-black text-white mb-2 group-hover:text-[#38bdf8] transition-colors uppercase tracking-tight">
-                    {m.name}
-                  </h3>
-                  <p className="text-xs font-black text-[#38bdf8] uppercase tracking-[0.2em]">
-                    {m.role}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
 
-        {members.length === 0 && (
-          <div className="text-center py-20 text-[#94a3b8] font-bold uppercase tracking-widest text-sm">
-            {t("jury.no_members", "Aucun membre détecté.")}
+                <button
+                  type="button"
+                  onClick={() => setSelected(null)}
+                  className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${theme.modalClose}`}
+                  aria-label={t("jury.close_profile", "Fermer le profil")}
+                >
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="overflow-y-auto p-5 sm:p-7 md:p-8">
+                {loading ? (
+                  <div className="flex items-center justify-center py-20">
+                    <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-300/40 border-t-cyan-400" />
+                  </div>
+                ) : (
+                  <div
+                    className={`prose max-w-none ${theme.prose}`}
+                    dangerouslySetInnerHTML={{ __html: selected.content.rendered }}
+                  />
+                )}
+              </div>
+
+              <div className={`border-t px-5 py-4 text-center sm:px-7 ${theme.modalBorder}`}>
+                <button
+                  type="button"
+                  onClick={() => setSelected(null)}
+                  className={`text-[10px] font-black uppercase tracking-[0.2em] transition hover:opacity-80 ${theme.modalLabel}`}
+                >
+                  {t("jury.close_profile", "Fermer le profil")}
+                </button>
+              </div>
+            </article>
           </div>
         )}
-      </div>
       </main>
     </>
   );

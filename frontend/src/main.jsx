@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import { CookiesProvider } from "react-cookie";
 import { createHead, UnheadProvider } from "@unhead/react/client";
 import App from "./App.jsx";
+import { ThemeProvider } from "./context/ThemeContext.jsx";
 import "./i18n";
 import "./index.css";
 
@@ -13,9 +14,11 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <UnheadProvider head={head}>
       <CookiesProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <ThemeProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </ThemeProvider>
       </CookiesProvider>
     </UnheadProvider>
   </React.StrictMode>

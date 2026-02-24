@@ -1,144 +1,49 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getCurrentSessionUser, getSitePhaseState } from "../api";
+import SocialIcon from "./ui/SocialIcon";
 
-const Footer = () => {
+export default function Footer() {
   const { t, i18n } = useTranslation();
   const [hideGalleryForVisitors, setHideGalleryForVisitors] = useState(false);
   const [hideSubmitForVisitors, setHideSubmitForVisitors] = useState(false);
+
   const currentYear = new Date().getFullYear();
   const homePath = i18n.language === "en" ? "/home" : "/accueil";
   const aboutPath = i18n.language === "en" ? "/about" : "/a-propos";
   const agendaPath = i18n.language === "en" ? "/schedule" : "/agenda";
   const juryPath = i18n.language === "en" ? "/jury-eng" : "/jury";
   const partnersPath = i18n.language === "en" ? "/partners" : "/partenaires";
-  const callForProjectsPath =
-    i18n.language === "en" ? "/call-for-project" : "/appel-a-projet";
-  const submitFilmPath =
-    i18n.language === "en" ? "/submit-film" : "/deposer-un-film";
+  const callForProjectsPath = i18n.language === "en" ? "/call-for-project" : "/appel-a-projet";
+  const submitFilmPath = i18n.language === "en" ? "/submit-film" : "/deposer-un-film";
   const cgvPath = i18n.language === "en" ? "/tos" : "/cgv";
   const cguPath = i18n.language === "en" ? "/gcu" : "/cgu";
-  const legalPath =
-    i18n.language === "en" ? "/legal-notice" : "/mentions-legales";
-
-  const footerLinks = {
-    festival: {
-      title: t("footer.festival"),
-      links: [
-        { name: t("nav.about"), path: aboutPath },
-        { name: t("nav.agenda"), path: agendaPath },
-        { name: t("footer.newsletter"), path: "/newsletter" },
-        { name: t("nav.jury"), path: juryPath },
-        { name: t("nav.partners"), path: partnersPath },
-      ],
-    },
-    participer: {
-      title: t("footer.participate"),
-      links: [
-        { name: t("nav.submitFilm"), path: submitFilmPath },
-        { name: t("nav.callForProjects"), path: callForProjectsPath },
-        { name: t("nav.agenda"), path: agendaPath },
-      ],
-    },
-    legal: {
-      title: t("footer.legal_title"),
-      links: [
-        { name: t("nav.terms_gv"), path: cgvPath },
-        { name: t("nav.terms_gu"), path: cguPath },
-        { name: t("nav.legal"), path: legalPath },
-        { name: t("nav.contact"), path: "/contact" },
-      ],
-    },
-  };
-
-  const socialLinks = [
-    {
-      name: "Instagram",
-      icon: (
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
-        </svg>
-      ),
-      url: "#",
-    },
-    {
-      name: "Twitter/X",
-      icon: (
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-        </svg>
-      ),
-      url: "#",
-    },
-    {
-      name: "Facebook",
-      icon: (
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-        </svg>
-      ),
-      url: "#",
-    },
-    {
-      name: "YouTube",
-      icon: (
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-        </svg>
-      ),
-      url: "#",
-    },
-    {
-      name: "LinkedIn",
-      icon: (
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-        </svg>
-      ),
-      url: "#",
-    },
-  ];
+  const legalPath = i18n.language === "en" ? "/legal-notice" : "/mentions-legales";
 
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
       try {
-        const sitePhase = await getSitePhaseState();
+        const [sitePhase, sessionPayload] = await Promise.all([
+          getSitePhaseState(),
+          getCurrentSessionUser().catch(() => null),
+        ]);
         if (cancelled) return;
 
         const phaseKey = String(sitePhase?.currentPhase || "phase_1").toLowerCase();
-        const needsSessionCheck =
-          phaseKey === "phase_1" || phaseKey === "phase_2" || phaseKey === "phase_3";
-        if (!needsSessionCheck) {
-          setHideGalleryForVisitors(false);
-          setHideSubmitForVisitors(false);
-          return;
-        }
+        const role = String(sessionPayload?.user?.role || "").toLowerCase();
+        const hasAdminSession = role === "admin" || role === "superadmin";
 
-        let hasAdminSession = false;
-        try {
-          const sessionPayload = await getCurrentSessionUser();
-          if (cancelled) return;
-
-          const role = String(sessionPayload?.user?.role || "").toLowerCase();
-          hasAdminSession = role === "admin" || role === "superadmin";
-        } catch {
-          hasAdminSession = false;
-        }
-
-        if (!cancelled) {
-          setHideGalleryForVisitors(phaseKey === "phase_1" && !hasAdminSession);
-          setHideSubmitForVisitors(
-            (phaseKey === "phase_2" || phaseKey === "phase_3") && !hasAdminSession,
-          );
-        }
+        setHideGalleryForVisitors(phaseKey === "phase_1" && !hasAdminSession);
+        setHideSubmitForVisitors(
+          (phaseKey === "phase_2" || phaseKey === "phase_3") && !hasAdminSession,
+        );
       } catch {
-        if (!cancelled) {
-          setHideGalleryForVisitors(false);
-          setHideSubmitForVisitors(false);
-        }
+        if (cancelled) return;
+        setHideGalleryForVisitors(false);
+        setHideSubmitForVisitors(false);
       }
     })();
 
@@ -147,111 +52,128 @@ const Footer = () => {
     };
   }, []);
 
+  const sections = useMemo(
+    () => [
+      {
+        title: t("footer.festival"),
+        links: [
+          { label: t("nav.about"), path: aboutPath },
+          { label: t("nav.agenda"), path: agendaPath },
+          { label: t("nav.jury"), path: juryPath },
+          { label: t("nav.partners"), path: partnersPath },
+          { label: t("footer.newsletter"), path: "/newsletter" },
+        ],
+      },
+      {
+        title: t("footer.participate"),
+        links: [
+          { label: t("nav.submitFilm"), path: submitFilmPath, type: "submit" },
+          { label: t("nav.callForProjects"), path: callForProjectsPath },
+          { label: t("nav.films"), path: i18n.language === "en" ? "/movies" : "/films", type: "gallery" },
+        ],
+      },
+      {
+        title: t("footer.legal_title"),
+        links: [
+          { label: t("nav.terms_gv"), path: cgvPath },
+          { label: t("nav.terms_gu"), path: cguPath },
+          { label: t("nav.legal"), path: legalPath },
+          { label: t("nav.contact"), path: "/contact" },
+        ],
+      },
+    ],
+    [
+      t,
+      aboutPath,
+      agendaPath,
+      juryPath,
+      partnersPath,
+      submitFilmPath,
+      callForProjectsPath,
+      i18n.language,
+      cgvPath,
+      cguPath,
+      legalPath,
+    ],
+  );
+
+  const socialLinks = [
+    { key: "instagram", name: "Instagram", href: "https://www.instagram.com/marsai" },
+    { key: "x", name: "X", href: "https://twitter.com/marsai" },
+    { key: "youtube", name: "YouTube", href: "https://www.youtube.com/marsai" },
+    { key: "linkedin", name: "LinkedIn", href: "https://www.linkedin.com/company/marsai" },
+  ];
+
+  const shouldShowLink = (link) => {
+    if (link.type === "gallery" && hideGalleryForVisitors) return false;
+    if (link.type === "submit" && hideSubmitForVisitors) return false;
+    return true;
+  };
+
   return (
-    <footer className="relative bg-black border-t border-gray-900">
-      <div className="h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent"></div>
+    <footer className="relative border-t border-slate-700/70 bg-slate-950/90">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/60 to-transparent" />
+      <div className="site-container py-12 md:py-14">
+        <div className="grid gap-10 lg:grid-cols-5">
+          <div className="lg:col-span-2">
+            <Link to={homePath} className="inline-flex items-center gap-3">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-300 to-sky-500 text-slate-950 shadow-[0_12px_28px_rgba(14,165,233,0.42)]">
+                <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm12.553 1.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                </svg>
+              </span>
+              <span className="leading-none">
+                <span className="block text-2xl font-black uppercase tracking-tight text-white">marsAI</span>
+                <span className="block text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-300/85">
+                  Festival 2026
+                </span>
+              </span>
+            </Link>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="py-12 lg:py-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
-            <div className="lg:col-span-2">
-              <Link
-                to={homePath}
-                className="inline-flex items-center space-x-3 group mb-6"
-              >
-                <div className="relative">
-                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-400 to-pink-500 flex items-center justify-center transform group-hover:scale-110 transition-transform duration-300">
-                    <svg
-                      className="w-7 h-7 text-black"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-                    </svg>
-                  </div>
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                </div>
-                <div>
-                  <span
-                    className="text-3xl font-black text-white tracking-tight"
-                    style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-                  >
-                    marsAI
-                  </span>
-                  <div className="text-xs text-cyan-400 font-mono tracking-wider -mt-1">
-                    FESTIVAL 2026
-                  </div>
-                </div>
-              </Link>
+            <p className="mt-5 max-w-md text-sm leading-relaxed text-slate-300">{t("footer.description")}</p>
 
-              <p
-                className="text-gray-400 text-sm leading-relaxed mb-6 max-w-sm"
-                style={{ fontFamily: "'Inter', sans-serif" }}
-              >
-                {t("footer.description")}
-              </p>
-
-              <div className="flex items-center space-x-3">
-                {socialLinks.map((social) => (
-                  <a
-                    key={social.name}
-                    href={social.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 rounded-lg bg-gray-900 flex items-center justify-center text-gray-400 hover:text-cyan-400 hover:bg-gray-800 transition-all duration-200 group"
-                    aria-label={social.name}
-                  >
-                    <span className="transform group-hover:scale-110 transition-transform duration-200">
-                      {social.icon}
-                    </span>
-                  </a>
-                ))}
-              </div>
-            </div>
-
-            {Object.entries(footerLinks).map(([key, section]) => (
-              <div key={key}>
-                <h3
-                  className="text-white font-bold text-sm uppercase tracking-wider mb-4"
-                  style={{ fontFamily: "'Inter', sans-serif" }}
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              {socialLinks.map((social) => (
+                <a
+                  key={social.name}
+                  href={social.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={social.name}
+                  title={social.name}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-600/70 bg-slate-900/70 text-slate-300 transition-colors hover:border-cyan-300/60 hover:text-cyan-200"
                 >
-                  {section.title}
-                </h3>
-                <ul className="space-y-3">
-                  {section.links
-                    .filter((link) => !hideGalleryForVisitors || !["/films", "/movies"].includes(link.path))
-                    .filter((link) => !hideSubmitForVisitors || !["/deposer-un-film", "/submit-film"].includes(link.path))
-                    .map((link) => (
-                    <li key={link.path}>
-                      <Link
-                        to={link.path}
-                        className="text-gray-400 hover:text-cyan-400 text-sm transition-colors duration-200 inline-flex items-center group"
-                        style={{ fontFamily: "'Inter', sans-serif" }}
-                      >
-                        <span className="transform group-hover:translate-x-1 transition-transform duration-200">
-                          {link.name}
-                        </span>
-                      </Link>
-                    </li>
-                    ))}
-                </ul>
-              </div>
-            ))}
+                  <SocialIcon network={social.key} className="h-4 w-4" />
+                  <span className="sr-only">{social.name}</span>
+                </a>
+              ))}
+            </div>
           </div>
+
+          {sections.map((section) => (
+            <div key={section.title}>
+              <h3 className="text-xs font-black uppercase tracking-[0.18em] text-cyan-200/90">
+                {section.title}
+              </h3>
+              <ul className="mt-4 space-y-2.5">
+                {section.links.filter(shouldShowLink).map((link) => (
+                  <li key={link.path}>
+                    <Link to={link.path} className="site-link text-sm font-semibold">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
-        <div className="border-t border-gray-900 py-6">
-          <div className="flex items-center justify-center text-sm text-gray-500">
-            <p style={{ fontFamily: "'Inter', sans-serif" }}>
-              @ {currentYear} marsAI Festival. {t("footer.rights")}
-            </p>
-          </div>
+        <div className="mt-10 border-t border-slate-700/70 pt-5 text-center text-xs font-semibold text-slate-400">
+          <p>
+            {currentYear} marsAI Festival. {t("footer.rights")}
+          </p>
         </div>
       </div>
-
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-pink-500/30 to-transparent"></div>
     </footer>
   );
-};
-
-export default Footer;
+}

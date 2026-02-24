@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
 import { MovieSchema, BreadcrumbSchema } from "../components/Schema";
 import MascotCameraPlayer from "../components/MascotCameraPlayer";
+import SocialIcon from "../components/ui/SocialIcon";
 import {
   deleteMyMovieRating,
   getCurrentSessionUser,
@@ -14,10 +15,12 @@ import {
 } from "../api";
 
 const SOCIAL_LINK_ORDER = [
-  { key: "instagram", label: "Instagram", icon: "📸" },
-  { key: "facebook", label: "Facebook", icon: "📘" },
-  { key: "x", label: "X", icon: "✖" },
-  { key: "website", label: "Website", icon: "🌐" },
+  { key: "instagram", label: "Instagram" },
+  { key: "facebook", label: "Facebook" },
+  { key: "x", label: "X" },
+  { key: "youtube", label: "YouTube" },
+  { key: "linkedin", label: "LinkedIn" },
+  { key: "website", label: "Website" },
 ];
 const HERO_PREVIEW_SECONDS = 5;
 
@@ -123,6 +126,7 @@ function toDirectPreviewVideoUrl(...values) {
   for (const value of values) {
     const raw = String(value || "").trim();
     if (!raw) continue;
+    if (/^https?:\/\/s3\.[^/]+\.scw\.cloud\/.+/i.test(raw)) return raw;
     if (/^https?:\/\/[^?#]+\.(mp4)(?:[?#].*)?$/i.test(raw)) return raw;
     if (/^\/(?:MarsAi\/)?uploads\/videos\/[^?#]+\.(mp4)(?:[?#].*)?$/i.test(raw)) return raw;
   }
@@ -133,9 +137,15 @@ function getSocialEntries(movie) {
   const socialLinks = movie?.socialLinks;
   if (!socialLinks || typeof socialLinks !== "object") return [];
 
+  const getRawLink = (entryKey) => {
+    if (entryKey === "x") return socialLinks.x || socialLinks.twitter || "";
+    if (entryKey === "website") return socialLinks.website || socialLinks.site || "";
+    return socialLinks[entryKey];
+  };
+
   return SOCIAL_LINK_ORDER
     .map((entry) => {
-      const url = toExternalUrl(socialLinks[entry.key]);
+      const url = toExternalUrl(getRawLink(entry.key));
       if (!url) return null;
       return { ...entry, url };
     })
@@ -196,7 +206,8 @@ const MovieDetails = () => {
 
   const shouldUseYoutubePlayer =
     activeSitePhase === "phase_2" || activeSitePhase === "phase_3";
-  const heroPreviewVideoUrl = toDirectPreviewVideoUrl(movie?.videoUrl, movie?.rawVideoUrl);
+  const directPlayerVideoUrl = toDirectPreviewVideoUrl(movie?.videoUrl, movie?.rawVideoUrl);
+  const heroPreviewVideoUrl = directPlayerVideoUrl;
 
   useEffect(() => {
     const video = heroVideoRef.current;
@@ -439,7 +450,7 @@ const MovieDetails = () => {
   const youtubeEmbedUrl = toYoutubeEmbedUrl(movie.youtubeUrl);
   const canWatchMovie = shouldUseYoutubePlayer
     ? Boolean(youtubeEmbedUrl)
-    : Boolean(movie.videoUrl);
+    : Boolean(directPlayerVideoUrl);
   const movieSchemaDurationMinutes = extractDurationMinutes(movie.duration);
   const movieGenreList = Array.isArray(movie.genre) ? movie.genre : [];
   const breadcrumbItems = [
@@ -554,9 +565,9 @@ const MovieDetails = () => {
           <div className="container mx-auto px-6 md:px-20 pt-20">
             <div className="grid lg:grid-cols-3 gap-16">
               <div className="lg:col-span-2">
-                {!shouldUseYoutubePlayer && movie.videoUrl && isPlayerOpen && (
+                {!shouldUseYoutubePlayer && directPlayerVideoUrl && isPlayerOpen && (
                   <MascotCameraPlayer
-                    src={movie.videoUrl}
+                    src={directPlayerVideoUrl}
                     title={movie.title}
                     onClose={() => setIsPlayerOpen(false)}
                   />
@@ -626,7 +637,7 @@ const MovieDetails = () => {
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-bold text-blue-900 transition hover:bg-white hover:shadow-md"
                         >
-                          <span>{entry.icon}</span>
+                          <SocialIcon network={entry.key} className="h-4 w-4" />
                           <span>{entry.label}</span>
                         </a>
                       ))}
@@ -836,3 +847,4 @@ const DetailRow = ({ label, value, isStar, last }) => (
 );
 
 export default MovieDetails;
+

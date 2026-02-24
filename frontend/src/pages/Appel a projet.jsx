@@ -1,119 +1,94 @@
-import React, { useState } from "react";
-import Seo from "../components/Seo";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import Seo from "../components/Seo";
+import { getSitePhaseState } from "../api";
+import PhaseCountdownBanner from "../components/phases/PhaseCountdownBanner";
 
 export default function CallForProject({ page }) {
   const { t, i18n } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const [article, setArticle] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [sitePhase, setSitePhase] = useState(null);
+  const [phaseLoaded, setPhaseLoaded] = useState(false);
+  const [phaseLoadError, setPhaseLoadError] = useState("");
 
-  const openModal = async () => {
-    setOpen(true);
-    if (article) return;
+  const uploadPath = i18n.language === "en" ? "/submit-film" : "/deposer-un-film";
 
-    setLoading(true);
-    try {
-      // Astuce : On adapte le slug WordPress selon la langue active
-      const slug = i18n.language === "en" ? "call" : "appel";
-      const res = await fetch(
-        `/wp-json/wp/v2/posts?slug=${slug}&_fields=title,content`,
-      );
-      const data = await res.json();
-      setArticle(data?.[0] || null);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    let cancelled = false;
 
+    (async () => {
+      try {
+        const payload = await getSitePhaseState();
+        if (!cancelled) setSitePhase(payload);
+      } catch (error) {
+        if (!cancelled) {
+          setPhaseLoadError(error?.message || "Impossible de charger l'etat des phases.");
+        }
+      } finally {
+        if (!cancelled) setPhaseLoaded(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const currentPhaseKey = String(sitePhase?.currentPhase || "phase_1").toLowerCase();
+  const isPhase1 = phaseLoaded && Boolean(sitePhase) && currentPhaseKey === "phase_1";
   const seoTitle = page?.title?.rendered || "Appel a projet";
   const seoDescription = page?.excerpt?.rendered || page?.content?.rendered || "";
 
   return (
     <>
       <Seo title={seoTitle} description={seoDescription} />
-      <main className="relative min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-indigo-950 text-white overflow-hidden">
-      {/* 🌌 Glow background */}
-      <div className="absolute top-[-250px] left-[-250px] w-[700px] h-[700px] bg-blue-500/20 blur-[200px] rounded-full" />
-      <div className="absolute bottom-[-250px] right-[-250px] w-[700px] h-[700px] bg-indigo-400/20 blur-[200px] rounded-full" />
-
-      <div className="relative z-10 max-w-5xl mx-auto px-6 py-24">
-        {/* 🔷 BOX PRINCIPALE FESTIVAL */}
-        <div className="relative group">
-          <div className="absolute -inset-[2px] rounded-3xl bg-gradient-to-r from-blue-500 via-indigo-400 to-blue-600 opacity-60 blur-sm group-hover:opacity-100 transition duration-500" />
-
-          <div className="relative bg-blue-950/70 backdrop-blur-xl rounded-3xl border border-blue-400/30 p-14 shadow-[0_0_80px_rgba(59,130,246,0.25)]">
-            {/* Titre WP */}
-            <h1 className="text-6xl md:text-7xl font-black uppercase tracking-tight mb-8 bg-gradient-to-r from-white to-blue-300 bg-clip-text text-transparent">
+      <main className="min-h-screen bg-gradient-to-b from-[#020617] via-[#0b1732] to-[#020617] py-14 text-slate-100 md:py-16">
+        <div className="site-container space-y-8">
+          <section>
+            <p className="inline-flex rounded-full border border-cyan-300/45 bg-cyan-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
+              {t("projects.main_title")}
+            </p>
+            <h1 className="mt-4 text-3xl font-black uppercase tracking-tight text-white sm:text-4xl md:text-5xl">
               {t("projects.main_title")}
             </h1>
+            {phaseLoaded && (
+              <div className="mt-6">
+                <PhaseCountdownBanner sitePhase={sitePhase} language={i18n.language} variant="callForProject" />
+              </div>
+            )}
+            {phaseLoadError && (
+              <p className="mt-4 rounded-xl border border-rose-300/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+                {phaseLoadError}
+              </p>
+            )}
+          </section>
 
-            <div className="h-[3px] w-32 bg-gradient-to-r from-blue-400 to-indigo-400 mb-10" />
-
-            {/* Contenu WP */}
+          <section className="border-t border-cyan-300/20 pt-8">
             <div
-              className="prose prose-invert prose-lg max-w-none text-blue-100"
-              dangerouslySetInnerHTML={{ __html: page?.content?.rendered }}
+              className="site-richtext prose-p:text-slate-300 prose-headings:text-white prose-a:text-cyan-300"
+              dangerouslySetInnerHTML={{ __html: page?.content?.rendered || "" }}
             />
 
-            {/* Bouton premium */}
-            <div className="mt-14">
-              <button
-                onClick={openModal}
-                className="relative px-12 py-5 uppercase font-bold tracking-widest rounded-xl bg-transparent border border-blue-400 text-blue-200 hover:text-white transition-all duration-300 group overflow-hidden"
-              >
-                <span className="relative z-10">{t("projects.view_call")}</span>
-                <div className="absolute inset-0 bg-blue-600 opacity-0 group-hover:opacity-100 transition duration-300" />
-              </button>
-            </div>
-          </div>
+            {isPhase1 && (
+              <div className="mt-8 rounded-2xl border border-emerald-300/30 bg-emerald-500/10 p-5">
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-200">
+                  {i18n.language === "en" ? "Call for projects is open" : "Appel a projet ouvert"}
+                </p>
+                <p className="mt-2 text-sm text-emerald-100/90">
+                  {i18n.language === "en"
+                    ? "Submit your film directly from the upload form."
+                    : "Depose ton film directement depuis le formulaire d'upload."}
+                </p>
+                <Link
+                  to={uploadPath}
+                  className="mt-4 inline-flex rounded-full bg-gradient-to-r from-cyan-300 to-sky-400 px-6 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-950 transition hover:brightness-105"
+                >
+                  {t("nav.submitFilm")}
+                </Link>
+              </div>
+            )}
+          </section>
         </div>
-      </div>
-
-      {/* 🔷 MODAL FESTIVAL PREMIUM */}
-      {open && (
-        <div className="fixed inset-0 z-50 bg-blue-950/95 backdrop-blur-2xl flex items-center justify-center p-10 animate-fadeIn">
-          <div className="relative w-full max-w-5xl max-h-[90vh] overflow-y-auto">
-            <div className="absolute -inset-[2px] rounded-3xl bg-gradient-to-r from-blue-400 via-indigo-400 to-blue-600 blur-sm opacity-70" />
-
-            <div className="relative bg-gradient-to-br from-blue-900 to-indigo-950 rounded-3xl border border-blue-400/30 p-16 shadow-[0_0_100px_rgba(59,130,246,0.3)]">
-              <button
-                onClick={() => setOpen(false)}
-                className="absolute top-6 right-6 text-blue-300 hover:text-white text-2xl transition"
-              >
-                ✕
-              </button>
-
-              {loading ? (
-                <div className="flex flex-col items-center justify-center py-20">
-                  <div className="w-12 h-12 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mb-6"></div>
-                  <p className="uppercase tracking-widest text-blue-300">
-                    {t("common.loading")}
-                  </p>
-                </div>
-              ) : article ? (
-                <>
-                  <h2
-                    className="text-5xl md:text-6xl font-extrabold mb-8 uppercase bg-gradient-to-r from-white to-blue-300 bg-clip-text text-transparent"
-                    dangerouslySetInnerHTML={{ __html: article.title.rendered }}
-                  />
-                  <div className="h-[3px] w-40 bg-gradient-to-r from-blue-400 to-indigo-400 mb-10" />
-                  <div
-                    className="prose prose-invert prose-lg max-w-none text-blue-100"
-                    dangerouslySetInnerHTML={{
-                      __html: article.content.rendered,
-                    }}
-                  />
-                </>
-              ) : (
-                <p className="text-blue-300">{t("projects.not_found")}</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
       </main>
     </>
   );

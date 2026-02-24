@@ -17,15 +17,17 @@ import { cleanMetadataMiddleware } from "../utils/MetadataCleaner.js";
 import { sendUploadSuccessMail } from "../services/messagingService.js";
 import { getSessionFromRequest } from "../services/authService.js";
 import { getSitePhaseState } from "../services/sitePhaseService.js";
+import {
+  isObjectStorageConfigured,
+  getObjectStorageMissingEnv,
+  uploadFileToObjectStorage,
+} from "../services/objectStorageService.js";
 
 const router = express.Router();
 const pool = getDbPool();
 
 const MAX_VIDEO_SIZE_BYTES = 300 * 1024 * 1024;
 const MAX_SRT_SIZE_BYTES = 1024 * 1024;
-const VIDEO_UPLOAD_DIR = "uploads/videos";
-const POSTER_UPLOAD_DIR = "uploads/posters";
-const SUBTITLE_UPLOAD_DIR = "uploads/subtitles";
 const DEFAULT_POSTER_SEED = "marsai";
 
 const ipLimiter = rateLimit({
@@ -103,23 +105,11 @@ const upload = multer({
   },
 });
 
-function ensureDirectory(directoryPath) {
-  if (!fs.existsSync(directoryPath)) {
-    fs.mkdirSync(directoryPath, { recursive: true });
-  }
-}
-
 function cleanupFile(filePath) {
   if (!filePath) return;
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
   }
-}
-
-function getBackendBaseUrl() {
-  return String(
-    process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`,
-  ).replace(/\/$/, "");
 }
 
 function toSlug(value) {
@@ -383,6 +373,16 @@ router.post(
       return res.status(400).json({ error: "Aucun fichier video recu." });
     }
 
+    if (!isObjectStorageConfigured()) {
+      cleanupFile(videoFile.path);
+      cleanupFile(subtitleFile?.path);
+      cleanupFile(posterFile?.path);
+      return res.status(500).json({
+        error: "Stockage Scaleway S3 non configure.",
+        details: `Variables manquantes: ${getObjectStorageMissingEnv().join(", ")}`,
+      });
+    }
+
     try {
       const sitePhaseState = await getSitePhaseState();
       const phaseKey = String(sitePhaseState?.currentPhase || "phase_1").toLowerCase();
@@ -419,7 +419,6 @@ router.post(
       }
     }
 
-    let persistedVideoPath = "";
     try {
       const metadata = await analyzeVideo(videoFile.path);
       const validation = validateVideoData(metadata);
@@ -462,24 +461,36 @@ router.post(
 
       const youtubeUrl = `https://www.youtube.com/watch?v=${youtubeId}`;
       const slug = toSlug(title);
-      const backendBase = getBackendBaseUrl();
-
-      ensureDirectory(VIDEO_UPLOAD_DIR);
       const videoName = `${slug}-${youtubeId}.mp4`;
-      const videoDest = path.join(VIDEO_UPLOAD_DIR, videoName);
-      fs.renameSync(videoFile.path, videoDest);
-      persistedVideoPath = videoDest;
-      const localVideoUrl = `${backendBase}/uploads/videos/${videoName}`;
+      const storedVideo = await uploadFileToObjectStorage({
+        localFilePath: videoFile.path,
+        objectKey: `videos/${videoName}`,
+        contentType: "video/mp4",
+        cacheControl: "public, max-age=31536000, immutable",
+      });
+      const videoStorageUrl = storedVideo.url;
 
       let posterUrl = `https://picsum.photos/seed/${slug}-${youtubeId}/600/900`;
       if (posterFile) {
-        ensureDirectory(POSTER_UPLOAD_DIR);
         const posterExt = path.extname(posterFile.originalname || "").toLowerCase() || ".jpg";
         const posterName = `${slug}-${youtubeId}${posterExt}`;
-        const posterDest = path.join(POSTER_UPLOAD_DIR, posterName);
-        fs.renameSync(posterFile.path, posterDest);
+        const storedPoster = await uploadFileToObjectStorage({
+          localFilePath: posterFile.path,
+          objectKey: `posters/${posterName}`,
+          contentType: posterFile.mimetype || undefined,
+          cacheControl: "public, max-age=31536000, immutable",
+        });
+        posterUrl = storedPoster.url;
+      }
 
-        posterUrl = `${backendBase}/uploads/posters/${posterName}`;
+      if (subtitleFile) {
+        const subtitleName = `${slug}-${youtubeId}.srt`;
+        await uploadFileToObjectStorage({
+          localFilePath: subtitleFile.path,
+          objectKey: `subtitles/${subtitleName}`,
+          contentType: "application/x-subrip",
+          cacheControl: "public, max-age=31536000, immutable",
+        });
       }
 
       const submittedBy = `${String(req.body?.firstName || "").trim()} ${String(req.body?.lastName || "").trim()}`
@@ -497,8 +508,6 @@ router.post(
       );
 
       if (!Array.isArray(countryRows) || countryRows.length === 0) {
-        cleanupFile(persistedVideoPath);
-        cleanupFile(subtitleFile?.path);
         return res.status(400).json({ error: "Code pays introuvable dans la base." });
       }
 
@@ -521,7 +530,7 @@ router.post(
           null,
           aiTools,
           posterUrl,
-          localVideoUrl,
+          videoStorageUrl,
           youtubeUrl,
           0,
           submittedBy,
@@ -555,12 +564,6 @@ router.post(
         }
       }
 
-      if (subtitleFile && movieId > 0) {
-        ensureDirectory(SUBTITLE_UPLOAD_DIR);
-        const subtitleDest = path.join(SUBTITLE_UPLOAD_DIR, `${movieId}.srt`);
-        fs.renameSync(subtitleFile.path, subtitleDest);
-      }
-
       let confirmationEmailSent = false;
       let confirmationEmailError = "";
       try {
@@ -582,7 +585,7 @@ router.post(
         message: "Upload reussi !",
         videoId: youtubeId,
         movieId,
-        videoUrl: localVideoUrl,
+        videoUrl: videoStorageUrl,
         youtubeUrl,
         statusEndpoint: `/api/upload/youtube/status/${youtubeId}`,
         confirmationEmailSent,
@@ -590,7 +593,6 @@ router.post(
       });
     } catch (error) {
       console.error("[UPLOAD] Erreur:", error.message);
-      cleanupFile(persistedVideoPath);
       if (!res.headersSent) {
         return res.status(500).json({
           error: "Erreur interne du serveur",

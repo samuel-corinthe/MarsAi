@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import Seo from "../components/Seo";
+import { BreadcrumbSchema, ArticleSchema } from "../components/Schema";
 import { getPageBySlug } from "../api";
 import NotFound from "./NotFound";
-import Seo from "../components/Seo";
-import { BreadcrumbSchema, ArticleSchema } from "../components/Schema"; // ← AJOUT
+import PageLoader from "../components/ui/PageLoader";
 
 export default function Partenaires() {
   const { t, i18n } = useTranslation();
@@ -18,115 +19,87 @@ export default function Partenaires() {
       try {
         const slug = i18n.language.startsWith("en") ? "partners" : "partenaires";
         const data = await getPageBySlug(slug);
-
-        if (!cancelled) {
-          setPage(data);
-          setLoading(false);
-        }
-      } catch  {
-        if (!cancelled) {
-          setPage(null);
-          setLoading(false);
-        }
+        if (!cancelled) setPage(data);
+      } catch {
+        if (!cancelled) setPage(null);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
 
-    return () => (cancelled = true);
+    return () => {
+      cancelled = true;
+    };
   }, [i18n.language]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600 text-lg font-medium">
-            {t("partners.loading")}
-          </p>
-        </div>
-      </div>
-    );
+    return <PageLoader message={t("partners.loading", "Chargement...")} />;
   }
 
   if (!page) return <NotFound />;
 
-  const seoTitle = page?.title?.rendered || t("nav.partners");
+  const seoTitle = page?.title?.rendered || t("nav.partners", "Partenaires");
   const seoDescription =
     page?.excerpt?.rendered || page?.content?.rendered || t("partners.subtitle");
-
-  // ← AJOUT : Breadcrumb
   const breadcrumbItems = [
-    { name: "Accueil", url: "/" },
-    { name: t("nav.partners", "Partenaires"), url: "/partenaires" }
+    {
+      name: i18n.language === "en" ? "Home" : "Accueil",
+      url: i18n.language === "en" ? "/home" : "/accueil",
+    },
+    {
+      name: t("nav.partners", "Partenaires"),
+      url: i18n.language === "en" ? "/partners" : "/partenaires",
+    },
   ];
 
   return (
     <>
       <Seo title={seoTitle} description={seoDescription} />
-      <BreadcrumbSchema items={breadcrumbItems} /> {/* ← AJOUT */}
+      <BreadcrumbSchema items={breadcrumbItems} />
       <ArticleSchema
         headline={page?.title?.rendered}
         description={seoDescription}
         datePublished={page?.date}
         dateModified={page?.modified}
-      /> {/* ← AJOUT */}
-      
-      <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="bg-gradient-to-r from-blue-600 via-blue-500 to-blue-700 py-16 shadow-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-block px-4 py-1 bg-white/20 backdrop-blur-sm rounded-full mb-4">
-            <p className="text-sm font-semibold text-white uppercase tracking-wider">
-              {t("partners.badge")}
+      />
+
+      <main className="min-h-screen bg-gradient-to-b from-[#f4f8ff] via-[#eef5ff] to-[#f8fcff] py-14 text-slate-900 md:py-16">
+        <div className="site-container">
+          <section className="pb-10">
+            <p className="inline-flex rounded-full border border-sky-300/60 bg-sky-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-sky-700">
+              {t("partners.badge", "Partenaires")}
             </p>
-          </div>
-          <h1
-            className="text-4xl md:text-6xl font-bold text-white drop-shadow-lg"
-            dangerouslySetInnerHTML={{ __html: page.title.rendered }}
-          />
-          <p className="mt-4 text-lg text-blue-50 max-w-2xl mx-auto">
-            {t("partners.subtitle")}
-          </p>
-        </div>
-      </div>
+            <h1
+              className="mt-4 text-3xl font-black uppercase tracking-tight text-slate-900 sm:text-4xl md:text-5xl"
+              dangerouslySetInnerHTML={{ __html: page.title.rendered }}
+            />
+            <p className="mt-4 max-w-3xl text-sm leading-relaxed text-slate-600 sm:text-base">
+              {t("partners.subtitle")}
+            </p>
+          </section>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
-          <div
-            className="px-8 py-12 text-center
-                       [&_h2]:text-center [&_h2]:text-gray-500 [&_h2]:text-base [&_h2]:font-bold 
-                       [&_h2]:uppercase [&_h2]:tracking-widest [&_h2]:mb-10 [&_h2]:mt-16
-                       [&_h2]:relative [&_h2]:pb-3
-                       [&_h2]:after:content-[''] [&_h2]:after:absolute [&_h2]:after:bottom-0 
-                       [&_h2]:after:left-1/2 [&_h2]:after:-translate-x-1/2 
-                       [&_h2]:after:w-24 [&_h2]:after:h-1 [&_h2]:after:bg-blue-500
-                       [&_h2:first-child]:mt-0
-                       [&_img]:max-w-[180px] [&_img]:h-auto [&_img]:mx-auto [&_img]:mb-8
-                       [&_img]:inline-block [&_img]:p-4
-                       [&_p]:flex [&_p]:flex-wrap [&_p]:justify-center [&_p]:items-center
-                       [&_p]:gap-8 [&_p]:mb-12 [&_p]:text-center
-                       [&_a]:inline-block"
-            dangerouslySetInnerHTML={{ __html: page.content.rendered }}
-          />
-        </div>
+          <section className="border-t border-sky-200/80 pt-8">
+            <div
+              className="prose max-w-none text-center prose-p:text-slate-600 prose-headings:text-slate-900 [&_h2]:text-xs [&_h2]:font-black [&_h2]:uppercase [&_h2]:tracking-[0.25em] [&_h2]:text-sky-700 [&_h2]:mt-12 [&_h2]:mb-6 [&_img]:mx-auto [&_img]:max-h-28 [&_img]:w-auto [&_img]:rounded-xl [&_img]:border [&_img]:border-sky-200/80"
+              dangerouslySetInnerHTML={{ __html: page.content.rendered }}
+            />
+          </section>
 
-        <div className="mt-16 text-center">
-          <div className="bg-gradient-to-r from-blue-500 to-blue-700 rounded-2xl shadow-xl p-10">
-            <h3 className="text-2xl md:text-3xl font-bold text-white mb-4">
+          <section className="border-t border-sky-200/80 pt-10">
+            <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900 sm:text-3xl">
               {t("partners.cta_title")}
-            </h3>
-            <p className="text-blue-50 text-lg mb-6 max-w-2xl mx-auto">
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600 sm:text-base">
               {t("partners.cta_text")}
             </p>
             <a
               href="/contact"
-              className="inline-block bg-white text-blue-600 font-bold px-8 py-4 rounded-full 
-                         hover:bg-blue-50 transition-all duration-300 hover:scale-105 
-                         shadow-lg hover:shadow-xl"
+              className="mt-5 inline-flex rounded-full bg-gradient-to-r from-cyan-300 to-sky-400 px-6 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-950 transition hover:brightness-105"
             >
-              {t("partners.cta_button")} →
+              {t("partners.cta_button")}
             </a>
-          </div>
+          </section>
         </div>
-      </div>
       </main>
     </>
   );

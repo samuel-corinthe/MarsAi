@@ -571,17 +571,20 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
 
   if (slug === "contact") {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white relative overflow-hidden">
+      <main className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#020617] via-[#0b1732] to-[#020617] text-slate-100">
         <Seo title={seoTitle} description={seoDescription} lang={seoLang} />
         <BreadcrumbSchema items={breadcrumbItems} />
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-32 -right-24 w-72 h-72 bg-cyan-500/10 blur-3xl rounded-full"></div>
-          <div className="absolute top-40 -left-24 w-72 h-72 bg-purple-500/10 blur-3xl rounded-full"></div>
+          <div className="absolute -top-32 -right-24 h-72 w-72 rounded-full bg-cyan-500/12 blur-3xl"></div>
+          <div className="absolute top-40 -left-24 h-72 w-72 rounded-full bg-indigo-500/12 blur-3xl"></div>
         </div>
 
-        <div className="relative max-w-6xl mx-auto px-4 pt-10 pb-16">
-          <div className="text-center">
-            <div className="w-16 h-16 mx-auto rounded-full border-4 border-cyan-400/70 flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+        <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-10">
+          <div>
+            <p className="inline-flex rounded-full border border-cyan-300/45 bg-cyan-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
+              {t("contact.badge")}
+            </p>
+            <div className="mt-4 h-16 w-16 rounded-full border-4 border-cyan-400/70 flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
               <svg
                 className="w-7 h-7"
                 fill="none"
@@ -597,29 +600,24 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               </svg>
             </div>
             <h1
-              className="text-4xl md:text-5xl font-black mt-4"
-              style={{ fontFamily: "'Bebas Neue', sans-serif" }}
+              className="mt-4 text-3xl font-black uppercase tracking-tight text-white sm:text-4xl md:text-5xl"
               dangerouslySetInnerHTML={{ __html: page.title.rendered }}
             />
-            <p
-              className="text-xs uppercase tracking-[0.4em] text-cyan-200 mt-2"
-              style={{ fontFamily: "'Space Mono', monospace" }}
-            >
-              {t("contact.badge")}
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">
+              {seoDescription?.replace(/<[^>]+>/g, "")}
             </p>
           </div>
 
-          <div className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="mt-10 grid gap-8 border-t border-cyan-300/20 pt-8 lg:grid-cols-[1.1fr_0.9fr]">
             <form
               onSubmit={handleSubmit}
-              className="bg-white/5 border border-cyan-400/20 rounded-[32px] p-6 sm:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.35)] space-y-5"
+              className="space-y-5 rounded-[28px] border border-slate-500/35 bg-slate-900/45 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:p-8"
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="flex flex-col gap-2">
                   <label
                     htmlFor="name"
-                    className="text-[10px] uppercase tracking-[0.3em] text-white/70"
-                    style={{ fontFamily: "'Space Mono', monospace" }}
+                    className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-300"
                   >
                     {t("contact.form.label_name")}
                   </label>
@@ -629,7 +627,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                     name="name"
                     placeholder={t("contact.form.placeholder_name")}
                     autoComplete="name"
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder:text-white/40 focus:ring-2 focus:ring-cyan-400/70 focus:border-cyan-300 outline-none transition"
+                    className="w-full rounded-2xl border border-slate-500/45 bg-slate-950/65 px-4 py-3 text-white placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-400/30 outline-none transition"
                     required
                   />
                 </div>
@@ -637,8 +635,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                 <div className="flex flex-col gap-2">
                   <label
                     htmlFor="email"
-                    className="text-[10px] uppercase tracking-[0.3em] text-white/70"
-                    style={{ fontFamily: "'Space Mono', monospace" }}
+                    className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-300"
                   >
                     {t("contact.form.label_email")}
                   </label>
@@ -648,7 +645,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                     name="email"
                     placeholder={t("contact.form.placeholder_email")}
                     autoComplete="email"
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder:text-white/40 focus:ring-2 focus:ring-cyan-400/70 focus:border-cyan-300 outline-none transition"
+                    className="w-full rounded-2xl border border-slate-500/45 bg-slate-950/65 px-4 py-3 text-white placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-400/30 outline-none transition"
                     required
                   />
                 </div>
@@ -657,8 +654,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               <div className="flex flex-col gap-2">
                 <label
                   htmlFor="subject"
-                  className="text-[10px] uppercase tracking-[0.3em] text-white/70"
-                  style={{ fontFamily: "'Space Mono', monospace" }}
+                  className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-300"
                 >
                   {t("contact.form.label_subject")}
                 </label>
@@ -667,7 +663,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                   id="subject"
                   name="subject"
                   placeholder={t("contact.form.placeholder_subject")}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder:text-white/40 focus:ring-2 focus:ring-cyan-400/70 focus:border-cyan-300 outline-none transition"
+                  className="w-full rounded-2xl border border-slate-500/45 bg-slate-950/65 px-4 py-3 text-white placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-400/30 outline-none transition"
                   required
                 />
               </div>
@@ -675,8 +671,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               <div className="flex flex-col gap-2">
                 <label
                   htmlFor="message"
-                  className="text-[10px] uppercase tracking-[0.3em] text-white/70"
-                  style={{ fontFamily: "'Space Mono', monospace" }}
+                  className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-300"
                 >
                   {t("contact.form.label_message")}
                 </label>
@@ -685,7 +680,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                   name="message"
                   rows="6"
                   placeholder={t("contact.form.placeholder_message")}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder:text-white/40 focus:ring-2 focus:ring-cyan-400/70 focus:border-cyan-300 outline-none transition resize-none"
+                  className="w-full resize-none rounded-2xl border border-slate-500/45 bg-slate-950/65 px-4 py-3 text-white placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-400/30 outline-none transition"
                   required
                 ></textarea>
               </div>
@@ -693,8 +688,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               <button
                 type="submit"
                 disabled={isSending}
-                className="w-full bg-gradient-to-r from-cyan-400 to-blue-600 text-black font-bold uppercase tracking-[0.25em] text-[11px] py-3.5 rounded-2xl transition hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{ fontFamily: "'Space Mono', monospace" }}
+                className="w-full rounded-2xl bg-gradient-to-r from-cyan-300 to-sky-400 py-3.5 text-[11px] font-black uppercase tracking-[0.22em] text-slate-950 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSending
                   ? t("contact.form.button_loading")
@@ -703,7 +697,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
             </form>
 
             <div className="space-y-6">
-              <div className="bg-white/5 border border-cyan-400/20 rounded-[32px] p-5 sm:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+              <div className="space-y-4 rounded-[28px] border border-slate-500/35 bg-slate-900/45 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:p-6">
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-full border border-cyan-400/40 flex items-center justify-center">
                     <svg
@@ -733,19 +727,16 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                     </svg>
                   </div>
                   <div>
-                    <p
-                      className="text-[10px] uppercase tracking-[0.3em] text-cyan-200"
-                      style={{ fontFamily: "'Space Mono', monospace" }}
-                    >
+                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200">
                       {t("contact.info.location_title")}
                     </p>
-                    <p className="text-white/80 text-sm">
+                    <p className="text-sm text-slate-300">
                       {t("contact.info.address")}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-4 aspect-[4/3] rounded-2xl overflow-hidden border border-white/10">
+                <div className="aspect-[4/3] overflow-hidden rounded-2xl border border-slate-500/35">
                   <iframe
                     title="Carte MarsAI"
                     src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2903.003971135914!2d5.368781999999999!3d43.3141763!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x12c9c13ddc0211b9%3A0xd1642ae4b32c4bc4!2s%C3%89cole%20La%20Plateforme_%20Marseille%20-%20Entr%C3%A9e%20Sud!5e0!3m2!1sfr!2sfr!4v1770039690847!5m2!1sfr!2sfr"
@@ -759,10 +750,6 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               </div>
             </div>
           </div>
-
-          <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
-        `}</style>
         </div>
       </main>
     );
@@ -775,7 +762,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     <main
       className={
         isAgenda
-          ? "min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white relative overflow-hidden"
+          ? "relative min-h-screen overflow-hidden bg-gradient-to-b from-[#020617] via-[#0b1732] to-[#020617] text-slate-100"
           : "min-h-screen bg-[#fcfcfc] text-[#333] p-4 md:p-12"
       }
     >
@@ -801,135 +788,108 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
             ? "relative max-w-6xl mx-auto px-4 pb-16"
             : "max-w-6xl mx-auto"
         }
-        style={isAgenda ? { fontFamily: "'Inter', sans-serif" } : undefined}
       >
         {isAgenda ? (
           <>
-            <div className="pt-10 pb-8 text-center">
-              <div className="w-16 h-16 mx-auto rounded-full border-4 border-cyan-400/70 flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
-                <svg
-                  className="w-7 h-7"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2.5}
-                    d="M12 8v5l3 3"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2.5}
-                    d="M12 21a9 9 0 100-18 9 9 0 000 18z"
-                  />
-                </svg>
-              </div>
-              <h1
-                className="text-4xl md:text-5xl font-black mt-4 text-white"
-                style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-                dangerouslySetInnerHTML={{ __html: page.title.rendered }}
-              />
-              <p
-                className="text-xs uppercase tracking-[0.4em] text-cyan-200 mt-2"
-                style={{ fontFamily: "'Space Mono', monospace" }}
-              >
+            <div className="pt-10 pb-8">
+              <p className="inline-flex rounded-full border border-cyan-300/45 bg-cyan-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
                 {t("agenda.subtitle")}
+              </p>
+              <div className="mt-4 flex items-center gap-4">
+                <div className="h-14 w-14 shrink-0 rounded-full border-4 border-cyan-400/70 flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2.25}
+                      d="M8 7V3m8 4V3m-9 8h10m-11 9h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2z"
+                    />
+                  </svg>
+                </div>
+                <h1
+                  className="text-3xl font-black uppercase tracking-tight text-white sm:text-4xl md:text-5xl"
+                  dangerouslySetInnerHTML={{ __html: page.title.rendered }}
+                />
+              </div>
+              <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300 sm:text-base">
+                {seoDescription?.replace(/<[^>]+>/g, "")}
               </p>
             </div>
 
             {selectedArticle ? (
-              <div className="mt-6">
+              <div className="mt-2">
                 <button
                   onClick={() => setSelectedArticle(null)}
-                  className="mb-6 text-white/90 font-bold flex items-center gap-2 hover:translate-x-[-4px] transition-transform"
-                  style={{ fontFamily: "'Space Mono', monospace" }}
+                  className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-300/35 bg-cyan-400/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-100 transition hover:bg-cyan-400/20"
                 >
-                  <span>&larr;</span>
+                  <span aria-hidden="true">←</span>
                   {t("agenda.back_to_agenda")}
                 </button>
 
-                <div className="max-w-4xl mx-auto">
-                  <article className="bg-white/5 text-white p-5 sm:p-8 md:p-10 rounded-[36px] border border-cyan-400/20 shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur">
-                    {selectedArticle.image ? (
-                      <div className="relative aspect-[16/9] rounded-[28px] overflow-hidden mb-6">
-                        <img
-                          src={selectedArticle.image}
-                          alt=""
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#062a7a]/80 via-[#0b5be9]/30 to-transparent" />
-                        <div className="absolute bottom-4 left-5 right-5">
-                          <h2
-                            className="text-2xl md:text-4xl font-black text-white leading-tight"
-                            style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-                            dangerouslySetInnerHTML={{
-                              __html: selectedArticle.titre,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <h2
-                        className="text-2xl md:text-4xl font-black text-white mb-6 leading-tight"
-                        style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-                        dangerouslySetInnerHTML={{
-                          __html: selectedArticle.titre,
-                        }}
+                <article className="rounded-[30px] border border-slate-500/35 bg-slate-900/45 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:p-8">
+                  {selectedArticle.image ? (
+                    <div className="relative mb-6 aspect-[16/9] overflow-hidden rounded-3xl border border-slate-500/35">
+                      <img
+                        src={selectedArticle.image}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        loading="lazy"
                       />
-                    )}
-
-                    <div
-                      className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-cyan-100/80 mb-6"
-                      style={{ fontFamily: "'Space Mono', monospace" }}
-                    >
-                      <span className="px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30">
-                        {t("agenda.hour_label")}: {selectedArticle.heure}
-                      </span>
-                      <span className="px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30">
-                        {t("agenda.place_label")}: {selectedArticle.lieu}
-                      </span>
-                      {selectedArticle.subCategories?.map((cat) => (
-                        <span
-                          key={cat.id}
-                          className="px-3 py-1 rounded-full border"
-                          style={{
-                            color: getCategoryColor(cat.id),
-                            borderColor: getCategoryColor(cat.id),
-                          }}
-                        >
-                          {getAgendaTagLabel(cat)}
-                        </span>
-                      ))}
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#020617]/85 via-[#0b1732]/20 to-transparent" />
                     </div>
+                  ) : null}
 
-                    <div
-                      className="agenda-article prose prose-invert prose-headings:font-black prose-headings:text-white prose-p:text-white/80 prose-a:text-cyan-200 prose-a:no-underline hover:prose-a:underline prose-strong:text-white max-w-none"
-                      dangerouslySetInnerHTML={{
-                        __html: selectedArticle.contenu,
-                      }}
-                    />
-                  </article>
-                </div>
+                  <h2
+                    className="text-2xl font-black uppercase tracking-tight text-white sm:text-3xl"
+                    dangerouslySetInnerHTML={{
+                      __html: selectedArticle.titre,
+                    }}
+                  />
+
+                  <div className="mt-5 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.15em]">
+                    <span className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1 text-cyan-100">
+                      {t("agenda.hour_label")}: {selectedArticle.heure}
+                    </span>
+                    <span className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1 text-cyan-100">
+                      {t("agenda.place_label")}: {selectedArticle.lieu}
+                    </span>
+                    {selectedArticle.subCategories?.map((cat) => (
+                      <span
+                        key={cat.id}
+                        className="rounded-full border px-3 py-1"
+                        style={{
+                          color: getCategoryColor(cat.id),
+                          borderColor: getCategoryColor(cat.id),
+                        }}
+                      >
+                        {getAgendaTagLabel(cat)}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div
+                    className="agenda-article prose prose-invert mt-6 max-w-none prose-headings:text-white prose-p:text-slate-200 prose-a:text-cyan-200 prose-strong:text-white"
+                    dangerouslySetInnerHTML={{
+                      __html: selectedArticle.contenu,
+                    }}
+                  />
+                </article>
               </div>
             ) : (
               <>
-                <div className="mt-6 bg-white/5 border border-cyan-400/20 rounded-[32px] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.45)] max-w-5xl mx-auto">
+                <div className="mt-4 rounded-[28px] border border-slate-500/35 bg-slate-900/45 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:p-6">
                   {canPaginateDates && (
-                    <div
-                      className="flex items-center justify-center gap-3 pb-4 text-[10px] uppercase tracking-[0.35em] text-cyan-100/80"
-                      style={{ fontFamily: "'Space Mono', monospace" }}
-                    >
+                    <div className="mb-4 flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-100">
                       <button
                         type="button"
-                        onClick={() =>
-                          setDatePage((prev) => Math.max(0, prev - 1))
-                        }
+                        onClick={() => setDatePage((prev) => Math.max(0, prev - 1))}
                         disabled={datePage === 0}
-                        className="px-3 py-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1.5 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label={t("agenda.previous_dates_aria")}
                       >
                         {t("prev")}
@@ -940,12 +900,10 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                       <button
                         type="button"
                         onClick={() =>
-                          setDatePage((prev) =>
-                            Math.min(datePageCount - 1, prev + 1),
-                          )
+                          setDatePage((prev) => Math.min(datePageCount - 1, prev + 1))
                         }
                         disabled={datePage >= datePageCount - 1}
-                        className="px-3 py-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/10 hover:bg-cyan-500/20 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1.5 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label={t("agenda.next_dates_aria")}
                       >
                         {t("next")}
@@ -953,7 +911,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                     </div>
                   )}
 
-                  <div className="flex flex-wrap justify-center gap-2 sm:gap-3 pb-2">
+                  <div className="flex flex-wrap justify-center gap-2">
                     {pagedDates.length ? (
                       pagedDates.map((dateStr) => {
                         const parts = formatDateParts(dateStr);
@@ -964,50 +922,31 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                           <button
                             key={dateStr}
                             onClick={() => setSelectedDate(dateStr)}
-                            className={`w-28 sm:w-32 md:w-36 h-24 sm:h-32 rounded-3xl flex flex-col items-center justify-center gap-1.5 border transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] ${
+                            className={`h-24 w-28 rounded-2xl border px-2 py-2 text-center transition sm:h-28 sm:w-32 ${
                               isSelected
-                                ? "bg-gradient-to-br from-cyan-400 to-blue-600 text-white border-cyan-200/60 shadow-lg"
-                                : "bg-white/5 text-white border-white/10 hover:bg-cyan-500/10"
+                                ? "border-cyan-200/65 bg-gradient-to-br from-cyan-400 to-sky-500 text-slate-950 shadow-lg"
+                                : "border-slate-500/35 bg-slate-950/55 text-white hover:border-cyan-300/45 hover:bg-cyan-400/10"
                             }`}
                           >
-                            <span
-                              className="text-[9px] sm:text-[10px] uppercase tracking-widest text-white/70"
-                              style={{ fontFamily: "'Space Mono', monospace" }}
-                            >
+                            <p className="text-[9px] font-black uppercase tracking-[0.18em] opacity-80">
                               {parts.weekdayShort}
-                            </span>
-                            <span
-                              className="text-[10px] sm:text-[11px] uppercase tracking-widest"
-                              style={{ fontFamily: "'Space Mono', monospace" }}
-                            >
+                            </p>
+                            <p className="mt-0.5 text-[10px] font-black uppercase tracking-[0.18em] opacity-80">
                               {parts.monthShort}
-                            </span>
-                            <span
-                              className="text-xl sm:text-2xl font-black"
-                              style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-                            >
+                            </p>
+                            <p className="mt-1 text-2xl font-black leading-none">
                               {parts.day}
-                            </span>
-                            {hasEvents ? (
-                              <span
-                                className={`text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                  isSelected
-                                    ? "bg-white/20 text-white"
-                                    : "bg-cyan-500/20 text-cyan-100"
-                                }`}
-                              >
-                                {t("agenda.event_count", { count: eventCount })}
-                              </span>
-                            ) : (
-                              <span className="text-[8px] sm:text-[9px] uppercase tracking-widest text-white/50">
-                                {t("agenda.no_events_short")}
-                              </span>
-                            )}
+                            </p>
+                            <p className="mt-1 text-[9px] font-black uppercase tracking-[0.12em] opacity-80">
+                              {hasEvents
+                                ? t("agenda.event_count", { count: eventCount })
+                                : t("agenda.no_events_short")}
+                            </p>
                           </button>
                         );
                       })
                     ) : (
-                      <div className="text-white/70 text-sm py-6 px-4">
+                      <div className="py-6 text-sm text-slate-300">
                         {t("agenda.no_events_available")}
                       </div>
                     )}
@@ -1015,61 +954,49 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                 </div>
 
                 {selectedParts && (
-                  <div className="mt-10 flex justify-center">
-                    <div className="px-8 py-5 rounded-3xl bg-white/5 border border-cyan-400/20 text-center shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-                      <div
-                        className="text-5xl font-black"
-                        style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-                      >
+                  <div className="mt-6 flex justify-center">
+                    <div className="rounded-3xl border border-slate-500/35 bg-slate-900/45 px-7 py-4 text-center shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+                      <p className="text-4xl font-black leading-none text-white">
                         {selectedParts.day}
-                      </div>
-                      <div
-                        className="text-xs uppercase tracking-[0.4em] text-white/70"
-                        style={{ fontFamily: "'Space Mono', monospace" }}
-                      >
+                      </p>
+                      <p className="mt-1 text-xs font-black uppercase tracking-[0.2em] text-slate-300">
                         {selectedParts.weekday}
-                      </div>
-                      <div
-                        className="text-sm uppercase tracking-[0.3em] text-white/80 mt-1"
-                        style={{ fontFamily: "'Space Mono', monospace" }}
-                      >
+                      </p>
+                      <p className="mt-1 text-[11px] font-black uppercase tracking-[0.16em] text-cyan-200">
                         {selectedParts.monthLong}
-                      </div>
+                      </p>
                     </div>
                   </div>
                 )}
 
-                <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3 justify-items-center">
+                <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                   {activeEvents.length ? (
                     activeEvents.map((ev) => (
-                      <div
+                      <article
                         key={ev.id}
-                        className="group w-full max-w-[380px] bg-white/5 border border-cyan-400/20 rounded-3xl p-4 sm:p-5 shadow-lg backdrop-blur transition-transform hover:-translate-y-1 hover:shadow-[0_20px_50px_rgba(0,0,0,0.35)]"
+                        className="group rounded-[28px] border border-slate-500/35 bg-slate-900/45 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)] transition hover:-translate-y-1 hover:border-cyan-300/45"
                       >
-                        <div className="relative h-32 sm:h-40 rounded-2xl overflow-hidden bg-white/10 mb-4">
+                        <div className="relative mb-4 h-36 overflow-hidden rounded-2xl border border-slate-500/35 bg-slate-950/60">
                           {ev.image ? (
                             <img
                               src={ev.image}
                               alt=""
-                              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                              className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                               loading="lazy"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-white/60 text-xs uppercase tracking-widest">
+                            <div className="flex h-full w-full items-center justify-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">
                               {t("agenda.event_badge")}
                             </div>
                           )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#051a4a]/80 via-black/10 to-transparent" />
-                          <span className="absolute bottom-3 left-4 text-xs uppercase tracking-widest text-white/90">
-                            {t("agenda.event_badge")}
-                          </span>
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#020617]/85 via-transparent to-transparent" />
                         </div>
 
-                        <div className="flex flex-wrap gap-2 mb-3">
+                        <div className="mb-3 flex flex-wrap gap-2">
                           {ev.subCategories.map((cat) => (
                             <span
                               key={cat.id}
-                              className="text-[10px] font-bold uppercase px-2 py-1 rounded-full border"
+                              className="rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.1em]"
                               style={{
                                 color: getCategoryColor(cat.id),
                                 borderColor: getCategoryColor(cat.id),
@@ -1081,51 +1008,39 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                         </div>
 
                         <h3
-                          className="text-lg font-bold mb-2"
-                          style={{ fontFamily: "'Bebas Neue', sans-serif" }}
+                          className="text-lg font-black uppercase tracking-tight text-white"
                           dangerouslySetInnerHTML={{ __html: ev.titre }}
                         />
-                        <p className="text-sm text-white/75 leading-relaxed">
+                        <p className="mt-2 text-sm leading-relaxed text-slate-300">
                           {ev.resume}
                         </p>
 
-                        <div className="mt-4 flex flex-wrap gap-2 text-xs text-white/80">
-                          <span className="px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30">
+                        <div className="mt-4 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-[0.14em]">
+                          <span className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1 text-cyan-100">
                             {t("agenda.hour_label")}: {ev.heure}
                           </span>
-                          <span className="px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-400/30">
+                          <span className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1 text-cyan-100">
                             {t("agenda.place_label")}: {ev.lieu}
                           </span>
                         </div>
 
                         <button
                           onClick={() => setSelectedArticle(ev)}
-                          className="mt-4 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-cyan-200 hover:text-white"
-                          style={{ fontFamily: "'Space Mono', monospace" }}
+                          className="mt-4 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200 transition hover:text-cyan-100"
                         >
                           <span>{t("agenda.read_article")}</span>
                           <span aria-hidden="true">➙</span>
                         </button>
-                      </div>
+                      </article>
                     ))
                   ) : (
-                    <div className="col-span-full bg-white/10 border border-dashed border-white/20 rounded-3xl p-8 text-center text-white/70">
+                    <div className="col-span-full rounded-[28px] border border-slate-500/35 bg-slate-900/45 p-8 text-center text-slate-300">
                       {t("agenda.no_events_today")}
                     </div>
                   )}
                 </div>
               </>
             )}
-
-            <style>{`
-              @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
-
-              .agenda-article h2,
-              .agenda-article h3,
-              .agenda-article h4 {
-                font-family: 'Bebas Neue', sans-serif;
-              }
-            `}</style>
           </>
         ) : (
           <div

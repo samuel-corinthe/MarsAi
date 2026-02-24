@@ -900,8 +900,8 @@ export default function YoutubeUpload() {
 
     if (uploadAccessLoading) {
         return (
-            <div className="section app-container py-12">
-                <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl border border-slate-100 p-8 text-center text-slate-700 font-semibold">
+            <div className="section app-container upload-modern-page py-12">
+                <div className="upload-modern-shell max-w-2xl mx-auto rounded-2xl border border-slate-500/35 bg-slate-900/55 p-8 text-center text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
                     Verification des droits d upload...
                 </div>
             </div>
@@ -914,14 +914,22 @@ export default function YoutubeUpload() {
     }
 
     return (
-        <div className="section app-container py-12">
-            <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
-                <div className="bg-slate-900 p-8 text-white">
+        <div className="section app-container upload-modern-page relative overflow-hidden py-12">
+            <div className="pointer-events-none absolute inset-0">
+                <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-cyan-500/12 blur-3xl"></div>
+                <div className="absolute -left-20 top-52 h-72 w-72 rounded-full bg-indigo-500/12 blur-3xl"></div>
+            </div>
+
+            <div className="upload-modern-shell relative mx-auto max-w-2xl overflow-hidden rounded-2xl border border-slate-500/35 bg-slate-900/55 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+                <div className="border-b border-slate-500/35 p-8 text-white">
+                    <p className="inline-flex rounded-full border border-cyan-300/45 bg-cyan-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
+                        Upload
+                    </p>
                     <h1 className="text-3xl font-bold">{t('upload.page_title')}</h1>
-                    <p className="text-slate-400 mt-2">{t('upload.page_subtitle')}</p>
+                    <p className="mt-2 text-slate-300">{t('upload.page_subtitle')}</p>
                 </div>
 
-                <form onSubmit={handleUpload} className="p-8 space-y-6" noValidate>
+                <form onSubmit={handleUpload} className="upload-modern-form p-8 space-y-6" noValidate>
                     <div className="space-y-6">
                     <section className={`rounded-xl border border-slate-200 p-4 md:p-5 space-y-6 ${currentStep === 1 ? '' : 'hidden'}`}>
                         <div className="space-y-1">
@@ -1827,6 +1835,92 @@ export default function YoutubeUpload() {
                     )}
                     </div>
                 </form>
+
+                <style>{`
+                    .upload-modern-page {
+                        background: linear-gradient(180deg, #020617 0%, #102042 52%, #020617 100%);
+                    }
+
+                    .upload-modern-shell {
+                        backdrop-filter: blur(12px);
+                    }
+
+                    .upload-modern-form .rounded-xl.border {
+                        border-color: rgba(125, 145, 175, 0.5);
+                        background: rgba(15, 23, 42, 0.72);
+                    }
+
+                    .upload-modern-form label {
+                        color: #f8fafc !important;
+                    }
+
+                    .upload-modern-form input:not([type='file']):not(.sr-only),
+                    .upload-modern-form textarea,
+                    .upload-modern-form select {
+                        border-color: rgba(125, 145, 175, 0.65) !important;
+                        background: rgba(15, 23, 42, 0.92) !important;
+                        color: #f8fafc !important;
+                    }
+
+                    .upload-modern-form input::placeholder,
+                    .upload-modern-form textarea::placeholder {
+                        color: #cbd5e1 !important;
+                    }
+
+                    .upload-modern-form input:focus,
+                    .upload-modern-form textarea:focus,
+                    .upload-modern-form select:focus {
+                        border-color: rgba(165, 243, 252, 0.95) !important;
+                        box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.35) !important;
+                    }
+
+                    .upload-modern-form .text-slate-700,
+                    .upload-modern-form .text-slate-800,
+                    .upload-modern-form .text-slate-900 {
+                        color: #f8fafc !important;
+                    }
+
+                    .upload-modern-form .text-slate-600,
+                    .upload-modern-form .text-slate-500,
+                    .upload-modern-form .text-slate-400 {
+                        color: #cbd5e1 !important;
+                    }
+
+                    .upload-modern-form .bg-slate-50 {
+                        background: rgba(15, 23, 42, 0.75) !important;
+                    }
+
+                    .upload-modern-form .border-slate-200,
+                    .upload-modern-form .border-slate-300 {
+                        border-color: rgba(125, 145, 175, 0.55) !important;
+                    }
+
+                    .upload-modern-form .bg-slate-100 {
+                        background: rgba(30, 41, 59, 0.75) !important;
+                    }
+
+                    .upload-modern-form .bg-slate-900,
+                    .upload-modern-form .hover\\:bg-slate-800:hover {
+                        background: linear-gradient(90deg, #67e8f9 0%, #38bdf8 100%) !important;
+                        color: #0f172a !important;
+                    }
+
+                    .upload-modern-form .bg-blue-600,
+                    .upload-modern-form .hover\\:bg-blue-700:hover {
+                        background: linear-gradient(90deg, #67e8f9 0%, #38bdf8 100%) !important;
+                        color: #0f172a !important;
+                    }
+
+                    .upload-modern-form .text-blue-700,
+                    .upload-modern-form .text-blue-900 {
+                        color: #a5f3fc !important;
+                    }
+
+                    .upload-modern-form .text-red-600,
+                    .upload-modern-form .text-red-700 {
+                        color: #fca5a5 !important;
+                    }
+                `}</style>
             </div>
         </div>
     );

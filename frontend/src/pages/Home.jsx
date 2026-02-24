@@ -1,24 +1,66 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import HomeModelViewer from "../components/HomeModelViewer";
 import Seo from "../components/Seo";
 import { OrganizationSchema, EventSchema, WebSiteSchema } from "../components/Schema";
 import { useTranslation } from "react-i18next";
+import { getSitePhaseState } from "../api";
+import PhaseCountdownBanner from "../components/phases/PhaseCountdownBanner";
 
 export default function Home({ page }) {
   const { i18n, t } = useTranslation();
+  const [sitePhase, setSitePhase] = useState(null);
+  const [phaseLoaded, setPhaseLoaded] = useState(false);
   const modelSrc =
     import.meta.env.VITE_HOME_MODEL_URL ||
     `${import.meta.env.BASE_URL}models/walking_robot_mr.glb`;
   const modelPoster = import.meta.env.VITE_HOME_MODEL_POSTER_URL || "";
   const submitFilmPath =
     i18n.language === "en" ? "/submit-film" : "/deposer-un-film";
+  const participateVideoUrl =
+    import.meta.env.VITE_HOME_PARTICIPATE_VIDEO_URL
+    || "https://cdn.pixabay.com/video/2023/07/28/173530-849610807_large.mp4";
   const agendaPath = i18n.language === "en" ? "/schedule" : "/agenda";
   const callForProjectsPath =
     i18n.language === "en" ? "/call-for-project" : "/appel-a-projet";
   const partnersPath = i18n.language === "en" ? "/partners" : "/partenaires";
   const aboutPath = i18n.language === "en" ? "/about" : "/a-propos";
   const moviesPath = i18n.language === "en" ? "/movies" : "/films";
+  const currentPhaseKey = String(sitePhase?.currentPhase || "phase_1").toLowerCase();
+  const isCallForProjectsPhase = currentPhaseKey === "phase_1";
+  const heroCtaPath = isCallForProjectsPhase ? submitFilmPath : moviesPath;
+  const heroCtaBadge = i18n.language === "en"
+    ? (isCallForProjectsPhase ? "Call for projects" : "Official selection")
+    : (isCallForProjectsPhase ? "Appel a projet" : "Selection officielle");
+  const heroCtaTitle = i18n.language === "en"
+    ? (isCallForProjectsPhase ? "Participate" : "Watch films")
+    : (isCallForProjectsPhase ? "Participer" : "Visionner les films");
+  const heroCtaSubtitle = i18n.language === "en"
+    ? (isCallForProjectsPhase ? "Click to submit your film" : "Click to open the gallery")
+    : (isCallForProjectsPhase ? "Clique pour deposer ton film" : "Clique pour ouvrir la galerie");
+  const heroCtaAria = i18n.language === "en"
+    ? (isCallForProjectsPhase ? "Submit your film" : "Open movie gallery")
+    : (isCallForProjectsPhase ? "Deposer un film" : "Ouvrir la galerie des films");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const payload = await getSitePhaseState();
+        if (!cancelled) setSitePhase(payload);
+      } catch {
+        if (!cancelled) setSitePhase(null);
+      } finally {
+        if (!cancelled) setPhaseLoaded(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const parsed = useMemo(() => {
     const html = page?.content?.rendered || "";
 
@@ -142,7 +184,14 @@ export default function Home({ page }) {
       }
     });
 
-    return { title: page?.title?.rendered || "", heroLead, heroLinks, aboutTitle, aboutText, articles };
+    return {
+      title: page?.title?.rendered || "",
+      heroLead,
+      heroLinks,
+      aboutTitle,
+      aboutText,
+      articles,
+    };
   }, [
     aboutPath,
     agendaPath,
@@ -168,59 +217,89 @@ export default function Home({ page }) {
       {/* Texture Grain - opacite reduite pour ne pas gener la lecture */}
       <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 mix-blend-overlay pointer-events-none z-[60]"></div>
 
-      {/* --- HERO (Accessibilite : contraste eleve) --- */}
-      <section className="relative min-h-[85vh] flex items-center justify-center text-center px-6 pt-16 md:pt-20 pb-20">
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-[#1e293b] via-[#0f172a] to-[#0f172a] z-0" />
-        <div className="relative z-20 max-w-4xl mx-auto">
-          <h1 className="text-4xl md:text-8xl font-black uppercase tracking-tighter leading-none text-white mb-10 drop-shadow-md"
-              dangerouslySetInnerHTML={{ __html: parsed.title }} />
+      {/* --- PARTICIPER CTA (plein ecran) --- */}
+      <section className="relative min-h-screen w-full overflow-hidden">
+        <video
+          className="absolute inset-0 h-full w-full object-cover"
+          src={participateVideoUrl}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#020617]/55 via-[#020617]/65 to-[#020617]/90" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.25),_transparent_48%)]" />
 
-          {parsed.heroLead && (
-            <p className="text-[#cbd5e1] text-lg md:text-xl max-w-2xl mx-auto font-medium leading-relaxed">
-              {parsed.heroLead}
+        <Link
+          to={heroCtaPath}
+          aria-label={heroCtaAria}
+          className="relative z-20 flex min-h-screen w-full items-center justify-center px-4 text-center sm:px-6"
+        >
+          <div className="group w-full max-w-3xl rounded-[2rem] border border-cyan-200/25 bg-slate-900/35 px-4 py-8 backdrop-blur-md transition-all duration-500 hover:scale-[1.02] hover:border-cyan-200/60 hover:bg-slate-900/55 sm:rounded-[2.5rem] sm:px-8 sm:py-10 md:px-14 md:py-14">
+            <p className="mb-4 text-[11px] font-black uppercase tracking-[0.35em] text-cyan-200/90">
+              {heroCtaBadge}
             </p>
-          )}
+            <h2 className="text-4xl font-black uppercase tracking-tight text-white sm:text-5xl md:text-7xl">
+              {heroCtaTitle}
+            </h2>
+            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-100/90 sm:mt-6 sm:text-sm sm:tracking-[0.2em] md:text-base">
+              {heroCtaSubtitle}
+            </p>
+          </div>
+        </Link>
+      </section>
 
-          <div className="mt-12 flex flex-col sm:flex-row gap-6 justify-center">
-            {parsed.heroLinks.map((l, i) =>
-              l.href.startsWith("/") ? (
-                <Link
-                  key={i}
-                  to={l.href}
-                  aria-label={`Acceder a ${l.text}`}
-                  className="px-12 py-5 rounded-full bg-[#38bdf8] text-[#0f172a] font-black uppercase tracking-widest text-[12px] hover:bg-white transition-colors shadow-lg"
-                >
-                  {l.text}
-                </Link>
-              ) : (
-                <a
-                  key={i}
-                  href={l.href}
-                  aria-label={`Acceder a ${l.text}`}
-                  className="px-12 py-5 rounded-full bg-[#38bdf8] text-[#0f172a] font-black uppercase tracking-widest text-[12px] hover:bg-white transition-colors shadow-lg"
-                >
-                  {l.text}
-                </a>
-              )
+      {/* --- INTRO + COMPTEUR --- */}
+      <section className="relative py-16 md:py-24 bg-[#0f172a]">
+        <div className="max-w-6xl mx-auto px-6 md:px-10">
+          <div className="rounded-[2.5rem] border border-cyan-300/20 bg-[#111b33]/80 p-8 md:p-12 shadow-xl">
+            <h1
+              className="text-3xl md:text-6xl font-black uppercase tracking-tight leading-[0.95] text-white"
+              dangerouslySetInnerHTML={{ __html: parsed.title }}
+            />
+
+            {parsed.heroLead && (
+              <p className="mt-6 text-[#cbd5e1] text-base md:text-xl max-w-3xl font-medium leading-relaxed">
+                {parsed.heroLead}
+              </p>
+            )}
+
+            <div className="mt-10 flex flex-col sm:flex-row gap-4">
+              {parsed.heroLinks.map((l, i) =>
+                l.href.startsWith("/") ? (
+                  <Link
+                    key={i}
+                    to={l.href}
+                    aria-label={`Acceder a ${l.text}`}
+                    className="px-8 py-4 rounded-full bg-[#38bdf8] text-[#0f172a] font-black uppercase tracking-widest text-[11px] hover:bg-white transition-colors shadow-lg text-center"
+                  >
+                    {l.text}
+                  </Link>
+                ) : (
+                  <a
+                    key={i}
+                    href={l.href}
+                    aria-label={`Acceder a ${l.text}`}
+                    className="px-8 py-4 rounded-full bg-[#38bdf8] text-[#0f172a] font-black uppercase tracking-widest text-[11px] hover:bg-white transition-colors shadow-lg text-center"
+                  >
+                    {l.text}
+                  </a>
+                ),
+              )}
+            </div>
+
+            {phaseLoaded && (
+              <div className="mt-8">
+                <PhaseCountdownBanner
+                  sitePhase={sitePhase}
+                  language={i18n.language}
+                  variant="home"
+                />
+              </div>
             )}
           </div>
-
-          <HomeModelViewer
-            only="mobile"
-            src={modelSrc}
-            poster={modelPoster || undefined}
-            alt="Objet 3D MarsAI"
-            className="mt-8 mx-auto w-36 h-36 sm:w-44 sm:h-44 cursor-grab active:cursor-grabbing"
-          />
         </div>
-
-        <HomeModelViewer
-          only="desktop"
-          src={modelSrc}
-          poster={modelPoster || undefined}
-          alt="Objet 3D MarsAI"
-          className="absolute right-6 lg:right-16 top-1/2 -translate-y-1/2 w-56 h-56 lg:w-72 lg:h-72 z-10 cursor-grab active:cursor-grabbing"
-        />
       </section>
 
       {/* --- ABOUT (Plus clair pour la lecture prolongee) --- */}
@@ -237,10 +316,16 @@ export default function Home({ page }) {
                     {parsed.aboutText}
                   </p>
                 </div>
-                <div className="aspect-square rounded-3xl bg-[#0f172a] border border-[#334155] overflow-hidden shadow-inner">
-                   <img src="https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=2059"
-                        className="w-full h-full object-cover filter contrast-[1.1]"
-                        alt="Illustration de la section a propos" />
+                <div className="rounded-3xl bg-[#0f172a] border border-[#334155] overflow-hidden shadow-inner p-6 md:p-8">
+                  <HomeModelViewer
+                    src={modelSrc}
+                    poster={modelPoster || undefined}
+                    alt="Objet 3D MarsAI"
+                    className="mx-auto w-56 h-56 md:w-72 md:h-72 cursor-grab active:cursor-grabbing"
+                  />
+                  <p className="mt-6 text-center text-xs font-black uppercase tracking-[0.25em] text-cyan-200/90">
+                    MarsAI Lab
+                  </p>
                 </div>
               </div>
             </div>

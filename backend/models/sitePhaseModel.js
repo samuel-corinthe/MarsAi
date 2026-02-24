@@ -1,3 +1,5 @@
+import { getObjectStorageSummary } from "../services/objectStorageService.js";
+
 const SITE_PHASE_TABLE = "site_phase_state";
 const PHASE2_SELECTION_TABLE = "phase2_movie_selections";
 const PHASE3_SELECTION_TABLE = "phase3_winner_selections";
@@ -7,6 +9,13 @@ const LEGACY_ADMIN_RATINGS_TABLE = "admin_ratings";
 
 export const SITE_PHASE_VALUES = ["phase_1", "phase_2", "phase_3"];
 export const SITE_PHASE_MODE_VALUES = ["manual", "timer"];
+
+const OBJECT_STORAGE_PUBLIC_PREFIX = String(
+  getObjectStorageSummary()?.publicUrlPrefix || "",
+).trim();
+const OBJECT_STORAGE_URL_LIKE = OBJECT_STORAGE_PUBLIC_PREFIX
+  ? `${OBJECT_STORAGE_PUBLIC_PREFIX}%`
+  : "";
 
 async function getExistingColumns(pool) {
   const [rows] = await pool.query(`SHOW COLUMNS FROM \`${SITE_PHASE_TABLE}\``);
@@ -242,40 +251,77 @@ export async function updateCurrentSitePhase(pool, { currentPhase, mode, updated
 }
 
 export async function countPhase2SelectedMovies(pool) {
-  const [rows] = await pool.query(`SELECT COUNT(*) AS total FROM \`${PHASE2_SELECTION_TABLE}\``);
+  const query = OBJECT_STORAGE_URL_LIKE
+    ? `
+      SELECT COUNT(*) AS total
+      FROM \`${PHASE2_SELECTION_TABLE}\` s
+      INNER JOIN movies m ON m.id = s.movie_id
+      WHERE m.video_url LIKE ?
+    `
+    : `SELECT COUNT(*) AS total FROM \`${PHASE2_SELECTION_TABLE}\``;
+  const params = OBJECT_STORAGE_URL_LIKE ? [OBJECT_STORAGE_URL_LIKE] : [];
+  const [rows] = await pool.query(query, params);
   return Number(rows?.[0]?.total || 0);
 }
 
 export async function fetchPhase2SelectedMovies(pool) {
-  const [rows] = await pool.query(
-    `
-      SELECT
-        m.id,
-        m.title,
-        m.poster_url,
-        m.submitted_by,
-        m.youtube_url,
-        m.video_url,
-        m.submission_status,
-        c.alpha2 AS country_alpha2,
-        c.name_fr AS country_name_fr,
-        c.flag_path AS country_flag_path,
-        s.selection_criteria,
-        s.selected_at AS added_at
-      FROM \`${PHASE2_SELECTION_TABLE}\` s
-      INNER JOIN movies m ON m.id = s.movie_id
-      LEFT JOIN countries c ON c.id = m.country_id
-      ORDER BY s.id ASC
-    `,
-  );
+  const query = `
+    SELECT
+      m.id,
+      m.title,
+      m.poster_url,
+      m.submitted_by,
+      m.youtube_url,
+      m.video_url,
+      m.submission_status,
+      c.alpha2 AS country_alpha2,
+      c.name_fr AS country_name_fr,
+      c.flag_path AS country_flag_path,
+      s.selection_criteria,
+      s.selected_at AS added_at
+    FROM \`${PHASE2_SELECTION_TABLE}\` s
+    INNER JOIN movies m ON m.id = s.movie_id
+    LEFT JOIN countries c ON c.id = m.country_id
+    ${OBJECT_STORAGE_URL_LIKE ? "WHERE m.video_url LIKE ?" : ""}
+    ORDER BY s.id ASC
+  `;
+  const params = OBJECT_STORAGE_URL_LIKE ? [OBJECT_STORAGE_URL_LIKE] : [];
+  const [rows] = await pool.query(query, params);
   return rows;
 }
 
 export async function isMovieSelectedForPhase2(pool, movieId) {
+  const query = OBJECT_STORAGE_URL_LIKE
+    ? `
+      SELECT s.id
+      FROM \`${PHASE2_SELECTION_TABLE}\` s
+      INNER JOIN movies m ON m.id = s.movie_id
+      WHERE s.movie_id = ?
+        AND m.video_url LIKE ?
+      LIMIT 1
+    `
+    : `SELECT id FROM \`${PHASE2_SELECTION_TABLE}\` WHERE movie_id = ? LIMIT 1`;
+  const params = OBJECT_STORAGE_URL_LIKE ? [movieId, OBJECT_STORAGE_URL_LIKE] : [movieId];
+  const [rows] = await pool.query(query, params);
+  return rows.length > 0;
+}
+
+export async function isMovieBackedByObjectStorage(pool, movieId) {
+  if (!OBJECT_STORAGE_URL_LIKE) {
+    return true;
+  }
+
   const [rows] = await pool.query(
-    `SELECT id FROM \`${PHASE2_SELECTION_TABLE}\` WHERE movie_id = ? LIMIT 1`,
-    [movieId],
+    `
+      SELECT id
+      FROM movies
+      WHERE id = ?
+        AND video_url LIKE ?
+      LIMIT 1
+    `,
+    [movieId, OBJECT_STORAGE_URL_LIKE],
   );
+
   return rows.length > 0;
 }
 
@@ -296,6 +342,21 @@ export async function deletePhase2MovieSelection(pool, movieId) {
     [movieId],
   );
   return Number(result?.affectedRows || 0);
+}
+
+export async function fetchMoviesOutsidePhase2Selection(pool) {
+  const [rows] = await pool.query(
+    `
+      SELECT
+        m.id,
+        m.video_url,
+        m.poster_url
+      FROM movies m
+      LEFT JOIN \`${PHASE2_SELECTION_TABLE}\` p2 ON p2.movie_id = m.id
+      WHERE p2.movie_id IS NULL
+    `,
+  );
+  return rows;
 }
 
 export async function pruneMoviesOutsidePhase2Selection(pool) {
@@ -366,40 +427,58 @@ export async function setPhase2ReadyFlag(pool, { isReady, readyBy }) {
 }
 
 export async function countPhase3SelectedMovies(pool) {
-  const [rows] = await pool.query(`SELECT COUNT(*) AS total FROM \`${PHASE3_SELECTION_TABLE}\``);
+  const query = OBJECT_STORAGE_URL_LIKE
+    ? `
+      SELECT COUNT(*) AS total
+      FROM \`${PHASE3_SELECTION_TABLE}\` s
+      INNER JOIN movies m ON m.id = s.movie_id
+      WHERE m.video_url LIKE ?
+    `
+    : `SELECT COUNT(*) AS total FROM \`${PHASE3_SELECTION_TABLE}\``;
+  const params = OBJECT_STORAGE_URL_LIKE ? [OBJECT_STORAGE_URL_LIKE] : [];
+  const [rows] = await pool.query(query, params);
   return Number(rows?.[0]?.total || 0);
 }
 
 export async function fetchPhase3SelectedMovies(pool) {
-  const [rows] = await pool.query(
-    `
-      SELECT
-        m.id,
-        m.title,
-        m.poster_url,
-        m.submitted_by,
-        m.youtube_url,
-        m.video_url,
-        m.submission_status,
-        c.alpha2 AS country_alpha2,
-        c.name_fr AS country_name_fr,
-        c.flag_path AS country_flag_path,
-        s.selection_criteria,
-        s.selected_at AS added_at
-      FROM \`${PHASE3_SELECTION_TABLE}\` s
-      INNER JOIN movies m ON m.id = s.movie_id
-      LEFT JOIN countries c ON c.id = m.country_id
-      ORDER BY s.id ASC
-    `,
-  );
+  const query = `
+    SELECT
+      m.id,
+      m.title,
+      m.poster_url,
+      m.submitted_by,
+      m.youtube_url,
+      m.video_url,
+      m.submission_status,
+      c.alpha2 AS country_alpha2,
+      c.name_fr AS country_name_fr,
+      c.flag_path AS country_flag_path,
+      s.selection_criteria,
+      s.selected_at AS added_at
+    FROM \`${PHASE3_SELECTION_TABLE}\` s
+    INNER JOIN movies m ON m.id = s.movie_id
+    LEFT JOIN countries c ON c.id = m.country_id
+    ${OBJECT_STORAGE_URL_LIKE ? "WHERE m.video_url LIKE ?" : ""}
+    ORDER BY s.id ASC
+  `;
+  const params = OBJECT_STORAGE_URL_LIKE ? [OBJECT_STORAGE_URL_LIKE] : [];
+  const [rows] = await pool.query(query, params);
   return rows;
 }
 
 export async function isMovieSelectedForPhase3(pool, movieId) {
-  const [rows] = await pool.query(
-    `SELECT id FROM \`${PHASE3_SELECTION_TABLE}\` WHERE movie_id = ? LIMIT 1`,
-    [movieId],
-  );
+  const query = OBJECT_STORAGE_URL_LIKE
+    ? `
+      SELECT s.id
+      FROM \`${PHASE3_SELECTION_TABLE}\` s
+      INNER JOIN movies m ON m.id = s.movie_id
+      WHERE s.movie_id = ?
+        AND m.video_url LIKE ?
+      LIMIT 1
+    `
+    : `SELECT id FROM \`${PHASE3_SELECTION_TABLE}\` WHERE movie_id = ? LIMIT 1`;
+  const params = OBJECT_STORAGE_URL_LIKE ? [movieId, OBJECT_STORAGE_URL_LIKE] : [movieId];
+  const [rows] = await pool.query(query, params);
   return rows.length > 0;
 }
 

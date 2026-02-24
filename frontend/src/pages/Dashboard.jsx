@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import Seo from "../components/Seo";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import FilmRow from "../components/dashboard/FilmRow";
+import ProgressBar from "../components/dashboard/ProgressBar";
+import PageLoader from "../components/ui/PageLoader";
 import {
   autoAssignMovieReviews,
   claimMovieAssignment,
@@ -22,15 +25,6 @@ import {
   upsertMyMovieRating,
   updateCurrentSessionProfile,
 } from "../api";
-
-function toSlug(value) {
-  return String(value ?? "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "");
-}
 
 const DEFAULT_ASSIGNMENT_META = {
   policy: null,
@@ -60,47 +54,6 @@ function resolveDashboardDefaultNav(items) {
   return filterDashboardNavItems(items)[0]?.href || "admin-top";
 }
 
-const COUNTRY_NAME_TO_CODE = {
-  france: "fr",
-  "etats unis": "us",
-  "united states": "us",
-  usa: "us",
-  canada: "ca",
-  espagne: "es",
-  spain: "es",
-  "royaume uni": "gb",
-  "united kingdom": "gb",
-  uk: "gb",
-  belgique: "be",
-  belgium: "be",
-  allemagne: "de",
-  germany: "de",
-  italie: "it",
-  italy: "it",
-  maroc: "ma",
-  algerie: "dz",
-  tunisie: "tn",
-};
-
-function normalizeCountryName(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function resolveCountryCode(film) {
-  const rawCode = String(film.countryCode || film.country_code || "")
-    .trim()
-    .toLowerCase();
-  if (/^[a-z]{2}$/.test(rawCode)) return rawCode;
-
-  const normalizedCountry = normalizeCountryName(film.country);
-  return COUNTRY_NAME_TO_CODE[normalizedCountry] || null;
-}
-
 function resolveMovieId(film) {
   const movieId = Number(film?.id ?? film?.movieId ?? film?.movie_id);
   if (!Number.isFinite(movieId) || movieId <= 0) return null;
@@ -113,193 +66,6 @@ function extractMovieYear(movie) {
   );
   const match = fromReleaseDate.match(/\d{4}/);
   return Number(match?.[0] || 0);
-}
-
-function ProgressBar({ label, value, color }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="w-24 text-xs text-slate-100/85">{label}</div>
-      <div className="bar-track">
-        <div className="bar-fill" style={{ width: `${Math.min(value, 100)}%`, background: color }} />
-      </div>
-      <div className="text-xs font-semibold">{Math.round(value)}%</div>
-      </div>
-    
-  );
-}
-
-function FilmRow({
-  film,
-  filmsBasePath,
-  onClaim,
-  onRelease,
-  onRate,
-  canManagePhase2Selection,
-  isPhase2Selected,
-  isSelectionQuotaReached,
-  isSelectionDisabled,
-  selectionDisabledLabel,
-  onTogglePhase2Select,
-  phase2SelectionBusyMovieId,
-  busyMovieId,
-  selectionAddLabel,
-  selectionRemoveLabel,
-}) {
-  const filmTitle = String(film.title || "Sans titre");
-  const ratingLabel = Number.isFinite(film.rating) ? film.rating.toFixed(1) : "-";
-  const myRatingLabel = Number.isFinite(film.myRating) ? `${film.myRating}/5` : "Non notée";
-  const myComment = String(film.myComment || "").trim();
-  const filmSlug = film.slug ?? toSlug(filmTitle);
-  const movieId = resolveMovieId(film);
-  const hasMovieId = movieId !== null;
-  const moviePath = hasMovieId ? `/movie/${movieId}` : `${filmsBasePath}/${filmSlug}`;
-  const isBusy = Number(busyMovieId) === Number(movieId);
-  const canClaim = Boolean(film.canClaim);
-  const canRelease = Boolean(film.canRelease);
-  const directorLabel = String(
-    film.director || film.submittedBy || film.submitted_by || "Anonyme",
-  ).trim() || "Anonyme";
-  const countryCode = resolveCountryCode(film);
-  const posterUrl = String(
-    film.img || film.poster || film.posterUrl || film.poster_url || "",
-  ).trim();
-  const CardWrapper = hasMovieId ? Link : "div";
-  const cardWrapperProps = hasMovieId ? { to: moviePath } : {};
-  const isPhase2SelectionBusy =
-    Number(phase2SelectionBusyMovieId) === Number(movieId);
-
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 md:px-5 md:py-4">
-      <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-        <div className="w-full max-w-sm">
-          <CardWrapper className="group block" {...cardWrapperProps}>
-            <div className="relative aspect-video rounded-[30px] overflow-hidden shadow-xl bg-slate-100 mb-5 border border-slate-50">
-              {posterUrl ? (
-                <img
-                  src={posterUrl}
-                  alt={filmTitle}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center px-4 text-center">
-                  <span className="text-slate-700 text-xs font-black uppercase tracking-wide line-clamp-2">
-                    {filmTitle}
-                  </span>
-                </div>
-              )}
-            </div>
-            <div className="px-2">
-              <h4 className="text-blue-950 font-black text-sm uppercase truncate mb-1 tracking-tight">
-                {filmTitle}
-              </h4>
-              <div className="flex items-center gap-2">
-                {countryCode ? (
-                  <img
-                    src={`/images/flags/${countryCode}.png`}
-                    className="w-5 h-3.5 object-cover rounded-[2px] shadow-sm border border-slate-200"
-                    alt={countryCode.toUpperCase()}
-                    onError={(event) => {
-                      event.currentTarget.style.display = "none";
-                    }}
-                  />
-                ) : (
-                  <div className="w-5 h-3.5 bg-slate-100 rounded-[2px]" />
-                )}
-                <p className="text-slate-400 text-[10px] font-black uppercase truncate tracking-[0.15em]">
-                  {directorLabel}
-                </p>
-              </div>
-            </div>
-          </CardWrapper>
-        </div>
-
-        <div className="flex-1 min-w-0 space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-slate-300/90">Statut : {film.status}</span>
-            <span className="text-xs text-slate-300/90">{film.phase}</span>
-          </div>
-          <div className="text-xs text-slate-200/90">
-            <span>{film.country}</span> · <span>{film.duration}</span> ·{" "}
-            <span className="text-slate-300/90">{film.tools}</span>
-          </div>
-          <div className="text-xs text-slate-200/95">
-            <span className="font-semibold text-cyan-200/95">Mon commentaire :</span>{" "}
-            <span title={myComment || "Aucun commentaire"} className="text-slate-100/95">
-              {myComment || "Aucun commentaire"}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-3 xl:items-end">
-          <div className="text-sm text-slate-100">
-            <span className="font-semibold">{ratingLabel}</span> ?
-            <span className="text-xs text-slate-300/80"> ({film.notesCount})</span>
-            <div className="mt-1 text-xs text-cyan-100/90">Ma note : {myRatingLabel}</div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {hasMovieId ? (
-              <Link
-                className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10"
-                to={moviePath}
-              >
-                Visionner
-              </Link>
-            ) : (
-              <button
-                type="button"
-                className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10 opacity-60 cursor-not-allowed"
-                disabled
-              >
-                Visionner
-              </button>
-            )}
-            <button
-              className="btn-primary px-3 py-1.5 rounded-lg disabled:opacity-60"
-              onClick={() => onRate?.({ ...film, id: movieId })}
-              disabled={!hasMovieId}
-            >
-              Noter
-            </button>
-            {canManagePhase2Selection && (
-              <button
-                className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10 disabled:opacity-60"
-                onClick={() => onTogglePhase2Select?.(movieId, Boolean(isPhase2Selected))}
-                disabled={!hasMovieId || isPhase2SelectionBusy || isSelectionDisabled || isSelectionQuotaReached}
-              >
-                {isPhase2SelectionBusy
-                  ? "..."
-                  : isSelectionQuotaReached
-                    ? "Quota atteint"
-                  : isSelectionDisabled
-                    ? (selectionDisabledLabel || "Indisponible")
-                  : isPhase2Selected
-                    ? (selectionRemoveLabel || "Retirer")
-                    : (selectionAddLabel || "Selectionner")}
-              </button>
-            )}
-            {canClaim && (
-              <button
-                className="btn-primary px-3 py-1.5 rounded-lg disabled:opacity-60"
-                onClick={() => onClaim?.(film)}
-                disabled={isBusy}
-              >
-                {isBusy ? "..." : "Prendre"}
-              </button>
-            )}
-            {canRelease && (
-              <button
-                className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10 disabled:opacity-60"
-                onClick={() => onRelease?.(film)}
-                disabled={isBusy}
-              >
-                {isBusy ? "..." : "Retirer"}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export default function Dashboard() {
@@ -489,7 +255,7 @@ export default function Dashboard() {
   }, [isFilmFilterModalOpen]);
 
   if (loading) {
-    return <div className="app-container page">Chargement du dashboard admin...</div>;
+    return <PageLoader message="Chargement du dashboard admin..." />;
   }
 
   if (loadError) {
@@ -501,7 +267,7 @@ export default function Dashboard() {
   }
 
   if (!adminData) {
-    return <div className="app-container page">Aucune donnée admin disponible.</div>;
+    return <PageLoader message="Aucune donnee admin disponible." fullscreen={false} compact />;
   }
 
   const {
@@ -516,7 +282,7 @@ export default function Dashboard() {
   const filteredNavItems = filterDashboardNavItems(navItems);
 
   if (!phaseTimeline?.length) {
-    return <div className="app-container page">Aucune phase configurée.</div>;
+    return <PageLoader message="Aucune phase configuree." fullscreen={false} compact />;
   }
 
   const effectiveUser = currentUser ?? adminData.currentUser;
@@ -524,7 +290,7 @@ export default function Dashboard() {
   const profilePreview = profileForm ?? effectiveUser;
 
   if (!effectiveUser || !effectiveProfile) {
-    return <div className="app-container page">Chargement du profil admin...</div>;
+    return <PageLoader message="Chargement du profil admin..." />;
   }
 
   const now = new Date(nowTs);
@@ -541,9 +307,26 @@ export default function Dashboard() {
   const phaseDuration = new Date(currentPhase.end) - new Date(currentPhase.start);
   const elapsed = Math.max(0, now - new Date(currentPhase.start));
   const phaseProgress = Math.min(100, (elapsed / (phaseDuration || 1)) * 100);
-  const remainingMs = Math.max(0, new Date(currentPhase.end) - now);
-  const remainingDays = Math.floor(remainingMs / 86400000);
-  const remainingHours = Math.floor((remainingMs % 86400000) / 3600000);
+  const phase1EndTs = sitePhase?.phase1EndsAt ? new Date(sitePhase.phase1EndsAt).getTime() : NaN;
+  const phase2EndTs = sitePhase?.phase2EndsAt ? new Date(sitePhase.phase2EndsAt).getTime() : NaN;
+  const phaseCountdownMeta = (() => {
+    if (activeSitePhaseKey === "phase_3") return null;
+    if (Number.isFinite(phase1EndTs) && nowTs < phase1EndTs) {
+      return { label: "Fin phase 1", targetTs: phase1EndTs };
+    }
+    if (Number.isFinite(phase2EndTs) && nowTs < phase2EndTs) {
+      return { label: "Fin phase 2", targetTs: phase2EndTs };
+    }
+    return null;
+  })();
+  const phaseCountdownMs = phaseCountdownMeta
+    ? Math.max(0, phaseCountdownMeta.targetTs - nowTs)
+    : 0;
+  const remainingDays = Math.floor(phaseCountdownMs / 86400000);
+  const remainingHours = Math.floor((phaseCountdownMs % 86400000) / 3600000);
+  const remainingMinutes = Math.floor((phaseCountdownMs % 3600000) / 60000);
+  const remainingSeconds = Math.floor((phaseCountdownMs % 60000) / 1000);
+  const showPhaseCountdown = Boolean(phaseCountdownMeta);
   const isSuperAdmin = effectiveUser.role === "superadmin";
   const canManagePhase = ["admin", "superadmin"].includes(String(effectiveUser.role || ""));
   const phase2SelectedMovieIds = new Set(
@@ -1173,7 +956,7 @@ export default function Dashboard() {
           <div className="glass-strong p-6 space-y-4 xl:col-span-2">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-xl font-semibold text-white">{profilePreview.name}</h2>
+                <h2 className="text-xl font-black uppercase tracking-tight text-white">{profilePreview.name}</h2>
                 <p className="text-sm text-slate-100/80">
                   Rôle actuel : {profilePreview.role === "superadmin" ? "Super admin" : "Admin"} - statut {profilePreview.status}.
                 </p>
@@ -1252,14 +1035,27 @@ export default function Dashboard() {
           <div className="glass p-6 space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-lg font-semibold text-white">{currentPhase.label}</h3>
+                <h3 className="text-lg font-black uppercase tracking-tight text-white">{currentPhase.label}</h3>
                 <p className="text-sm text-slate-100/80">{currentPhase.description}</p>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-semibold text-white">
-                  {remainingDays}j {String(remainingHours).padStart(2, "0")}h
-                </div>
-                <div className="text-xs text-slate-200/80">reste</div>
+                {showPhaseCountdown ? (
+                  <>
+                    <div className="text-2xl font-semibold text-white">
+                      {remainingDays}j {String(remainingHours).padStart(2, "0")}h{" "}
+                      {String(remainingMinutes).padStart(2, "0")}m{" "}
+                      {String(remainingSeconds).padStart(2, "0")}s
+                    </div>
+                    <div className="text-xs text-slate-200/80">
+                      {phaseCountdownMeta?.label || "Decompte en cours"}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-2xl font-semibold text-white">-</div>
+                    <div className="text-xs text-slate-200/80">Pas de decompte</div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -1318,7 +1114,7 @@ export default function Dashboard() {
           <div className="xl:col-span-8 glass p-6 space-y-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-semibold">Vision rapide</h2>
+                <h2 className="text-2xl font-black uppercase tracking-tight">Vision rapide</h2>
                 <p className="text-xs text-slate-200/85">
                   Charge perso : {assignmentMeta.myPendingMinutes} min en attente - {assignedFilms.length} films assignés - Règle {assignmentPolicy.minReviewers}-{assignmentPolicy.maxReviewers} évaluateurs / film
                 </p>
@@ -1364,7 +1160,7 @@ export default function Dashboard() {
           
             <div className="stat-card glass-strong p-5 space-y-4">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="text-lg font-semibold text-white">Vision synthèse</h3>
+                <h3 className="text-lg font-black uppercase tracking-tight text-white">Vision synthèse</h3>
                 <span className="text-xs text-slate-100/80">
                   {viewedAssignedCount}/{assignedFilms.length} traités
                 </span>
@@ -1388,7 +1184,7 @@ export default function Dashboard() {
               <div className="bar-track">
                 <div className="bar-fill" style={{ width: `${selectionRatio}%` }} />
               </div>
-              <div className="kpi-trend text-pink-200">Quota cible {quotaTarget}</div>
+              <div className="kpi-trend text-cyan-200">Quota cible {quotaTarget}</div>
             </div>
 
             {/* Filters */}
@@ -1580,7 +1376,7 @@ export default function Dashboard() {
             {showSelectionCard && (
             <div className="glass p-5 space-y-4">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="font-semibold text-white">{selectionCardTitle}</h3>
+                <h3 className="font-black uppercase tracking-tight text-white">{selectionCardTitle}</h3>
                 <button
                   type="button"
                   className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10"
@@ -1679,7 +1475,7 @@ export default function Dashboard() {
 
             <div className="glass p-5 space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Vos indicateurs</h3>
+                <h3 className="font-black uppercase tracking-tight">Vos indicateurs</h3>
                 <span className="text-xs text-slate-100/80">Basé sur vos actions réelles</span>
               </div>
               <ProgressBar
@@ -1726,13 +1522,13 @@ export default function Dashboard() {
         {isFilmFilterModalOpen && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
             <div
-              className="absolute inset-0 bg-blue-950/80 backdrop-blur-md"
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-md"
               onClick={() => setIsFilmFilterModalOpen(false)}
             ></div>
 
             <div className="relative w-full max-w-md rounded-[36px] bg-white p-8 shadow-2xl">
               <div className="mb-8 flex items-center justify-between">
-                <h2 className="text-2xl font-black uppercase tracking-tight text-blue-950">
+                <h2 className="text-2xl font-black uppercase tracking-tight text-white">
                   Filtres avancés
                 </h2>
                 <button
@@ -1806,7 +1602,7 @@ export default function Dashboard() {
                             setMaxRating(nextMin);
                           }
                         }}
-                        className="w-full accent-blue-600"
+                        className="w-full accent-cyan-400"
                       />
                     </div>
                     <div>
@@ -1826,7 +1622,7 @@ export default function Dashboard() {
                             setMinRating(nextMax);
                           }
                         }}
-                        className="w-full accent-blue-600"
+                        className="w-full accent-cyan-400"
                       />
                     </div>
                   </div>
@@ -1847,11 +1643,11 @@ export default function Dashboard() {
         {ratingModalFilm && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div
-              className="absolute inset-0 bg-blue-950/95 backdrop-blur-md"
+              className="absolute inset-0 bg-slate-950/90 backdrop-blur-md"
               onClick={handleCloseRatingModal}
             ></div>
-            <div className="relative bg-white rounded-[50px] p-12 w-full max-w-sm shadow-2xl text-center">
-              <h3 className="text-3xl font-black text-blue-950 mb-8 uppercase tracking-tighter italic">
+            <div className="relative w-full max-w-sm rounded-[50px] border border-slate-500/35 bg-slate-900 p-12 text-center shadow-2xl">
+              <h3 className="mb-8 text-3xl font-black uppercase tracking-tighter text-white">
                 Noter ce film
               </h3>
               <p className="mb-4 text-sm font-bold text-slate-500 uppercase tracking-wider truncate">
@@ -1862,7 +1658,7 @@ export default function Dashboard() {
                   <button
                     key={num}
                     onClick={() => setRatingModalScore(num)}
-                    className={`w-12 h-14 rounded-2xl font-black text-2xl transition-all ${ratingModalScore === num ? "bg-blue-600 text-white scale-110 shadow-xl" : "bg-slate-100 text-slate-300"}`}
+                    className={`h-14 w-12 rounded-2xl text-2xl font-black transition-all ${ratingModalScore === num ? "scale-110 bg-cyan-500 text-slate-950 shadow-xl" : "bg-slate-800 text-slate-300"}`}
                     disabled={ratingModalLoading}
                   >
                     {num}
@@ -1878,7 +1674,7 @@ export default function Dashboard() {
                   onChange={(event) => setRatingModalComment(event.target.value)}
                   maxLength={2000}
                   rows={4}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white"
+                  className="w-full rounded-2xl border border-slate-600 bg-slate-800 p-3 text-sm text-slate-100 outline-none transition focus:border-cyan-300 focus:bg-slate-800/80"
                   placeholder="Votre commentaire (optionnel)"
                 />
               </div>
@@ -1888,7 +1684,7 @@ export default function Dashboard() {
               <div className="flex flex-col gap-4">
                 <button
                   onClick={handleSaveRating}
-                  className="w-full py-5 bg-blue-950 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-800 transition-all disabled:opacity-60"
+                  className="w-full rounded-2xl bg-gradient-to-r from-cyan-300 to-sky-400 py-5 font-black uppercase tracking-widest text-slate-950 transition-all hover:brightness-105 disabled:opacity-60"
                   disabled={ratingModalLoading || ratingModalScore < 1 || ratingModalScore > 5}
                 >
                   {ratingModalLoading ? "..." : "Confirmer"}

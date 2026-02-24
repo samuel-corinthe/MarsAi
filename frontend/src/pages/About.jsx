@@ -1,178 +1,115 @@
-import React, { useState, useEffect } from "react";
-import { getPageBySlug } from "../api";
-import { useTranslation } from "react-i18next";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
 import { OrganizationSchema, WebSiteSchema } from "../components/Schema";
+import { getPageBySlug } from "../api";
+import PageLoader from "../components/ui/PageLoader";
 
-const About = () => {
+export default function About() {
   const { t, i18n } = useTranslation();
   const [wpContent, setWpContent] = useState(null);
   const [loading, setLoading] = useState(true);
-  const submitFilmPath =
-    i18n.language === "en" ? "/submit-film" : "/deposer-un-film";
+
+  const submitFilmPath = i18n.language === "en" ? "/submit-film" : "/deposer-un-film";
   const contactPath = "/contact";
 
   useEffect(() => {
-    const loadContent = async () => {
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        // On adapte le slug WP selon la langue active
         const slug = i18n.language === "fr" ? "a-propos" : "about";
         const data = await getPageBySlug(slug, i18n.language);
-        setWpContent(data);
-      } catch (error) {
-        console.error("Erreur chargement WordPress:", error);
-        setWpContent(null); // On reset pour afficher le contenu par défaut en cas d'erreur
+        if (!cancelled) setWpContent(data);
+      } catch {
+        if (!cancelled) setWpContent(null);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
+    })();
+
+    return () => {
+      cancelled = true;
     };
-    loadContent();
-  }, [i18n.language]); // Recharge si on change de langue
+  }, [i18n.language]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-blue-950 text-white">
-        <div className="text-xl animate-pulse">{t("about.loading")}</div>
-      </div>
-    );
+    return <PageLoader message={t("about.loading", "Chargement...")} />;
   }
 
-  const seoTitle =
-    wpContent?.title?.rendered || t("about.defaultTitle") || "A propos";
+  const seoTitle = wpContent?.title?.rendered || t("about.defaultTitle") || "A propos";
   const seoDescription =
     wpContent?.excerpt?.rendered || wpContent?.content?.rendered || t("about.description");
 
   return (
     <>
       <Seo title={seoTitle} description={seoDescription} />
-       <OrganizationSchema />
+      <OrganizationSchema />
       <WebSiteSchema />
-      <div className="flex flex-col bg-blue-950 text-white min-h-screen relative selection:bg-cyan-500/30">
-      <section className="relative overflow-hidden w-full">
-        <div className="relative pt-20 pb-10">
-          <div className="absolute top-20 left-0 w-3/4 md:w-1/2 h-28 bg-white rounded-r-full shadow-[0_0_30px_rgba(59,130,246,0.4)] flex items-center pl-10 md:pl-20 z-10">
+
+      <main className="min-h-screen bg-gradient-to-b from-[#020617] via-[#0b1732] to-[#020617] py-14 text-slate-100 md:py-16">
+        <div className="site-container space-y-10">
+          <section>
+            <p className="inline-flex rounded-full border border-cyan-300/45 bg-cyan-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
+              marsAI
+            </p>
             <h1
-              className=" text-4xl md:text-6xl font-extrabold text-blue-600 tracking-tight"
+              className="mt-4 text-3xl font-black uppercase tracking-tight text-white sm:text-4xl md:text-5xl"
               dangerouslySetInnerHTML={{
                 __html: wpContent?.title?.rendered || t("about.defaultTitle"),
               }}
             />
-          </div>
-        </div>
+            <p className="mt-4 max-w-3xl text-sm leading-relaxed text-slate-300 sm:text-base">
+              {t("about.description")}
+            </p>
 
-        <div className="pt-32 px-6 md:px-20 pb-12 relative z-0">
-          <div className="flex flex-col md:flex-row items-center gap-16">
-            <div className="md:w-1/2 relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-cyan-400 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-500"></div>
-              <img
-                src="../public/images/marsai-illustration.png"
-                alt="Illustration MarsAi"
-                className="relative rounded-2xl shadow-2xl border border-white/10 w-full"
-              />
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link
+                to={submitFilmPath}
+                className="inline-flex rounded-full bg-gradient-to-r from-cyan-300 to-sky-400 px-6 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-950 transition hover:brightness-105"
+              >
+                {t("about.cta_join")}
+              </Link>
+              <Link
+                to={contactPath}
+                className="inline-flex rounded-full border border-slate-400/45 bg-slate-900/40 px-6 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-100 transition hover:border-cyan-300/60 hover:text-cyan-100"
+              >
+                {t("about.cta_contact")}
+              </Link>
             </div>
+          </section>
 
-            <div className="md:w-1/2 space-y-8">
+          <section className="grid items-start gap-8 border-t border-cyan-300/20 pt-8 lg:grid-cols-[1.2fr_1fr]">
+            <article className="min-w-0">
               {wpContent?.content?.rendered ? (
                 <div
-                  className="wp-content-about text-gray-300 text-lg leading-relaxed space-y-6"
-                  dangerouslySetInnerHTML={{
-                    __html: wpContent.content.rendered,
-                  }}
+                  className="site-richtext prose-p:text-slate-300 prose-headings:text-white prose-a:text-cyan-300"
+                  dangerouslySetInnerHTML={{ __html: wpContent.content.rendered }}
                 />
               ) : (
-                <>
-                  <p className="text-gray-300 text-lg leading-relaxed border-l-4 border-cyan-500 pl-6">
-                    <span className="text-cyan-400 font-semibold uppercase italic">
-                      MarsAi
-                    </span>{" "}
-                    {t("about.description")}
-                  </p>
-
-                  <div className="flex flex-wrap gap-3">
-                    {["Innovation", "Deep Learning", "Creative Tools"].map(
-                      (tag) => (
-                        <span
-                          key={tag}
-                          className="px-3 py-1 rounded-full text-[10px] font-black bg-blue-500/10 text-blue-300 border border-blue-500/20 uppercase tracking-widest"
-                        >
-                          #{tag}
-                        </span>
-                      ),
-                    )}
-                  </div>
-
-                  <p className="text-gray-300 text-lg leading-relaxed">
-                    {t("about.community")}
-                  </p>
-
-                  <h2 className="text-3xl md:text-5xl font-black text-white pt-4 uppercase italic leading-none">
-                    Show Your cr
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500">
-                      AI
-                    </span>
-                    tivity
-                  </h2>
-                </>
+                <div className="space-y-4 text-slate-300">
+                  <p>{t("about.description")}</p>
+                  <p>{t("about.community")}</p>
+                </div>
               )}
+            </article>
 
-              <div className="pt-4 flex flex-col sm:flex-row gap-4">
-                <Link
-                  to={submitFilmPath}
-                  className="text-center bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-8 py-3 rounded-full hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-300 font-bold uppercase text-sm tracking-widest transform hover:-translate-y-1"
-                >
-                  {t("about.cta_join")}
-                </Link>
-                <button className="px-8 py-3 rounded-full border border-white/20 hover:bg-white/5 transition font-bold text-gray-300 hover:text-white uppercase text-sm tracking-widest">
-                  {t("about.cta_more")}
-                </button>
-              </div>
-            </div>
-          </div>
+            <aside className="space-y-4">
+              <img
+                src="/images/marsai-illustration.png"
+                alt="MarsAI"
+                className="w-full rounded-[28px] border border-slate-500/35 object-cover shadow-[0_16px_40px_rgba(2,6,23,0.4)]"
+                onError={(event) => {
+                  event.currentTarget.style.display = "none";
+                }}
+              />
+              <p className="text-sm text-slate-300">{t("about.features.future")}</p>
+            </aside>
+          </section>
         </div>
-      </section>
-
-      {/* Circle Section */}
-      <section className="py-24 px-6 relative flex items-center justify-center bg-blue-950/50 backdrop-blur-sm overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-blue-600/20 to-cyan-400/20 rounded-full blur-[100px]" />
-        </div>
-
-        <div className="relative w-full max-w-lg aspect-square rounded-full border border-white/10 bg-white/5 backdrop-blur-md flex flex-col items-center justify-center p-12 shadow-[0_0_100px_rgba(59,130,246,0.1)] text-center ring-1 ring-white/20 group hover:ring-cyan-500/30 transition-all duration-700">
-          <h2 className="text-5xl font-black mb-8 bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60 group-hover:from-cyan-300 group-hover:to-blue-500 transition-all duration-500 uppercase italic">
-            MarsAi
-          </h2>
-
-          <div className="space-y-3 text-xs text-gray-300 font-black uppercase tracking-[0.2em]">
-            <p className="hover:text-cyan-400 transition-colors cursor-default">
-              {t("about.features.ai")}
-            </p>
-            <p className="hover:text-cyan-400 transition-colors cursor-default">
-              {t("about.features.innovation")}
-            </p>
-            <p className="hover:text-cyan-400 transition-colors cursor-default">
-              {t("about.features.creativity")}
-            </p>
-            <p className="hover:text-cyan-400 transition-colors cursor-default">
-              {t("about.features.future")}
-            </p>
-            <p className="hover:text-cyan-400 transition-colors cursor-default">
-              {t("about.features.tech")}
-            </p>
-          </div>
-
-          <Link
-            to={contactPath}
-            className="mt-10 bg-white text-blue-950 px-8 py-3 rounded-full hover:bg-cyan-400 hover:text-white transition-all duration-300 font-black uppercase text-sm tracking-widest shadow-lg hover:shadow-cyan-500/50"
-          >
-            {t("about.cta_contact")}
-          </Link>
-        </div>
-      </section>
-      </div>
+      </main>
     </>
   );
-};
-
-export default About;
+}

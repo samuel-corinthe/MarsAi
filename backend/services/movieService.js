@@ -5,6 +5,10 @@ import {
   findCastByMovieId,
   findCastByMovieIds,
 } from "../models/movieModel.js";
+import {
+  isObjectStorageConfigured,
+  isPublicObjectStorageUrl,
+} from "./objectStorageService.js";
 
 const FALLBACK_POSTER_PREFIX = "https://picsum.photos/seed/marsai-movie-";
 
@@ -120,15 +124,33 @@ function toCountryFlagPath(flagPath, alpha2) {
   return normalized || fallbackPath;
 }
 
-function isServerHostedVideoUrl(value) {
+function isDirectPlayableVideoUrl(value) {
   const raw = String(value || "").trim();
   if (!raw) return false;
+
+  if (/^https?:\/\/[^?#]+\.(mp4)(?:[?#].*)?$/i.test(raw)) {
+    return true;
+  }
 
   if (/^\/(?:MarsAi\/)?uploads\/videos\/.+\.mp4$/i.test(raw)) {
     return true;
   }
 
   return /^https?:\/\/[^/]+\/(?:MarsAi\/)?uploads\/videos\/.+\.mp4$/i.test(raw);
+}
+
+function isS3MediaUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return false;
+  if (isPublicObjectStorageUrl(raw)) return true;
+  if (!isObjectStorageConfigured()) {
+    return /^https?:\/\/s3\.[^/]+\.scw\.cloud\/.+/i.test(raw);
+  }
+  return false;
+}
+
+function isS3BackedMovieRow(row) {
+  return isS3MediaUrl(row?.video_url);
 }
 
 function normalizeCastEntry(entry, index) {
@@ -255,7 +277,7 @@ function mapMovieRow(row) {
   const countryFlagPath = toCountryFlagPath(row.country_flag_path, countryCode);
   const localVideoUrl = String(row.video_url || "").trim();
   const youtubeUrl = String(row.youtube_url || "").trim();
-  const playbackVideoUrl = isServerHostedVideoUrl(localVideoUrl) ? localVideoUrl : "";
+  const playbackVideoUrl = isDirectPlayableVideoUrl(localVideoUrl) ? localVideoUrl : "";
 
   return {
     id: Number.isFinite(movieId) && movieId > 0 ? movieId : 0,
@@ -306,12 +328,13 @@ export function toMovieId(rawValue) {
 export async function listMovies() {
   const pool = getDbPool();
   const rows = await findAllMovies(pool);
-  const movieIds = rows
+  const s3Rows = rows.filter(isS3BackedMovieRow);
+  const movieIds = s3Rows
     .map((row) => Number(row.id))
     .filter((movieId) => Number.isFinite(movieId) && movieId > 0);
   const castByMovieId = await loadCastByMovieIds(pool, movieIds);
 
-  return rows.map((row) => {
+  return s3Rows.map((row) => {
     const movieId = Number(row.id);
     const castRows = castByMovieId.get(movieId) || null;
     return mapMovieRowWithCast(row, castRows);
@@ -322,6 +345,7 @@ export async function getMovieDetails({ movieId }) {
   const pool = getDbPool();
   const row = await findMovieById(pool, movieId);
   if (!row) return null;
+  if (!isS3BackedMovieRow(row)) return null;
 
   const castRows = await loadCastByMovieId(pool, movieId);
   return mapMovieRowWithCast(row, castRows);

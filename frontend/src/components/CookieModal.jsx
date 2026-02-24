@@ -1,41 +1,29 @@
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useCookies } from "react-cookie";
 
-const CookieModal = () => {
+export default function CookieModal() {
   const [cookies, setCookie] = useCookies(["user_consent"]);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Si le cookie n'existe pas, on affiche la modal après 1 seconde
-    if (!cookies.user_consent) {
-      const timer = setTimeout(() => setIsVisible(true), 1000);
-      return () => clearTimeout(timer);
-    }
+    if (cookies.user_consent) return;
+    const timer = setTimeout(() => setIsVisible(true), 900);
+    return () => clearTimeout(timer);
   }, [cookies]);
 
   const handleConsent = (status) => {
-    console.log(`Action: ${status} cliqué`);
-
-    // 1. Sauvegarde du choix dans le navigateur (votre cookie technique)
     setCookie("user_consent", status, {
       path: "/",
-      maxAge: 31536000, // 1 an
+      maxAge: 31536000,
       sameSite: "lax",
     });
 
-    // 2. Communication CRUCIALE avec GTM
-    // On s'assure que le dataLayer est initialisé
     window.dataLayer = window.dataLayer || [];
-
-    // On pousse l'événement que GTM doit écouter
     window.dataLayer.push({
       event: "consent_update",
       consent_status: status,
-      // Optionnel: On peut aussi envoyer l'état au Consent Mode de Google
       analytics_storage: status === "accepted" ? "granted" : "denied",
     });
-
-    console.log("Données envoyées au dataLayer :", window.dataLayer);
 
     setIsVisible(false);
   };
@@ -43,34 +31,23 @@ const CookieModal = () => {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-6 left-6 right-6 md:left-auto md:max-w-sm z-[9999] animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-2xl p-6 text-gray-900">
-        <div className="flex items-center gap-3 mb-4">
-          <h3 className="font-bold text-lg leading-tight">🍪 Cookies</h3>
-        </div>
-
-        <p className="text-gray-600 text-sm mb-6 leading-relaxed">
-          Nous utilisons des cookies pour analyser notre trafic. En acceptant,
-          vous nous aidez à améliorer votre expérience.
+    <div className="fixed bottom-5 left-4 right-4 z-[120] md:left-auto md:right-6 md:max-w-sm">
+      <div className="site-panel site-panel-solid border-cyan-300/30 p-5">
+        <p className="site-kicker">Cookies</p>
+        <h3 className="mt-3 text-lg font-black uppercase tracking-tight text-white">Gestion des cookies</h3>
+        <p className="mt-2 text-sm leading-relaxed text-slate-300">
+          Nous utilisons des cookies pour mesurer l'audience et ameliorer l'experience utilisateur.
         </p>
 
-        <div className="flex flex-col gap-2">
-          <button
-            onClick={() => handleConsent("accepted")}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-xl transition-all duration-200 shadow-sm active:scale-95"
-          >
-            Tout accepter
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <button type="button" className="site-btn-primary px-4 py-2.5" onClick={() => handleConsent("accepted")}>
+            Accepter
           </button>
-          <button
-            onClick={() => handleConsent("declined")}
-            className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 px-4 rounded-xl transition-all duration-200"
-          >
+          <button type="button" className="site-btn-secondary px-4 py-2.5" onClick={() => handleConsent("declined")}>
             Refuser
           </button>
         </div>
       </div>
     </div>
   );
-};
-
-export default CookieModal;
+}

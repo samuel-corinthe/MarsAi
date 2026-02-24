@@ -8,10 +8,12 @@ import {
   deletePhase3MovieSelection,
   ensureSitePhaseSchema,
   fetchCurrentSitePhase,
+  fetchMoviesOutsidePhase2Selection,
   fetchPhase2SelectedMovies,
   fetchPhase3SelectedMovies,
   insertPhase2MovieSelection,
   insertPhase3MovieSelection,
+  isMovieBackedByObjectStorage,
   isMovieSelectedForPhase2,
   isMovieSelectedForPhase3,
   pruneMoviesOutsidePhase2Selection,
@@ -19,6 +21,13 @@ import {
   setPhase3ReadyFlag,
   updateCurrentSitePhase,
 } from "../models/sitePhaseModel.js";
+import {
+  deleteObjectByKey,
+  deleteObjectFromPublicUrl,
+  extractObjectKeyFromPublicUrl,
+  isPublicObjectStorageUrl,
+  listObjectKeysByPrefix,
+} from "./objectStorageService.js";
 
 const MIN_PHASE2_SELECTION = 50;
 const MIN_PHASE3_SELECTION = 5;
@@ -122,6 +131,135 @@ function toSelectionMovie(row) {
   };
 }
 
+function collectObjectStorageMediaUrls(movieRows) {
+  const urls = new Set();
+  const rows = Array.isArray(movieRows) ? movieRows : [];
+
+  rows.forEach((row) => {
+    const videoUrl = String(row?.video_url || "").trim();
+    const posterUrl = String(row?.poster_url || "").trim();
+
+    if (videoUrl && isPublicObjectStorageUrl(videoUrl)) {
+      urls.add(videoUrl);
+    }
+    if (posterUrl && isPublicObjectStorageUrl(posterUrl)) {
+      urls.add(posterUrl);
+    }
+  });
+
+  return [...urls];
+}
+
+async function cleanupObjectStorageAssets(publicUrls) {
+  const urls = Array.isArray(publicUrls) ? publicUrls.filter(Boolean) : [];
+  if (urls.length === 0) {
+    return {
+      attempted: 0,
+      deleted: 0,
+      failed: 0,
+      failures: [],
+    };
+  }
+
+  let deleted = 0;
+  const failures = [];
+
+  for (const publicUrl of urls) {
+    try {
+      const result = await deleteObjectFromPublicUrl(publicUrl);
+      if (result?.deleted) {
+        deleted += 1;
+      }
+    } catch (error) {
+      failures.push({
+        url: publicUrl,
+        error: String(error?.message || error || "Delete failed"),
+      });
+    }
+  }
+
+  return {
+    attempted: urls.length,
+    deleted,
+    failed: failures.length,
+    failures: failures.slice(0, 25),
+  };
+}
+
+async function fetchReferencedObjectStorageKeys(pool) {
+  const [rows] = await pool.query(`
+    SELECT
+      video_url,
+      poster_url
+    FROM movies
+  `);
+
+  const keys = new Set();
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const videoUrl = String(row?.video_url || "").trim();
+    const posterUrl = String(row?.poster_url || "").trim();
+
+    if (videoUrl && isPublicObjectStorageUrl(videoUrl)) {
+      const key = extractObjectKeyFromPublicUrl(videoUrl);
+      if (key) keys.add(key);
+    }
+    if (posterUrl && isPublicObjectStorageUrl(posterUrl)) {
+      const key = extractObjectKeyFromPublicUrl(posterUrl);
+      if (key) keys.add(key);
+    }
+  });
+
+  return keys;
+}
+
+async function cleanupOrphanObjectStorageMedia(pool) {
+  try {
+    const referencedKeys = await fetchReferencedObjectStorageKeys(pool);
+    const [videoKeys, posterKeys] = await Promise.all([
+      listObjectKeysByPrefix("videos"),
+      listObjectKeysByPrefix("posters"),
+    ]);
+
+    const allCandidateKeys = [...videoKeys, ...posterKeys];
+    let deleted = 0;
+    const failures = [];
+
+    for (const key of allCandidateKeys) {
+      if (referencedKeys.has(key)) continue;
+      try {
+        await deleteObjectByKey(key);
+        deleted += 1;
+      } catch (error) {
+        failures.push({
+          key,
+          error: String(error?.message || error || "Delete failed"),
+        });
+      }
+    }
+
+    return {
+      scanned: allCandidateKeys.length,
+      referenced: referencedKeys.size,
+      deleted,
+      failed: failures.length,
+      failures: failures.slice(0, 25),
+    };
+  } catch (error) {
+    return {
+      scanned: 0,
+      referenced: 0,
+      deleted: 0,
+      failed: 1,
+      failures: [
+        {
+          key: null,
+          error: String(error?.message || error || "Orphan cleanup failed"),
+        },
+      ],
+    };
+  }
+}
+
 async function getPhase2SelectionSnapshot(pool) {
   const [selectedCount, selectedRows] = await Promise.all([
     countPhase2SelectedMovies(pool),
@@ -212,6 +350,14 @@ export async function togglePhase2Selection({
   await getOrCreateCurrentState(pool);
 
   if (shouldSelect) {
+    const isS3BackedMovie = await isMovieBackedByObjectStorage(pool, safeMovieId);
+    if (!isS3BackedMovie) {
+      throw createHttpError(
+        400,
+        "Ce film n'est pas heberge sur le stockage S3 et ne peut pas etre selectionne.",
+      );
+    }
+
     const alreadySelected = await isMovieSelectedForPhase2(pool, safeMovieId);
     if (!alreadySelected) {
       const selectedCount = await countPhase2SelectedMovies(pool);
@@ -268,6 +414,14 @@ export async function togglePhase3Selection({
   await getOrCreateCurrentState(pool);
 
   if (shouldSelect) {
+    const isS3BackedMovie = await isMovieBackedByObjectStorage(pool, safeMovieId);
+    if (!isS3BackedMovie) {
+      throw createHttpError(
+        400,
+        "Ce film n'est pas heberge sur le stockage S3 et ne peut pas etre promu en phase 3.",
+      );
+    }
+
     const availableForPhase3 = await isMovieSelectedForPhase2(pool, safeMovieId);
     if (!availableForPhase3) {
       throw createHttpError(
@@ -519,6 +673,7 @@ export async function setSitePhaseState({ currentPhase, mode, updatedBy, actorRo
 
   const connection = await pool.getConnection();
   let phase2PruneSummary = null;
+  let phase2PruneCandidateRows = [];
 
   try {
     await connection.beginTransaction();
@@ -530,6 +685,7 @@ export async function setSitePhaseState({ currentPhase, mode, updatedBy, actorRo
     });
 
     if (shouldPruneMoviesForPhase2) {
+      phase2PruneCandidateRows = await fetchMoviesOutsidePhase2Selection(connection);
       phase2PruneSummary = await pruneMoviesOutsidePhase2Selection(connection);
     }
 
@@ -541,13 +697,25 @@ export async function setSitePhaseState({ currentPhase, mode, updatedBy, actorRo
     connection.release();
   }
 
+  let objectStorageCleanup = null;
+  let objectStorageOrphanSweep = null;
+  if (phase2PruneSummary) {
+    const mediaUrls = collectObjectStorageMediaUrls(phase2PruneCandidateRows);
+    objectStorageCleanup = await cleanupObjectStorageAssets(mediaUrls);
+    objectStorageOrphanSweep = await cleanupOrphanObjectStorageMedia(pool);
+  }
+
   const updatedRow = await fetchCurrentSitePhase(pool);
   const mappedState = mapSitePhaseRow(updatedRow);
 
   if (phase2PruneSummary) {
     return {
       ...mappedState,
-      phase2PruneSummary,
+      phase2PruneSummary: {
+        ...phase2PruneSummary,
+        objectStorageCleanup,
+        objectStorageOrphanSweep,
+      },
     };
   }
 
