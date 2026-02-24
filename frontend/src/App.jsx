@@ -61,8 +61,8 @@ export default function App() {
       <Route path="about-ar" element={<About />} />
 
       <Route path="partenaires" element={<Partenaires />} />
-      <Route path="partner" element={<Partenaires />} />
-      <Route path="شركاء" element={<Partenaires />} />
+      <Route path="partners" element={<Partenaires />} />
+      <Route path="partners-ar" element={<Partenaires />} />
 
       {/* FILMS / GALERIE */}
       <Route path="films" element={<Gallery />} />
@@ -72,6 +72,7 @@ export default function App() {
 
       {/* JURY & AGENDA */}
       <Route path="jury" element={<WpPage fixedSlug="jury" />} />
+      <Route path="jury-ar" element={<WpPage fixedSlug="jury" />} />
       <Route path="jury-eng" element={<WpPage fixedSlug="jury" />} />
       <Route path="agenda" element={<WpPage fixedSlug="agenda" />} />
       <Route path="schedule" element={<WpPage fixedSlug="schedule" />} />

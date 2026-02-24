@@ -21,7 +21,7 @@ export default function Partenaires() {
         if (i18n.language.startsWith("en")) {
           slug = "partners";
         } else if (i18n.language.startsWith("ar")) {
-          slug = "شركاء"; // Ou le slug exact que tu as mis sur WP pour l'arabe
+          slug = "partners-ar"; // Ou le slug exact que tu as mis sur WP pour l'arabe
         }
 
         const data = await getPageBySlug(slug);
