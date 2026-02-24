@@ -30,7 +30,7 @@ export async function ensureAssignmentSchema(pool, policy) {
           assigned_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
           started_at DATETIME DEFAULT NULL,
           completed_at DATETIME DEFAULT NULL,
-          updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP NULL DEFAULT NULL,
           PRIMARY KEY (id),
           UNIQUE KEY uq_movie_admin_assignment (movie_id, admin_id),
           KEY idx_assignment_admin_status (admin_id, status),
@@ -101,6 +101,42 @@ export async function fetchAssignmentsBasic(pool) {
       SELECT id, movie_id, admin_id, source, status
       FROM movie_review_assignments
     `,
+  );
+
+  return rows;
+}
+
+export async function fetchRatingsBasic(pool) {
+  const [rows] = await pool.query(
+    `
+      SELECT movie_id, admin_id
+      FROM movie_admin_ratings
+    `,
+  );
+
+  return rows;
+}
+
+export async function fetchRatedReviewerCountRows(pool) {
+  const [rows] = await pool.query(
+    `
+      SELECT movie_id, COUNT(DISTINCT admin_id) AS reviewers_count
+      FROM movie_admin_ratings
+      GROUP BY movie_id
+    `,
+  );
+
+  return rows;
+}
+
+export async function fetchMyRatedMovieRows(pool, adminId) {
+  const [rows] = await pool.query(
+    `
+      SELECT movie_id
+      FROM movie_admin_ratings
+      WHERE admin_id = ?
+    `,
+    [adminId],
   );
 
   return rows;
@@ -201,12 +237,34 @@ export async function findExistingAssignmentForUpdate(connection, movieId, admin
   return rows[0] || null;
 }
 
+export async function findAdminRatingForUpdate(connection, movieId, adminId) {
+  const [rows] = await connection.query(
+    "SELECT id FROM movie_admin_ratings WHERE movie_id = ? AND admin_id = ? LIMIT 1 FOR UPDATE",
+    [movieId, adminId],
+  );
+  return rows[0] || null;
+}
+
 export async function countMovieReviewersForUpdate(connection, movieId, countedStatusesSql) {
   const [rows] = await connection.query(
     `
       SELECT COUNT(*) AS total
       FROM movie_review_assignments
       WHERE movie_id = ? AND status IN (${countedStatusesSql})
+      FOR UPDATE
+    `,
+    [movieId],
+  );
+
+  return Number(rows?.[0]?.total || 0);
+}
+
+export async function countMovieRatedReviewersForUpdate(connection, movieId) {
+  const [rows] = await connection.query(
+    `
+      SELECT COUNT(DISTINCT admin_id) AS total
+      FROM movie_admin_ratings
+      WHERE movie_id = ?
       FOR UPDATE
     `,
     [movieId],

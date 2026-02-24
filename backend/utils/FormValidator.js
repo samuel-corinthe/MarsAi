@@ -299,6 +299,55 @@ export const validateFormData = (req, res, next) => {
   }
   req.body.socialLinks = Object.keys(socialLinks).length > 0 ? JSON.stringify(socialLinks) : null;
 
+  let parsedCast = [];
+  if (req.body?.cast) {
+    try {
+      parsedCast = typeof req.body.cast === 'string' ? JSON.parse(req.body.cast) : req.body.cast;
+    } catch {
+      return res.status(400).json({ error: 'Le format du casting est invalide' });
+    }
+  }
+
+  if (parsedCast && !Array.isArray(parsedCast)) {
+    return res.status(400).json({ error: 'Le casting doit etre un tableau' });
+  }
+
+  const castEntries = Array.isArray(parsedCast) ? parsedCast : [];
+  if (castEntries.length > 10) {
+    return res.status(400).json({ error: 'Maximum 10 membres de casting.' });
+  }
+
+  const normalizedCastEntries = [];
+  for (const rawMember of castEntries) {
+    const name = sanitizeString(rawMember?.name || '');
+    const role = sanitizeString(rawMember?.role || '');
+    const avatarUrl = String(rawMember?.avatarUrl || rawMember?.img || '').trim();
+
+    if (!name && !role && !avatarUrl) {
+      continue;
+    }
+
+    if (!name || !role) {
+      return res.status(400).json({ error: 'Chaque membre du casting doit avoir un nom et un role.' });
+    }
+
+    if (name.length > 120 || role.length > 120) {
+      return res.status(400).json({ error: 'Nom/role de casting trop long (max 120 caracteres).' });
+    }
+
+    if (avatarUrl && !validator.isURL(avatarUrl, { require_protocol: true })) {
+      return res.status(400).json({ error: 'URL avatar invalide dans le casting (https:// obligatoire).' });
+    }
+
+    normalizedCastEntries.push({
+      name,
+      role,
+      avatarUrl,
+    });
+  }
+
+  req.body.cast = normalizedCastEntries.length > 0 ? JSON.stringify(normalizedCastEntries) : null;
+
   console.log(' [VALIDATION] Formulaire validé avec succès');
   next();
 };

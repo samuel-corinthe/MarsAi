@@ -4,11 +4,15 @@ import {
   fetchAdminsWithCapacity,
   fetchMoviesBasic,
   fetchAssignmentsBasic,
+  fetchRatingsBasic,
+  fetchRatedReviewerCountRows,
   insertAssignmentsBatch,
   moveAssignmentsBatch,
   findMovieForUpdate,
   findExistingAssignmentForUpdate,
+  findAdminRatingForUpdate,
   countMovieReviewersForUpdate,
+  countMovieRatedReviewersForUpdate,
   ensureCapacityProfileForAdmin,
   fetchCapacityProfileForUpdate,
   fetchManualPendingMinutesForUpdate,
@@ -20,10 +24,12 @@ import {
   findAdminUserById,
   upsertAdminCapacityProfile,
   fetchMyAssignmentsRows,
+  fetchMyRatedMovieRows,
   fetchReviewerCountRows,
   fetchMyPendingMinutes,
   fetchWorkloadRows,
 } from "../models/assignmentModel.js";
+import { ensureRatingSchema } from "../models/ratingModel.js";
 
 const COUNTED_STATUSES = ["assigned", "in_progress", "completed"];
 const PENDING_STATUSES = ["assigned", "in_progress"];
@@ -58,8 +64,8 @@ export function toPositiveInt(value) {
 }
 
 export function getPolicy() {
-  const minReviewers = toInt(process.env.ASSIGNMENT_MIN_REVIEWERS, 3, 1, 10);
-  const maxReviewers = toInt(process.env.ASSIGNMENT_MAX_REVIEWERS, 5, minReviewers, 15);
+  const minReviewers = 1;
+  const maxReviewers = 1;
   const defaultCapacityMinutes = toInt(process.env.ASSIGNMENT_DEFAULT_CAPACITY_MINUTES, 720, 60, 20000);
   const defaultManualRatio = toRatio(process.env.ASSIGNMENT_DEFAULT_MANUAL_RATIO, 0.3);
   const rebalanceThreshold = toRatio(process.env.ASSIGNMENT_REBALANCE_THRESHOLD, 0.1);
@@ -106,26 +112,29 @@ function mapAssignments(rows) {
   }));
 }
 
-function buildState({ admins, movies, assignments }) {
+function ensureSetInMap(map, key) {
+  if (!map.has(key)) {
+    map.set(key, new Set());
+  }
+  return map.get(key);
+}
+
+function buildState({ admins, movies, assignments, ratingRows }) {
   const movieDuration = new Map(movies.map((movie) => [movie.id, movie.duration]));
   const movieAssignedAdmins = new Map();
-  const movieReviewerCounts = new Map();
+  const movieReviewerAdmins = new Map();
   const adminPendingMinutes = new Map();
   const adminById = new Map(admins.map((admin) => [admin.id, admin]));
 
   for (const assignment of assignments) {
     const duration = movieDuration.get(assignment.movieId) || 1;
 
-    if (!movieAssignedAdmins.has(assignment.movieId)) {
-      movieAssignedAdmins.set(assignment.movieId, new Set());
-    }
-    movieAssignedAdmins.get(assignment.movieId).add(assignment.adminId);
+    const assignedSet = ensureSetInMap(movieAssignedAdmins, assignment.movieId);
+    assignedSet.add(assignment.adminId);
 
     if (COUNTED_STATUSES.includes(assignment.status)) {
-      movieReviewerCounts.set(
-        assignment.movieId,
-        (movieReviewerCounts.get(assignment.movieId) || 0) + 1,
-      );
+      const reviewerSet = ensureSetInMap(movieReviewerAdmins, assignment.movieId);
+      reviewerSet.add(assignment.adminId);
     }
 
     if (PENDING_STATUSES.includes(assignment.status)) {
@@ -134,6 +143,23 @@ function buildState({ admins, movies, assignments }) {
         (adminPendingMinutes.get(assignment.adminId) || 0) + duration,
       );
     }
+  }
+
+  for (const row of ratingRows) {
+    const movieId = Number(row.movie_id);
+    const adminId = Number(row.admin_id);
+    if (!Number.isFinite(movieId) || !Number.isFinite(adminId)) continue;
+
+    const assignedSet = ensureSetInMap(movieAssignedAdmins, movieId);
+    assignedSet.add(adminId);
+
+    const reviewerSet = ensureSetInMap(movieReviewerAdmins, movieId);
+    reviewerSet.add(adminId);
+  }
+
+  const movieReviewerCounts = new Map();
+  for (const [movieId, reviewerSet] of movieReviewerAdmins.entries()) {
+    movieReviewerCounts.set(movieId, reviewerSet.size);
   }
 
   for (const admin of admins) {
@@ -172,9 +198,110 @@ function weightedPick(candidates, getWeight) {
   return candidates[candidates.length - 1];
 }
 
+function ratingKey(movieId, adminId) {
+  return `${Number(movieId)}:${Number(adminId)}`;
+}
+
+function buildRatedPairsLookup(rows) {
+  const ratedPairs = new Set();
+  for (const row of rows) {
+    ratedPairs.add(ratingKey(row.movie_id, row.admin_id));
+  }
+  return ratedPairs;
+}
+
+function assignmentPriority(assignment) {
+  const status = String(assignment?.status || "");
+  const source = String(assignment?.source || "");
+
+  const statusScore =
+    status === "in_progress" ? 30 : status === "completed" ? 20 : status === "assigned" ? 10 : 0;
+  const sourceScore = source === "manual" ? 3 : source === "swap" ? 2 : 1;
+
+  return statusScore + sourceScore;
+}
+
+async function pruneAssignmentsAboveMaxReviewers({ pool, policy }) {
+  const [assignmentRows, ratingRows] = await Promise.all([
+    fetchAssignmentsBasic(pool),
+    fetchRatingsBasic(pool),
+  ]);
+  const assignments = mapAssignments(assignmentRows).filter((assignment) =>
+    COUNTED_STATUSES.includes(assignment.status),
+  );
+  const ratedReviewerCountByMovie = new Map();
+
+  for (const row of ratingRows) {
+    const movieId = Number(row.movie_id);
+    const adminId = Number(row.admin_id);
+    if (!Number.isFinite(movieId) || !Number.isFinite(adminId)) continue;
+
+    const ratedSet = ensureSetInMap(ratedReviewerCountByMovie, movieId);
+    ratedSet.add(adminId);
+  }
+
+  const byMovie = new Map();
+  for (const assignment of assignments) {
+    if (!byMovie.has(assignment.movieId)) {
+      byMovie.set(assignment.movieId, []);
+    }
+    byMovie.get(assignment.movieId).push(assignment);
+  }
+
+  const toDeleteIds = [];
+
+  for (const [movieId, movieAssignments] of byMovie.entries()) {
+    const ratedReviewers = ratedReviewerCountByMovie.get(movieId)?.size || 0;
+    const maxAssignments = Math.max(0, Number(policy.maxReviewers) - ratedReviewers);
+    if (movieAssignments.length <= maxAssignments) continue;
+
+    const sorted = [...movieAssignments].sort((left, right) => {
+      const byPriority = assignmentPriority(right) - assignmentPriority(left);
+      if (byPriority !== 0) return byPriority;
+      return Number(left.id) - Number(right.id);
+    });
+
+    const keepIds = new Set(
+      sorted.slice(0, maxAssignments).map((assignment) => Number(assignment.id)),
+    );
+
+    const removable = sorted.filter(
+      (assignment) =>
+        !keepIds.has(Number(assignment.id)) &&
+        String(assignment.status || "") === "assigned",
+    );
+
+    for (const assignment of removable) {
+      toDeleteIds.push(Number(assignment.id));
+    }
+  }
+
+  if (!toDeleteIds.length) return 0;
+
+  const connection = await pool.getConnection();
+  let deletedCount = 0;
+
+  try {
+    await connection.beginTransaction();
+    for (const assignmentId of toDeleteIds) {
+      await deleteAssignmentById(connection, assignmentId);
+      deletedCount += 1;
+    }
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+
+  return deletedCount;
+}
+
 async function ensureSchema(pool) {
   const policy = getPolicy();
   await ensureAssignmentSchema(pool, policy);
+  await ensureRatingSchema(pool);
   return policy;
 }
 
@@ -185,22 +312,24 @@ async function autoAssignMissingReviews({ pool, actorAdminId, source = "auto" })
 
   const policy = await ensureSchema(pool);
 
-  const [adminRows, movieRows, assignmentRows] = await Promise.all([
+  const [adminRows, movieRows, assignmentRows, ratingRows] = await Promise.all([
     fetchAdminsWithCapacity(pool, policy),
     fetchMoviesBasic(pool),
     fetchAssignmentsBasic(pool),
+    fetchRatingsBasic(pool),
   ]);
 
   const admins = mapAdmins(adminRows, policy);
   const movies = mapMovies(movieRows);
   const assignments = mapAssignments(assignmentRows);
+  const ratedPairs = buildRatedPairsLookup(ratingRows);
 
   const activeAdmins = admins.filter((admin) => admin.isActive);
   if (!activeAdmins.length || !movies.length) {
     return { createdAssignments: 0, uncoveredMovies: movies.length };
   }
 
-  const state = buildState({ admins, movies, assignments });
+  const state = buildState({ admins, movies, assignments, ratingRows });
   const inserts = [];
 
   for (const movie of movies) {
@@ -208,7 +337,11 @@ async function autoAssignMissingReviews({ pool, actorAdminId, source = "auto" })
     let reviewerCount = state.movieReviewerCounts.get(movie.id) || 0;
 
     while (reviewerCount < policy.minReviewers) {
-      const candidates = activeAdmins.filter((admin) => !assignedSet.has(admin.id));
+      const candidates = activeAdmins.filter(
+        (admin) =>
+          !assignedSet.has(admin.id) &&
+          !ratedPairs.has(ratingKey(movie.id, admin.id)),
+      );
       if (!candidates.length) break;
 
       const chosen = weightedPick(candidates, (candidate) => {
@@ -254,20 +387,22 @@ async function autoAssignMissingReviews({ pool, actorAdminId, source = "auto" })
 async function rebalanceUnstartedAssignments({ pool, actorAdminId }) {
   const policy = await ensureSchema(pool);
 
-  const [adminRows, movieRows, assignmentRows] = await Promise.all([
+  const [adminRows, movieRows, assignmentRows, ratingRows] = await Promise.all([
     fetchAdminsWithCapacity(pool, policy),
     fetchMoviesBasic(pool),
     fetchAssignmentsBasic(pool),
+    fetchRatingsBasic(pool),
   ]);
 
   const admins = mapAdmins(adminRows, policy);
   const movies = mapMovies(movieRows);
   const assignments = mapAssignments(assignmentRows);
+  const ratedPairs = buildRatedPairsLookup(ratingRows);
 
   const activeAdmins = admins.filter((admin) => admin.isActive);
   if (activeAdmins.length < 2) return { movedAssignments: 0 };
 
-  const state = buildState({ admins, movies, assignments });
+  const state = buildState({ admins, movies, assignments, ratingRows });
 
   const getAverageRatio = () => {
     const total = activeAdmins.reduce((sum, admin) => {
@@ -305,7 +440,10 @@ async function rebalanceUnstartedAssignments({ pool, actorAdminId }) {
 
     const assignedSet = state.movieAssignedAdmins.get(assignment.movieId) || new Set();
     const candidates = activeAdmins.filter(
-      (admin) => admin.id !== sourceAdmin.id && !assignedSet.has(admin.id),
+      (admin) =>
+        admin.id !== sourceAdmin.id &&
+        !assignedSet.has(admin.id) &&
+        !ratedPairs.has(ratingKey(assignment.movieId, admin.id)),
     );
 
     let bestCandidate = null;
@@ -352,15 +490,25 @@ async function rebalanceUnstartedAssignments({ pool, actorAdminId }) {
 
 export async function runAutoAssign({ actorAdminId }) {
   const pool = getDbPool();
-  return autoAssignMissingReviews({
+  const policy = await ensureSchema(pool);
+  const prunedAssignments = await pruneAssignmentsAboveMaxReviewers({ pool, policy });
+
+  const autoResult = await autoAssignMissingReviews({
     pool,
     actorAdminId,
     source: "auto",
   });
+
+  return {
+    ...autoResult,
+    prunedAssignments,
+  };
 }
 
 export async function runRebalance({ actorAdminId }) {
   const pool = getDbPool();
+  const policy = await ensureSchema(pool);
+  const prunedAssignments = await pruneAssignmentsAboveMaxReviewers({ pool, policy });
 
   const autoResult = await autoAssignMissingReviews({
     pool,
@@ -377,6 +525,7 @@ export async function runRebalance({ actorAdminId }) {
     createdAssignments: autoResult.createdAssignments,
     movedAssignments: rebalanceResult.movedAssignments,
     uncoveredMovies: autoResult.uncoveredMovies,
+    prunedAssignments,
   };
 }
 
@@ -402,11 +551,22 @@ export async function claimMovie({ adminId, movieId }) {
       throw createHttpError(409, "Ce film est deja assigne a cet admin.");
     }
 
-    const reviewerCount = await countMovieReviewersForUpdate(
+    const existingRating = await findAdminRatingForUpdate(connection, movieId, adminId);
+    if (existingRating) {
+      await connection.rollback();
+      throw createHttpError(
+        409,
+        "Impossible de reassigner ce film: vous avez deja une note/commentaire. Supprimez votre note d'abord.",
+      );
+    }
+
+    const assignedReviewerCount = await countMovieReviewersForUpdate(
       connection,
       movieId,
       COUNTED_STATUSES_SQL,
     );
+    const ratedReviewerCount = await countMovieRatedReviewersForUpdate(connection, movieId);
+    const reviewerCount = assignedReviewerCount + ratedReviewerCount;
     if (reviewerCount >= policy.maxReviewers) {
       await connection.rollback();
       throw createHttpError(409, "Le film a deja atteint le nombre maximum de reviewers.");
@@ -479,8 +639,10 @@ export async function releaseMovie({ adminId, movieId }) {
       assignment.id,
       COUNTED_STATUSES_SQL,
     );
+    const ratedReviewerCount = await countMovieRatedReviewersForUpdate(connection, movieId);
+    const effectiveRemainingCount = remainingCount + ratedReviewerCount;
 
-    if (remainingCount < policy.minReviewers) {
+    if (effectiveRemainingCount < policy.minReviewers) {
       await connection.rollback();
       throw createHttpError(409, "Impossible de retirer ce film: minimum de reviewers casse.");
     }
@@ -502,7 +664,7 @@ export async function setAssignmentStatus({ adminId, movieId, status }) {
   await ensureSchema(pool);
 
   const updates = [status];
-  let setSql = "status = ?";
+  let setSql = "status = ?, updated_at = NOW()";
 
   if (status === "in_progress") {
     setSql += ", started_at = COALESCE(started_at, NOW()), completed_at = NULL";
@@ -550,22 +712,43 @@ export async function getMyAssignments({ adminId }) {
   const pool = getDbPool();
   const policy = await ensureSchema(pool);
 
-  const [assignmentRows, reviewerRows, myPendingMinutes] = await Promise.all([
+  const [assignmentRows, myRatedRows, reviewerRows, ratedReviewerRows, myPendingMinutes] = await Promise.all([
     fetchMyAssignmentsRows(pool, adminId),
+    fetchMyRatedMovieRows(pool, adminId),
     fetchReviewerCountRows(pool, COUNTED_STATUSES_SQL),
+    fetchRatedReviewerCountRows(pool),
     fetchMyPendingMinutes(pool, adminId, PENDING_STATUSES_SQL),
   ]);
 
-  const assignmentByMovie = Object.fromEntries(
-    assignmentRows.map((row) => [
-      String(row.movie_id),
-      { status: String(row.status || "assigned"), source: String(row.source || "auto") },
-    ]),
-  );
+  const assignmentByMovie = {};
+  assignmentRows.forEach((row) => {
+    assignmentByMovie[String(row.movie_id)] = {
+      status: String(row.status || "assigned"),
+      source: String(row.source || "auto"),
+    };
+  });
+  myRatedRows.forEach((row) => {
+    const movieIdKey = String(row.movie_id);
+    if (!assignmentByMovie[movieIdKey]) {
+      assignmentByMovie[movieIdKey] = {
+        status: "completed",
+        source: "rating",
+      };
+    }
+  });
 
-  const reviewerCountByMovie = Object.fromEntries(
-    reviewerRows.map((row) => [String(row.movie_id), Number(row.reviewers_count || 0)]),
-  );
+  const reviewerCountByMovie = {};
+  reviewerRows.forEach((row) => {
+    reviewerCountByMovie[String(row.movie_id)] = Number(row.reviewers_count || 0);
+  });
+  ratedReviewerRows.forEach((row) => {
+    const movieIdKey = String(row.movie_id);
+    const ratingCount = Number(row.reviewers_count || 0);
+    reviewerCountByMovie[movieIdKey] = Math.max(
+      Number(reviewerCountByMovie[movieIdKey] || 0),
+      ratingCount,
+    );
+  });
 
   return {
     policy,

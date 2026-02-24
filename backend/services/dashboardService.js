@@ -11,6 +11,7 @@ import {
 } from "../models/dashboardModel.js";
 
 const STATUS_ORDER = ["en cours", "accepte", "selectionne", "refuse"];
+const DASHBOARD_POSTER_FALLBACK_PREFIX = "https://picsum.photos/seed/marsai-dashboard-";
 
 const navItems = [
   { label: "Vue admin", href: "admin-top" },
@@ -45,6 +46,15 @@ function toSlug(value) {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "");
+}
+
+function toDashboardPosterUrl(row) {
+  const rawPoster = String(row.poster_url || row.posterUrl || row.img || "").trim();
+  if (rawPoster) return rawPoster;
+
+  const movieId = Number(row.id);
+  const seed = Number.isFinite(movieId) && movieId > 0 ? movieId : "fallback";
+  return `${DASHBOARD_POSTER_FALLBACK_PREFIX}${seed}/600/900`;
 }
 
 function mapMovieStatus(rawStatus, isSelected) {
@@ -203,7 +213,11 @@ export async function getDashboardPayload({ authUserId, authRole, queryAdminId }
       id: row.id,
       title: row.title,
       slug: toSlug(row.title),
+      director: String(row.submitted_by || "Anonyme").trim() || "Anonyme",
+      img: toDashboardPosterUrl(row),
       country: row.name_fr || row.name_eng || "Inconnu",
+      countryCode: String(row.country_alpha2 || "").trim().toLowerCase() || null,
+      countryFlagPath: String(row.country_flag_path || "").trim() || null,
       status,
       rating: row.avg_rating == null ? 0 : Number(row.avg_rating),
       myRating: row.my_score == null ? null : Number(row.my_score),

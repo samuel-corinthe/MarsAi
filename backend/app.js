@@ -11,6 +11,7 @@ import assignmentRoutes from "./routes/assignments.js";
 import ratingRoutes from "./routes/ratings.js";
 import authRoutes from "./routes/auth.js";
 import movieRoutes from "./routes/movie.js";
+import sitePhaseRoutes from "./routes/sitePhase.js";
 import { requireAuth, requireRole } from "./middlewares/authMiddleware.js";
 
 const app = express();
@@ -81,6 +82,8 @@ app.use("/MarsAi/api/auth", authRoutes);
 app.use("/api/dashboard", requireAuth, requireRole(["admin", "superadmin"]), dashboardRoutes);
 app.use("/api/assignments", requireAuth, requireRole(["admin", "superadmin"]), assignmentRoutes);
 app.use("/api/ratings", requireAuth, requireRole(["admin", "superadmin"]), ratingRoutes);
+app.use("/api/site-phase", sitePhaseRoutes);
+app.use("/MarsAi/api/site-phase", sitePhaseRoutes);
 
 app.get("/", (req, res) => {
   res.send("Serveur MarsAI operationnel");

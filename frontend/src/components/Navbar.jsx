@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { getCurrentSessionUser, getSitePhaseState } from "../api";
 
 const Navbar = () => {
   const { t, i18n } = useTranslation();
@@ -9,6 +10,8 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [hideGalleryForVisitors, setHideGalleryForVisitors] = useState(false);
+  const [hideSubmitForVisitors, setHideSubmitForVisitors] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -19,9 +22,60 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
-    setMobileMenuOpen(false);
-    setActiveDropdown(null);
+    const timerId = setTimeout(() => {
+      setMobileMenuOpen(false);
+      setActiveDropdown(null);
+    }, 0);
+
+    return () => clearTimeout(timerId);
   }, [location]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const sitePhase = await getSitePhaseState();
+        if (cancelled) return;
+
+        const phaseKey = String(sitePhase?.currentPhase || "phase_1").toLowerCase();
+        const needsSessionCheck =
+          phaseKey === "phase_1" || phaseKey === "phase_2" || phaseKey === "phase_3";
+        if (!needsSessionCheck) {
+          setHideGalleryForVisitors(false);
+          setHideSubmitForVisitors(false);
+          return;
+        }
+
+        let hasAdminSession = false;
+        try {
+          const sessionPayload = await getCurrentSessionUser();
+          if (cancelled) return;
+
+          const role = String(sessionPayload?.user?.role || "").toLowerCase();
+          hasAdminSession = role === "admin" || role === "superadmin";
+        } catch {
+          hasAdminSession = false;
+        }
+
+        if (!cancelled) {
+          setHideGalleryForVisitors(phaseKey === "phase_1" && !hasAdminSession);
+          setHideSubmitForVisitors(
+            (phaseKey === "phase_2" || phaseKey === "phase_3") && !hasAdminSession,
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setHideGalleryForVisitors(false);
+          setHideSubmitForVisitors(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const routeAliases = {
     "/accueil": "/home",
@@ -144,6 +198,9 @@ const Navbar = () => {
       id: "partners",
     },
   ];
+  const visibleMainNav = hideGalleryForVisitors
+    ? mainNav.filter((item) => item.id !== "films")
+    : mainNav;
 
   const moreNav = [
     {
@@ -206,7 +263,7 @@ const Navbar = () => {
             </Link>
 
             <div className="hidden lg:flex items-center space-x-1">
-              {mainNav.map((item) => (
+              {visibleMainNav.map((item) => (
                 <Link
                   key={item.id}
                   to={item.path}
@@ -280,29 +337,31 @@ const Navbar = () => {
                 </button>
               </div>
 
-              <Link
-                to={submitFilmPath}
-                className="group relative px-6 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-sm rounded-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-green-500/50 hover:scale-105"
-                style={{ fontFamily: "'Inter', sans-serif" }}
-              >
-                <span className="relative z-10 flex items-center space-x-2">
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                    />
-                  </svg>
-                  <span>{t("nav.submitFilm")}</span>
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-green-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              </Link>
+              {!hideSubmitForVisitors && (
+                <Link
+                  to={submitFilmPath}
+                  className="group relative px-6 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-sm rounded-full overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-green-500/50 hover:scale-105"
+                  style={{ fontFamily: "'Inter', sans-serif" }}
+                >
+                  <span className="relative z-10 flex items-center space-x-2">
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                      />
+                    </svg>
+                    <span>{t("nav.submitFilm")}</span>
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-green-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </Link>
+              )}
             </div>
 
             <button
@@ -361,7 +420,7 @@ const Navbar = () => {
                 </button>
               </div>
 
-              {mainNav.map((item) => (
+              {visibleMainNav.map((item) => (
                 <Link
                   key={item.id}
                   to={item.path}
@@ -395,28 +454,30 @@ const Navbar = () => {
 
               <div className="h-px bg-gradient-to-r from-transparent via-gray-800 to-transparent my-4"></div>
 
-              <div className="px-4 space-y-3">
-                <Link
-                  to={submitFilmPath}
-                  className="flex items-center justify-center space-x-2 w-full px-4 py-3 text-base font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg hover:shadow-lg hover:shadow-green-500/50 transition-all duration-300"
-                  style={{ fontFamily: "'Inter', sans-serif" }}
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+              {!hideSubmitForVisitors && (
+                <div className="px-4 space-y-3">
+                  <Link
+                    to={submitFilmPath}
+                    className="flex items-center justify-center space-x-2 w-full px-4 py-3 text-base font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg hover:shadow-lg hover:shadow-green-500/50 transition-all duration-300"
+                    style={{ fontFamily: "'Inter', sans-serif" }}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                    />
-                  </svg>
-                  <span>{t("nav.submitFilm")}</span>
-                </Link>
-              </div>
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                      />
+                    </svg>
+                    <span>{t("nav.submitFilm")}</span>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -5,11 +5,21 @@ import { useTranslation } from "react-i18next";
 import {
   autoAssignMovieReviews,
   claimMovieAssignment,
+  deleteMyMovieRating,
   getAdminDashboardData,
   getMyAssignments,
+  getPhase2SelectionStatus,
+  getPhase3SelectionStatus,
+  getSitePhaseState,
+  patchPhase2Selection,
+  patchPhase3Selection,
   rebalanceMovieReviews,
   releaseMovieAssignment,
   logoutSession,
+  updateSitePhaseState,
+  validatePhase2Selection,
+  validatePhase3Selection,
+  upsertMyMovieRating,
   updateCurrentSessionProfile,
 } from "../api";
 
@@ -28,61 +38,81 @@ const DEFAULT_ASSIGNMENT_META = {
   reviewerCountByMovie: {},
   myPendingMinutes: 0,
 };
-function SparkLine({ data }) {
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const points = data
-    .map((val, idx) => {
-      const x = (idx / (data.length - 1)) * 100;
-      const y = 60 - ((val - min) / (max - min || 1)) * 60;
-      return `${x},${y}`;
-    })
-    .join(" ");
 
-  return (
-    <div className="spark">
-      <svg viewBox="0 0 100 60" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="sparkGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#f6c452" />
-            <stop offset="60%" stopColor="#f2438b" />
-            <stop offset="100%" stopColor="#25d0ff" />
-          </linearGradient>
-        </defs>
-        <polyline
-          fill="none"
-          stroke="url(#sparkGradient)"
-          strokeWidth="3"
-          strokeLinecap="round"
-          points={points}
-        />
-        <polyline
-          fill="url(#sparkGradient)"
-          opacity="0.18"
-          points={`${points} 100,60 0,60`}
-        />
-      </svg>
-      </div>
-    
-  );
+const DASHBOARD_SECTION_IDS = ["admin-top", "profile", "films"];
+const SITE_PHASE_KEYS = ["phase_1", "phase_2", "phase_3"];
+const SITE_PHASE_LABELS = {
+  phase_1: "Phase 1 - Depot",
+  phase_2: "Phase 2 - Selection",
+  phase_3: "Phase 3 - Annonce",
+};
+
+function isDashboardSection(href) {
+  return DASHBOARD_SECTION_IDS.includes(String(href || ""));
 }
 
-function DonutSplit({ accepted, pending, rejected }) {
-  const total = accepted + pending + rejected || 1;
-  const a = (accepted / total) * 360;
-  const p = (pending / total) * 360;
-  const style = {
-    background: `conic-gradient(#25d0ff 0deg ${a}deg, #f6c452 ${a}deg ${a + p}deg, #f2438b ${a + p}deg 360deg)`,
-  };
+function filterDashboardNavItems(items) {
+  if (!Array.isArray(items)) return [];
+  return items.filter((item) => isDashboardSection(item?.href));
+}
 
-  return (
-    <div className="donut" style={style}>
-      <div className="core">
-        <div className="text-xs text-slate-100/85">Statuts</div>
-        <div className="font-semibold">{accepted}/{total}</div>
-      </div>
-    </div>
+function resolveDashboardDefaultNav(items) {
+  return filterDashboardNavItems(items)[0]?.href || "admin-top";
+}
+
+const COUNTRY_NAME_TO_CODE = {
+  france: "fr",
+  "etats unis": "us",
+  "united states": "us",
+  usa: "us",
+  canada: "ca",
+  espagne: "es",
+  spain: "es",
+  "royaume uni": "gb",
+  "united kingdom": "gb",
+  uk: "gb",
+  belgique: "be",
+  belgium: "be",
+  allemagne: "de",
+  germany: "de",
+  italie: "it",
+  italy: "it",
+  maroc: "ma",
+  algerie: "dz",
+  tunisie: "tn",
+};
+
+function normalizeCountryName(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function resolveCountryCode(film) {
+  const rawCode = String(film.countryCode || film.country_code || "")
+    .trim()
+    .toLowerCase();
+  if (/^[a-z]{2}$/.test(rawCode)) return rawCode;
+
+  const normalizedCountry = normalizeCountryName(film.country);
+  return COUNTRY_NAME_TO_CODE[normalizedCountry] || null;
+}
+
+function resolveMovieId(film) {
+  const movieId = Number(film?.id ?? film?.movieId ?? film?.movie_id);
+  if (!Number.isFinite(movieId) || movieId <= 0) return null;
+  return movieId;
+}
+
+function extractMovieYear(movie) {
+  const fromReleaseDate = String(
+    movie?.releaseDate || movie?.release_date || movie?.releaseYear || movie?.release_year || "",
   );
+  const match = fromReleaseDate.match(/\d{4}/);
+  return Number(match?.[0] || 0);
 }
 
 function ProgressBar({ label, value, color }) {
@@ -98,67 +128,152 @@ function ProgressBar({ label, value, color }) {
   );
 }
 
-function Pill({ children, tone = "pink", active = false, onClick }) {
-  const toneClass =
-    tone === "cyan" ? "pill-cyan" : tone === "amber" ? "pill-amber" : "pill-pink";
-  return (
-    <button className={`chip ${active ? "chip-active" : ""} ${toneClass}`} onClick={onClick}>
-      {children}
-    </button>
-  );
-}
-
 function FilmRow({
   film,
   filmsBasePath,
   onClaim,
   onRelease,
+  onRate,
+  canManagePhase2Selection,
+  isPhase2Selected,
+  isSelectionDisabled,
+  selectionDisabledLabel,
+  onTogglePhase2Select,
+  phase2SelectionBusyMovieId,
   busyMovieId,
+  selectionAddLabel,
+  selectionRemoveLabel,
 }) {
+  const filmTitle = String(film.title || "Sans titre");
   const ratingLabel = Number.isFinite(film.rating) ? film.rating.toFixed(1) : "-";
-  const myRatingLabel = Number.isFinite(film.myRating) ? `${film.myRating}/5` : "Non note";
+  const myRatingLabel = Number.isFinite(film.myRating) ? `${film.myRating}/5` : "Non notée";
   const myComment = String(film.myComment || "").trim();
-  const filmSlug = film.slug ?? toSlug(film.title);
-  const isBusy = Number(busyMovieId) === Number(film.id);
+  const filmSlug = film.slug ?? toSlug(filmTitle);
+  const movieId = resolveMovieId(film);
+  const hasMovieId = movieId !== null;
+  const moviePath = hasMovieId ? `/movie/${movieId}` : `${filmsBasePath}/${filmSlug}`;
+  const isBusy = Number(busyMovieId) === Number(movieId);
   const canClaim = Boolean(film.canClaim);
   const canRelease = Boolean(film.canRelease);
+  const directorLabel = String(
+    film.director || film.submittedBy || film.submitted_by || "Anonyme",
+  ).trim() || "Anonyme";
+  const countryCode = resolveCountryCode(film);
+  const posterUrl = String(
+    film.img || film.poster || film.posterUrl || film.poster_url || "",
+  ).trim();
+  const CardWrapper = hasMovieId ? Link : "div";
+  const cardWrapperProps = hasMovieId ? { to: moviePath } : {};
+  const isPhase2SelectionBusy =
+    Number(phase2SelectionBusyMovieId) === Number(movieId);
 
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 md:px-5 md:py-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="min-w-0">
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+        <div className="w-full max-w-sm">
+          <CardWrapper className="group block" {...cardWrapperProps}>
+            <div className="relative aspect-video rounded-[30px] overflow-hidden shadow-xl bg-slate-100 mb-5 border border-slate-50">
+              {posterUrl ? (
+                <img
+                  src={posterUrl}
+                  alt={filmTitle}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center px-4 text-center">
+                  <span className="text-slate-700 text-xs font-black uppercase tracking-wide line-clamp-2">
+                    {filmTitle}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="px-2">
+              <h4 className="text-blue-950 font-black text-sm uppercase truncate mb-1 tracking-tight">
+                {filmTitle}
+              </h4>
+              <div className="flex items-center gap-2">
+                {countryCode ? (
+                  <img
+                    src={`/images/flags/${countryCode}.png`}
+                    className="w-5 h-3.5 object-cover rounded-[2px] shadow-sm border border-slate-200"
+                    alt={countryCode.toUpperCase()}
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <div className="w-5 h-3.5 bg-slate-100 rounded-[2px]" />
+                )}
+                <p className="text-slate-400 text-[10px] font-black uppercase truncate tracking-[0.15em]">
+                  {directorLabel}
+                </p>
+              </div>
+            </div>
+          </CardWrapper>
+        </div>
+
+        <div className="flex-1 min-w-0 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="font-semibold text-base text-white truncate">{film.title}</div>
             <span className="text-xs text-slate-300/90">Statut : {film.status}</span>
             <span className="text-xs text-slate-300/90">{film.phase}</span>
           </div>
-          <div className="mt-1 text-xs text-slate-200/90">
+          <div className="text-xs text-slate-200/90">
             <span>{film.country}</span> · <span>{film.duration}</span> ·{" "}
             <span className="text-slate-300/90">{film.tools}</span>
           </div>
-          <div className="mt-2 text-xs text-slate-200/95">
+          <div className="text-xs text-slate-200/95">
             <span className="font-semibold text-cyan-200/95">Mon commentaire :</span>{" "}
             <span title={myComment || "Aucun commentaire"} className="text-slate-100/95">
               {myComment || "Aucun commentaire"}
             </span>
           </div>
         </div>
-        <div className="flex items-center justify-between gap-3 md:justify-end">
+
+        <div className="flex flex-col gap-3 xl:items-end">
           <div className="text-sm text-slate-100">
             <span className="font-semibold">{ratingLabel}</span> ?
             <span className="text-xs text-slate-300/80"> ({film.notesCount})</span>
             <div className="mt-1 text-xs text-cyan-100/90">Ma note : {myRatingLabel}</div>
           </div>
-          <div className="flex gap-2">
-            <Link
-              className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10"
-              to={`${filmsBasePath}/${filmSlug}`}
+          <div className="flex flex-wrap gap-2">
+            {hasMovieId ? (
+              <Link
+                className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10"
+                to={moviePath}
+              >
+                Visionner
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10 opacity-60 cursor-not-allowed"
+                disabled
+              >
+                Visionner
+              </button>
+            )}
+            <button
+              className="btn-primary px-3 py-1.5 rounded-lg disabled:opacity-60"
+              onClick={() => onRate?.({ ...film, id: movieId })}
+              disabled={!hasMovieId}
             >
-              Visionner
-            </Link>
-            <button className="btn-primary px-3 py-1.5 rounded-lg">
               Noter
             </button>
+            {canManagePhase2Selection && (
+              <button
+                className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10 disabled:opacity-60"
+                onClick={() => onTogglePhase2Select?.(movieId, Boolean(isPhase2Selected))}
+                disabled={!hasMovieId || isPhase2SelectionBusy || isSelectionDisabled}
+              >
+                {isPhase2SelectionBusy
+                  ? "..."
+                  : isSelectionDisabled
+                    ? (selectionDisabledLabel || "Indisponible")
+                  : isPhase2Selected
+                    ? (selectionRemoveLabel || "Retirer")
+                    : (selectionAddLabel || "Selectionner")}
+              </button>
+            )}
             {canClaim && (
               <button
                 className="btn-primary px-3 py-1.5 rounded-lg disabled:opacity-60"
@@ -191,10 +306,13 @@ export default function Dashboard() {
   const [adminData, setAdminData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [filters, setFilters] = useState({
-    phase: "toutes",
-    note: "toutes",
-  });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("default");
+  const [minRating, setMinRating] = useState(0);
+  const [maxRating, setMaxRating] = useState(5);
+  const [isFilmFilterModalOpen, setIsFilmFilterModalOpen] = useState(false);
+  const [showFilmFiltersCard, setShowFilmFiltersCard] = useState(true);
+  const [isFilmsListCompact, setIsFilmsListCompact] = useState(true);
   const [activeNav, setActiveNav] = useState("admin-top");
   const [currentUser, setCurrentUser] = useState(null);
   const [profileForm, setProfileForm] = useState(null);
@@ -209,8 +327,52 @@ export default function Dashboard() {
   const [assignmentInfoError, setAssignmentInfoError] = useState("");
   const [assignmentInfoSuccess, setAssignmentInfoSuccess] = useState("");
   const [distributionBusy, setDistributionBusy] = useState(false);
-  const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
+  const [ratingModalFilm, setRatingModalFilm] = useState(null);
+  const [ratingModalScore, setRatingModalScore] = useState(0);
+  const [ratingModalComment, setRatingModalComment] = useState("");
+  const [ratingModalLoading, setRatingModalLoading] = useState(false);
+  const [ratingModalError, setRatingModalError] = useState("");
+  const [sitePhase, setSitePhase] = useState(null);
+  const [sitePhaseBusy, setSitePhaseBusy] = useState(false);
+  const [phase2SelectionState, setPhase2SelectionState] = useState({
+    selectedCount: 0,
+    minRequired: 50,
+    selectedMovies: [],
+    isReadyBySuperadmin: false,
+    readyByName: null,
+    readyAt: null,
+  });
+  const [phase3EligibleMovieIds, setPhase3EligibleMovieIds] = useState(() => new Set());
+  const [phase3EligibilityLoaded, setPhase3EligibilityLoaded] = useState(false);
+  const [phase2SelectionBusyMovieId, setPhase2SelectionBusyMovieId] = useState(null);
+  const [phase2SelectionValidateBusy, setPhase2SelectionValidateBusy] = useState(false);
+  const [isPhase2SelectionCardOpen, setIsPhase2SelectionCardOpen] = useState(false);
   const [nowTs, setNowTs] = useState(Date.now());
+  const sortOptions = [
+    { label: "Défaut", value: "default" },
+    { label: "Titre A-Z", value: "title_asc" },
+    { label: "Titre Z-A", value: "title_desc" },
+    { label: "Année - +", value: "year_asc" },
+    { label: "Année + -", value: "year_desc" },
+  ];
+
+  const applyPhase2SelectionSnapshot = (payload, fallbackMinRequired = 50) => {
+    setPhase2SelectionState({
+      selectedCount: Number(payload?.selectedCount || 0),
+      minRequired: Number(payload?.minRequired ?? fallbackMinRequired),
+      selectedMovies: Array.isArray(payload?.selectedMovies) ? payload.selectedMovies : [],
+      isReadyBySuperadmin: Boolean(payload?.isReadyBySuperadmin),
+      readyByName: payload?.readyByName || null,
+      readyAt: payload?.readyAt || null,
+    });
+  };
+
+  const applyPhase3EligibilitySnapshot = (payload) => {
+    const ids = (Array.isArray(payload?.selectedMovies) ? payload.selectedMovies : [])
+      .map((movie) => Number(movie?.id))
+      .filter((movieId) => Number.isFinite(movieId) && movieId > 0);
+    setPhase3EligibleMovieIds(new Set(ids));
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -220,10 +382,20 @@ export default function Dashboard() {
       setLoading(true);
       setLoadError("");
       try {
-        const [dashboardResult, assignmentsResult] = await Promise.allSettled([
+        const [
+          dashboardResult,
+          assignmentsResult,
+          sitePhaseResult,
+          phase2SelectionResult,
+          phase3SelectionResult,
+        ] =
+          await Promise.allSettled([
           getAdminDashboardData({ signal: controller.signal }),
           getMyAssignments(),
-        ]);
+          getSitePhaseState({ signal: controller.signal }),
+          getPhase2SelectionStatus({ signal: controller.signal }),
+          getPhase3SelectionStatus({ signal: controller.signal }),
+          ]);
         if (dashboardResult.status !== "fulfilled") {
           throw dashboardResult.reason;
         }
@@ -245,19 +417,47 @@ export default function Dashboard() {
         });
         if (assignmentsResult.status === "rejected") {
           setAssignmentInfoError(
-            "Module d'assignations indisponible (endpoint /api/assignments absent ou backend non redemarre).",
+            "Module d'assignations indisponible (endpoint /api/assignments absent ou backend non redémarré).",
           );
         }
-        setActiveNav(data?.navItems?.[0]?.href ?? "admin-top");
+        setActiveNav(resolveDashboardDefaultNav(data?.navItems));
         setCurrentUser(data?.currentUser ?? null);
         setProfileForm(data?.currentUser ?? null);
-        const now = Date.now();
-        const idx = data?.phaseTimeline?.findIndex(
-          (phase) =>
-            now >= new Date(phase.start).getTime() &&
-            now <= new Date(phase.end).getTime()
-        );
-        setCurrentPhaseIndex(idx === -1 ? 0 : idx);
+        const resolvedSitePhase =
+          sitePhaseResult.status === "fulfilled" ? sitePhaseResult.value : null;
+        if (resolvedSitePhase) {
+          setSitePhase(resolvedSitePhase);
+        }
+
+        const resolvedPhaseKey = String(
+          resolvedSitePhase?.currentPhase || "phase_1",
+        ).toLowerCase();
+        const activeSelectionResult =
+          resolvedPhaseKey === "phase_2" ? phase3SelectionResult : phase2SelectionResult;
+
+        if (resolvedPhaseKey === "phase_2" && phase2SelectionResult.status === "fulfilled") {
+          applyPhase3EligibilitySnapshot(phase2SelectionResult.value);
+          setPhase3EligibilityLoaded(true);
+        } else {
+          setPhase3EligibleMovieIds(new Set());
+          setPhase3EligibilityLoaded(false);
+        }
+
+        if (activeSelectionResult.status === "fulfilled") {
+          applyPhase2SelectionSnapshot(
+            activeSelectionResult.value,
+            resolvedPhaseKey === "phase_2" ? 5 : 50,
+          );
+        } else {
+          setPhase2SelectionState({
+            selectedCount: 0,
+            minRequired: resolvedPhaseKey === "phase_2" ? 5 : 50,
+            selectedMovies: [],
+            isReadyBySuperadmin: false,
+            readyByName: null,
+            readyAt: null,
+          });
+        }
       } catch (err) {
         if (!cancelled) {
           setLoadError(err?.message ?? "Erreur de chargement.");
@@ -277,6 +477,13 @@ export default function Dashboard() {
     const id = setInterval(() => setNowTs(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = isFilmFilterModalOpen ? "hidden" : "unset";
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isFilmFilterModalOpen]);
 
   if (loading) {
     return <div className="app-container page">Chargement du dashboard admin...</div>;
@@ -298,15 +505,12 @@ export default function Dashboard() {
     selectionTarget = 0,
     adminKpis = { noted: 0, remaining: 0, selected: 0, quota: 0 },
     films = [],
-    phaseFilters = [],
-    notes = [],
     navItems = [],
     phaseTimeline = [],
-    logs = [],
-    adminsCount = 0,
   } = adminData;
 
   const quotaTarget = selectionTarget || adminKpis.quota || 0;
+  const filteredNavItems = filterDashboardNavItems(navItems);
 
   if (!phaseTimeline?.length) {
     return <div className="app-container page">Aucune phase configurée.</div>;
@@ -321,22 +525,76 @@ export default function Dashboard() {
   }
 
   const now = new Date(nowTs);
+  const requestedPhaseKey = String(sitePhase?.currentPhase || "").toLowerCase();
+  const requestedPhaseIndex = SITE_PHASE_KEYS.indexOf(requestedPhaseKey);
+  const phaseIndexFromSite = requestedPhaseIndex === -1 ? 0 : requestedPhaseIndex;
   const safePhaseIndex = Math.min(
-    Math.max(currentPhaseIndex, 0),
+    Math.max(phaseIndexFromSite, 0),
     phaseTimeline.length - 1
   );
   const currentPhase = phaseTimeline[safePhaseIndex];
-  const nextPhase = phaseTimeline[safePhaseIndex + 1] ?? null;
+  const activeSitePhaseKey = SITE_PHASE_KEYS[safePhaseIndex] || "phase_1";
+  const activeSitePhaseLabel = SITE_PHASE_LABELS[activeSitePhaseKey] || SITE_PHASE_LABELS.phase_1;
   const phaseDuration = new Date(currentPhase.end) - new Date(currentPhase.start);
   const elapsed = Math.max(0, now - new Date(currentPhase.start));
   const phaseProgress = Math.min(100, (elapsed / (phaseDuration || 1)) * 100);
   const remainingMs = Math.max(0, new Date(currentPhase.end) - now);
   const remainingDays = Math.floor(remainingMs / 86400000);
   const remainingHours = Math.floor((remainingMs % 86400000) / 3600000);
-  const remainingMinutes = Math.floor((remainingMs % 3600000) / 60000);
   const isSuperAdmin = effectiveUser.role === "superadmin";
+  const canManagePhase = ["admin", "superadmin"].includes(String(effectiveUser.role || ""));
+  const phase2SelectedMovieIds = new Set(
+    (phase2SelectionState.selectedMovies || [])
+      .map((movie) => Number(movie?.id))
+      .filter((movieId) => Number.isFinite(movieId) && movieId > 0),
+  );
+  const phase2SelectionCount = Number(phase2SelectionState.selectedCount || 0);
+  const isSelectionForPhase2 = activeSitePhaseKey === "phase_1";
+  const isSelectionForPhase3 = activeSitePhaseKey === "phase_2";
+  const phase2SelectionMinRequired = isSelectionForPhase3
+    ? 5
+    : Number(phase2SelectionState.minRequired || 50);
+  const hasEnoughPhase2Selection = phase2SelectionCount >= phase2SelectionMinRequired;
+  const canManageSelectionForCurrentPhase =
+    canManagePhase && (isSelectionForPhase2 || isSelectionForPhase3);
+  const phase3EligibilityEnforced = phase3EligibilityLoaded && phase3EligibleMovieIds.size >= 50;
+  const selectionCardTitle = isSelectionForPhase2
+    ? "Preselection phase 2"
+    : "Selection jury phase 3";
+  const selectionAddLabel = isSelectionForPhase2
+    ? "Selectionner pour phase 2"
+    : "Selectionner pour phase 3";
+  const selectionRemoveLabel = isSelectionForPhase2
+    ? "Retirer de la phase 2"
+    : "Retirer de la phase 3";
+  const selectionDisabledLabel = isSelectionForPhase3 ? "Non retenu phase 2" : "Indisponible";
+  const selectionValidationLabel = isSelectionForPhase2
+    ? "Valider les 50 films"
+    : "Valider les 5 films";
+  const selectionValidatedLabel = isSelectionForPhase2
+    ? "Selection phase 2 validee"
+    : "Selection phase 3 validee";
+  const selectionConditionsLabel = isSelectionForPhase2 ? "Conditions phase 2" : "Conditions phase 3";
+  const selectionDeadlineLabel = isSelectionForPhase2 ? "Date de fin phase 1" : "Date de fin phase 2";
+  const selectionDeadlineIso = isSelectionForPhase2 ? sitePhase?.phase1EndsAt : sitePhase?.phase2EndsAt;
+  const selectionDeadlineTs = selectionDeadlineIso ? new Date(selectionDeadlineIso).getTime() : NaN;
+  const isSelectionDeadlineReached = Number.isFinite(selectionDeadlineTs)
+    ? Date.now() >= selectionDeadlineTs
+    : false;
+  const showSelectionCard = isSuperAdmin && (isSelectionForPhase2 || isSelectionForPhase3);
+  const isSelectionDisabledForMovie = (movieId) => {
+    const safeMovieId = Number(movieId);
+    if (!isSelectionForPhase3) return false;
+    if (!Number.isFinite(safeMovieId) || safeMovieId <= 0) return true;
+    if (!phase3EligibilityEnforced) return false;
+    return (
+      !phase2SelectedMovieIds.has(safeMovieId)
+      && !phase3EligibleMovieIds.has(safeMovieId)
+    );
+  };
 
   const handleNav = (href) => {
+    if (!isDashboardSection(href)) return;
     setActiveNav(href);
     const el = document.getElementById(href);
     if (el) {
@@ -373,22 +631,75 @@ export default function Dashboard() {
     };
   });
 
-  const filteredFilms = filmsWithAssignments.filter((film) => {
-    if (filters.phase !== "toutes" && film.phase !== filters.phase) return false;
-    if (["= 4", ">= 4"].includes(filters.note) && film.rating < 4) return false;
-    if (filters.note === "3 - 4" && (film.rating < 3 || film.rating >= 4)) return false;
-    if (filters.note === "< 3" && film.rating >= 3) return false;
-    return true;
-  });
+  const assignedFilms = filmsWithAssignments.filter((film) => film.isAssignedToMe);
+
+  const isFilmViewedByMe = (film) => {
+    const hasValidRating =
+      Number.isFinite(film.myRating) &&
+      Number(film.myRating) >= 1 &&
+      Number(film.myRating) <= 5;
+    const hasComment = String(film.myComment || "").trim().length > 0;
+    const isManualReviewOnly = String(film.myAssignmentSource || "") === "rating";
+    if (isManualReviewOnly) return hasValidRating;
+    return hasValidRating && hasComment;
+  };
+
+  const viewedAssignedCount = assignedFilms.filter(isFilmViewedByMe).length;
+  const remainingAssignedCount = Math.max(0, assignedFilms.length - viewedAssignedCount);
+  const ratedAssignedCount = assignedFilms.filter((film) => {
+    const rating = Number(film.myRating);
+    return Number.isFinite(rating) && rating >= 1 && rating <= 5;
+  }).length;
+  const commentedAssignedCount = assignedFilms.filter(
+    (film) => String(film.myComment || "").trim().length > 0,
+  ).length;
+  const assignedTotal = Math.max(0, assignedFilms.length);
+  const notesProgressValue = assignedTotal > 0 ? (ratedAssignedCount / assignedTotal) * 100 : 0;
+  const commentsProgressValue =
+    assignedTotal > 0 ? (commentedAssignedCount / assignedTotal) * 100 : 0;
+  const viewingProgressValue = assignedTotal > 0 ? (viewedAssignedCount / assignedTotal) * 100 : 0;
+
+  const normalizedSearchQuery = String(searchQuery || "").toLowerCase().trim();
+  const filteredFilms = assignedFilms
+    .filter((film) => {
+      const matchesSearch = String(film.title || "")
+        .toLowerCase()
+        .includes(normalizedSearchQuery);
+      const movieRating = Number(film?.rating || 0);
+      const matchesRating = movieRating >= minRating && movieRating <= maxRating;
+      return matchesSearch && matchesRating;
+    })
+    .sort((a, b) => {
+      if (sortBy === "title_asc") {
+        return String(a?.title || "").localeCompare(String(b?.title || ""), "fr");
+      }
+      if (sortBy === "title_desc") {
+        return String(b?.title || "").localeCompare(String(a?.title || ""), "fr");
+      }
+      if (sortBy === "year_desc") {
+        return extractMovieYear(b) - extractMovieYear(a);
+      }
+      if (sortBy === "year_asc") {
+        return extractMovieYear(a) - extractMovieYear(b);
+      }
+      return 0;
+    });
+
+  const activeSortLabel =
+    sortOptions.find((option) => option.value === sortBy)?.label || "Défaut";
+  const hasAdvancedFilters = sortBy !== "default" || minRating > 0 || maxRating < 5;
+  const compactFilm = filteredFilms[0] || null;
+  const visibleFilms = isFilmsListCompact ? (compactFilm ? [compactFilm] : []) : filteredFilms;
+  const hiddenFilmsCount = Math.max(0, filteredFilms.length - visibleFilms.length);
 
   const selectionRatio = adminKpis.quota ? (adminKpis.selected / adminKpis.quota) * 100 : 0;
   const selectionProgress = quotaTarget ? Math.min(100, (currentPhase.selected / quotaTarget) * 100) : 0;
 
-  const superStats = {
-    films: currentPhase.submitted,
-    admins: adminsCount ?? 0,
-    phasesProgress: Math.round(phaseProgress),
-    countdown: `${remainingDays} j ${String(remainingHours).padStart(2, "0")} h ${String(remainingMinutes).padStart(2, "0")} min restantes`,
+  const resetFilmFilters = () => {
+    setSortBy("default");
+    setMinRating(0);
+    setMaxRating(5);
+    setSearchQuery("");
   };
 
   const handleProfileSave = async () => {
@@ -416,7 +727,7 @@ export default function Dashboard() {
         prev ? { ...prev, currentUser: { ...(prev.currentUser || {}), ...mergedUser } } : prev,
       );
       setWpPasswordForSync("");
-      setProfileSaveSuccess("Profil synchronise avec WordPress et la base locale.");
+      setProfileSaveSuccess("Profil synchronisé avec WordPress et la base locale.");
     } catch (error) {
       setProfileSaveError(
         error?.message || "Impossible de synchroniser le profil avec WordPress.",
@@ -450,11 +761,6 @@ export default function Dashboard() {
     });
   };
 
-  const handleNextPhase = () => {
-    if (!isSuperAdmin || currentPhaseIndex >= phaseTimeline.length - 1) return;
-    setCurrentPhaseIndex((idx) => Math.min(idx + 1, phaseTimeline.length - 1));
-  };
-
   const handleLogout = async () => {
     setLogoutError("");
     setLogoutPending(true);
@@ -462,16 +768,26 @@ export default function Dashboard() {
       await logoutSession();
       window.location.assign("/dashboard");
     } catch (error) {
-      setLogoutError(error?.message || "Deconnexion impossible.");
+      setLogoutError(error?.message || "Déconnexion impossible.");
       setLogoutPending(false);
     }
   };
 
   const refreshDashboardAndAssignments = async () => {
-    const [dashboardResult, assignmentsResult] = await Promise.allSettled([
+    const [
+      dashboardResult,
+      assignmentsResult,
+      sitePhaseResult,
+      phase2SelectionResult,
+      phase3SelectionResult,
+    ] =
+      await Promise.allSettled([
       getAdminDashboardData(),
       getMyAssignments(),
-    ]);
+      getSitePhaseState(),
+      getPhase2SelectionStatus(),
+      getPhase3SelectionStatus(),
+      ]);
     if (dashboardResult.status !== "fulfilled") {
       throw dashboardResult.reason;
     }
@@ -480,7 +796,9 @@ export default function Dashboard() {
       assignmentsResult.status === "fulfilled" ? assignmentsResult.value : null;
 
     setAdminData(data);
-    setActiveNav((prev) => prev || data?.navItems?.[0]?.href || "admin-top");
+    setActiveNav((prev) =>
+      isDashboardSection(prev) ? prev : resolveDashboardDefaultNav(data?.navItems),
+    );
     setCurrentUser(data?.currentUser ?? null);
     setProfileForm((prev) => prev ?? data?.currentUser ?? null);
     setAssignmentMeta({
@@ -496,10 +814,138 @@ export default function Dashboard() {
     });
     if (assignmentsResult.status === "rejected") {
       setAssignmentInfoError(
-        "Module d'assignations indisponible (endpoint /api/assignments absent ou backend non redemarre).",
+        "Module d'assignations indisponible (endpoint /api/assignments absent ou backend non redémarré).",
       );
     } else {
       setAssignmentInfoError("");
+    }
+    const resolvedSitePhase =
+      sitePhaseResult.status === "fulfilled" ? sitePhaseResult.value : null;
+    if (resolvedSitePhase) {
+      setSitePhase(resolvedSitePhase);
+    }
+
+    const resolvedPhaseKey = String(
+      resolvedSitePhase?.currentPhase || "phase_1",
+    ).toLowerCase();
+    const activeSelectionResult =
+      resolvedPhaseKey === "phase_2" ? phase3SelectionResult : phase2SelectionResult;
+
+    if (resolvedPhaseKey === "phase_2" && phase2SelectionResult.status === "fulfilled") {
+      applyPhase3EligibilitySnapshot(phase2SelectionResult.value);
+      setPhase3EligibilityLoaded(true);
+    } else {
+      setPhase3EligibleMovieIds(new Set());
+      setPhase3EligibilityLoaded(false);
+    }
+
+    if (activeSelectionResult.status === "fulfilled") {
+      applyPhase2SelectionSnapshot(
+        activeSelectionResult.value,
+        resolvedPhaseKey === "phase_2" ? 5 : 50,
+      );
+    } else {
+      setPhase2SelectionState({
+        selectedCount: 0,
+        minRequired: resolvedPhaseKey === "phase_2" ? 5 : 50,
+        selectedMovies: [],
+        isReadyBySuperadmin: false,
+        readyByName: null,
+        readyAt: null,
+      });
+    }
+  };
+
+  const handleSetSitePhase = async (phaseKey) => {
+    if (!canManagePhase) return;
+    if (!SITE_PHASE_KEYS.includes(phaseKey)) return;
+    if (sitePhaseBusy) return;
+
+    setAssignmentInfoError("");
+    setAssignmentInfoSuccess("");
+    setSitePhaseBusy(true);
+
+    try {
+      const payload = await updateSitePhaseState({
+        currentPhase: phaseKey,
+        mode: "manual",
+      });
+      setSitePhase(payload);
+      setAssignmentInfoSuccess(`Phase active: ${SITE_PHASE_LABELS[phaseKey]}.`);
+    } catch (error) {
+      setAssignmentInfoError(error?.message || "Impossible de mettre a jour la phase.");
+    } finally {
+      setSitePhaseBusy(false);
+    }
+  };
+
+  const handleTogglePhase2Movie = async (movieId, currentSelected) => {
+    if (!canManageSelectionForCurrentPhase) return;
+    const safeMovieId = Number(movieId);
+    if (!Number.isFinite(safeMovieId) || safeMovieId <= 0) return;
+    if (phase2SelectionBusyMovieId != null) return;
+    if (
+      isSelectionForPhase3
+      && phase3EligibilityEnforced
+      && !currentSelected
+      && !phase3EligibleMovieIds.has(safeMovieId)
+    ) {
+      setAssignmentInfoError(
+        "Ce film n'est pas dans la selection phase 2 et ne peut pas etre promu en phase 3.",
+      );
+      return;
+    }
+
+    setAssignmentInfoError("");
+    setAssignmentInfoSuccess("");
+    setPhase2SelectionBusyMovieId(safeMovieId);
+
+    try {
+      const payload = isSelectionForPhase3
+        ? await patchPhase3Selection(safeMovieId, !currentSelected)
+        : await patchPhase2Selection(safeMovieId, !currentSelected);
+      applyPhase2SelectionSnapshot(payload, isSelectionForPhase3 ? 5 : 50);
+      setAssignmentInfoSuccess(
+        !currentSelected
+          ? `Film ajoute a la selection ${isSelectionForPhase2 ? "phase 2" : "phase 3"}.`
+          : `Film retire de la selection ${isSelectionForPhase2 ? "phase 2" : "phase 3"}.`,
+      );
+    } catch (error) {
+      setAssignmentInfoError(
+        error?.message
+          || `Impossible de modifier la selection ${isSelectionForPhase2 ? "phase 2" : "phase 3"}.`,
+      );
+    } finally {
+      setPhase2SelectionBusyMovieId(null);
+    }
+  };
+
+  const handleValidatePhase2BySuperadmin = async () => {
+    if (!isSuperAdmin) return;
+    if (!showSelectionCard) return;
+    if (phase2SelectionValidateBusy) return;
+
+    setAssignmentInfoError("");
+    setAssignmentInfoSuccess("");
+    setPhase2SelectionValidateBusy(true);
+
+    try {
+      const payload = isSelectionForPhase3
+        ? await validatePhase3Selection()
+        : await validatePhase2Selection();
+      applyPhase2SelectionSnapshot(payload, isSelectionForPhase3 ? 5 : 50);
+      const siteState = await getSitePhaseState();
+      setSitePhase(siteState);
+      setAssignmentInfoSuccess(
+        `Selection ${isSelectionForPhase2 ? "phase 2" : "phase 3"} validee par superadmin.`,
+      );
+    } catch (error) {
+      setAssignmentInfoError(
+        error?.message
+          || `Impossible de valider la selection ${isSelectionForPhase2 ? "phase 2" : "phase 3"}.`,
+      );
+    } finally {
+      setPhase2SelectionValidateBusy(false);
     }
   };
 
@@ -510,7 +956,7 @@ export default function Dashboard() {
     try {
       await claimMovieAssignment(film.id);
       await refreshDashboardAndAssignments();
-      setAssignmentInfoSuccess(`Film "${film.title}" attribue a votre file.`);
+      setAssignmentInfoSuccess(`Film "${film.title}" attribué à votre file.`);
     } catch (error) {
       setAssignmentInfoError(error?.message || "Impossible de prendre ce film.");
     } finally {
@@ -525,11 +971,70 @@ export default function Dashboard() {
     try {
       await releaseMovieAssignment(film.id);
       await refreshDashboardAndAssignments();
-      setAssignmentInfoSuccess(`Film "${film.title}" retire de votre file.`);
+      setAssignmentInfoSuccess(`Film "${film.title}" retiré de votre file.`);
     } catch (error) {
       setAssignmentInfoError(error?.message || "Impossible de retirer ce film.");
     } finally {
       setAssignmentBusyMovieId(null);
+    }
+  };
+
+  const handleOpenRatingModal = (film) => {
+    const movieId = resolveMovieId(film);
+    if (!movieId) return;
+    const initialScore = Number.isFinite(Number(film?.myRating))
+      ? Math.round(Math.max(0, Math.min(5, Number(film.myRating))))
+      : 0;
+    setRatingModalFilm({ ...film, id: movieId });
+    setRatingModalScore(initialScore);
+    setRatingModalComment(String(film?.myComment || ""));
+    setRatingModalError("");
+  };
+
+  const handleCloseRatingModal = () => {
+    if (ratingModalLoading) return;
+    setRatingModalFilm(null);
+    setRatingModalError("");
+  };
+
+  const handleSaveRating = async () => {
+    if (!ratingModalFilm) return;
+    if (!Number.isInteger(ratingModalScore) || ratingModalScore < 1 || ratingModalScore > 5) {
+      return;
+    }
+
+    setRatingModalError("");
+    setRatingModalLoading(true);
+    try {
+      await upsertMyMovieRating(
+        ratingModalFilm.id,
+        ratingModalScore,
+        String(ratingModalComment || "").trim(),
+      );
+      await refreshDashboardAndAssignments();
+      setRatingModalFilm(null);
+      setAssignmentInfoSuccess(`Note enregistrée pour "${ratingModalFilm.title}".`);
+    } catch (error) {
+      setRatingModalError(error?.message || "Impossible d'enregistrer la note.");
+    } finally {
+      setRatingModalLoading(false);
+    }
+  };
+
+  const handleDeleteRating = async () => {
+    if (!ratingModalFilm) return;
+
+    setRatingModalError("");
+    setRatingModalLoading(true);
+    try {
+      await deleteMyMovieRating(ratingModalFilm.id);
+      await refreshDashboardAndAssignments();
+      setRatingModalFilm(null);
+      setAssignmentInfoSuccess(`Note supprimée pour "${ratingModalFilm.title}".`);
+    } catch (error) {
+      setRatingModalError(error?.message || "Impossible de supprimer la note.");
+    } finally {
+      setRatingModalLoading(false);
     }
   };
 
@@ -542,10 +1047,10 @@ export default function Dashboard() {
       const result = await autoAssignMovieReviews();
       await refreshDashboardAndAssignments();
       setAssignmentInfoSuccess(
-        `Auto-repartition terminee: ${result?.createdAssignments || 0} assignations creees.`,
+        `Auto-répartition terminée : ${result?.createdAssignments || 0} assignations créées.`,
       );
     } catch (error) {
-      setAssignmentInfoError(error?.message || "Impossible de lancer l'auto-repartition.");
+      setAssignmentInfoError(error?.message || "Impossible de lancer l’auto-répartition.");
     } finally {
       setDistributionBusy(false);
     }
@@ -560,10 +1065,10 @@ export default function Dashboard() {
       const result = await rebalanceMovieReviews();
       await refreshDashboardAndAssignments();
       setAssignmentInfoSuccess(
-        `Reequilibrage termine: ${result?.movedAssignments || 0} deplaces, ${result?.createdAssignments || 0} crees.`,
+        `Rééquilibrage terminé : ${result?.movedAssignments || 0} déplacées, ${result?.createdAssignments || 0} créées.`,
       );
     } catch (error) {
-      setAssignmentInfoError(error?.message || "Impossible de reequilibrer les assignations.");
+      setAssignmentInfoError(error?.message || "Impossible de rééquilibrer les assignations.");
     } finally {
       setDistributionBusy(false);
     }
@@ -581,7 +1086,7 @@ export default function Dashboard() {
               <span className="w-2 h-2 rounded-full bg-emerald-300" />
               Home
             </Link>
-            {navItems.map((item) => (
+            {filteredNavItems.map((item) => (
               <button
                 key={item.href}
                 className={activeNav === item.href ? "active" : ""}
@@ -595,16 +1100,16 @@ export default function Dashboard() {
           <div className="flex-1 space-y-8">
         <header id="admin-top" className="glass p-6 flex flex-col gap-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
-              <h1 className="dash-title text-white">Dashboard Admin & Super Admin</h1>
+              <h1 className="dash-title text-white">Bienvenue, {profilePreview.name}</h1>
             <button
               className="btn-ghost rounded-full px-4 py-2 border border-white/10 disabled:opacity-60"
               onClick={handleLogout}
               disabled={logoutPending}
             >
-              {logoutPending ? "Deconnexion..." : "Se deconnecter"}
+              {logoutPending ? "Déconnexion..." : "Se déconnecter"}
             </button>
             <p className="dash-subtitle text-slate-100/90">
-              Vue unifiée : juger les films, piloter les règles et la gouvernance du festival.
+              Vue unifiée : juger les films et gérer vos assignations.
             </p>
           </div>
           {logoutError && <p className="text-sm text-rose-200">{logoutError}</p>}
@@ -617,7 +1122,7 @@ export default function Dashboard() {
               <div>
                 <h2 className="text-xl font-semibold text-white">{profilePreview.name}</h2>
                 <p className="text-sm text-slate-100/80">
-                  Rôle actuel : {profilePreview.role === "superadmin" ? "Super admin" : "Admin"} — statut {profilePreview.status}.
+                  Rôle actuel : {profilePreview.role === "superadmin" ? "Super admin" : "Admin"} - statut {profilePreview.status}.
                 </p>
               </div>
             </div>
@@ -649,61 +1154,12 @@ export default function Dashboard() {
                   }
                 />
               </label>
-              <label className="flex flex-col gap-1 text-sm text-slate-100/90">
-                Téléphone
-                <input
-                  className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-300"
-                  value={effectiveProfile.phone}
-                  onChange={(e) =>
-                    setProfileForm((f) => ({
-                      ...(f ?? effectiveProfile),
-                      phone: e.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm text-slate-100/90">
-                Fuseau horaire
-                <input
-                  className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-300"
-                  value={effectiveProfile.timezone}
-                  onChange={(e) =>
-                    setProfileForm((f) => ({
-                      ...(f ?? effectiveProfile),
-                      timezone: e.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm text-slate-100/90">
+              <div className="flex flex-col gap-1 text-sm text-slate-100/90">
                 Rôle
-                <select
-                  className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white focus:outline-none focus:border-cyan-300"
-                  value={effectiveProfile.role}
-                  onChange={(e) =>
-                    setProfileForm((f) => ({
-                      ...(f ?? effectiveProfile),
-                      role: e.target.value,
-                    }))
-                  }
-                >
-                  <option value="admin">Admin</option>
-                  <option value="superadmin">Super admin</option>
-                </select>
-              </label>
-              <label className="flex flex-col gap-1 text-sm text-slate-100/90">
-                Region
-                <input
-                  className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-300"
-                  value={effectiveProfile.region}
-                  onChange={(e) =>
-                    setProfileForm((f) => ({
-                      ...(f ?? effectiveProfile),
-                      region: e.target.value,
-                    }))
-                  }
-                />
-              </label>
+                <div className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-slate-200">
+                  {effectiveProfile.role === "superadmin" ? "Super admin" : "Admin"}
+                </div>
+              </div>
               <label className="flex flex-col gap-1 text-sm text-slate-100/90 md:col-span-2">
                 Mot de passe WordPress (requis pour synchroniser)
                 <input
@@ -733,9 +1189,9 @@ export default function Dashboard() {
                   setProfileSaveSuccess("");
                 }}
               >
-                Reinitialiser
+                Réinitialiser
               </button>
-              {isSuperAdmin && <span className="text-xs text-amber-200/90">Super admin : peut changer de phase</span>}
+              {canManagePhase && <span className="text-xs text-amber-200/90">Session admin : changement de phase autorise</span>}
             </div>
             {profileSaveError && <p className="text-sm text-rose-200">{profileSaveError}</p>}
             {profileSaveSuccess && <p className="text-sm text-emerald-200">{profileSaveSuccess}</p>}
@@ -773,27 +1229,38 @@ export default function Dashboard() {
             <div className="text-xs text-slate-100/75">
               Progression sélection : {Math.round(selectionProgress)}%
             </div>
-            <div className="flex gap-2 flex-wrap">
-              <button
-                className="btn-primary px-4 py-2 rounded-lg disabled:opacity-60"
-                disabled={!isSuperAdmin || !nextPhase}
-                onClick={handleNextPhase}
-              >
-                Passer à {nextPhase ? nextPhase.label : "la dernière phase"}
-              </button>
-              <button
-                className="btn-ghost px-4 py-2 rounded-lg border border-white/10"
-                onClick={() => setCurrentPhaseIndex(0)}
-              >
-                Revenir au dépôt
-              </button>
+            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+              <div className="text-xs font-semibold text-cyan-100">
+                Phase site active: {activeSitePhaseLabel}
+              </div>
+              <div className="text-[11px] text-slate-200/80">
+                Mode: {sitePhase?.mode === "timer" ? "Timer" : "Manuel"}
+              </div>
             </div>
-            {!isSuperAdmin && (
-              <p className="text-xs text-amber-200/90">Seuls les super admins peuvent changer de phase.</p>
+            <div className="flex gap-2 flex-wrap">
+              {SITE_PHASE_KEYS.map((phaseKey) => {
+                const isActivePhase = activeSitePhaseKey === phaseKey;
+                return (
+                  <button
+                    key={phaseKey}
+                    className={
+                      isActivePhase
+                        ? "btn-primary px-4 py-2 rounded-lg"
+                        : "btn-ghost px-4 py-2 rounded-lg border border-white/10"
+                    }
+                    disabled={!canManagePhase || sitePhaseBusy || isActivePhase}
+                    onClick={() => handleSetSitePhase(phaseKey)}
+                  >
+                    {SITE_PHASE_LABELS[phaseKey]}
+                  </button>
+                );
+              })}
+            </div>
+            {!canManagePhase && (
+              <p className="text-xs text-amber-200/90">Connexion admin requise pour changer de phase.</p>
             )}
           </div>
         </section>
-
         {/* Admin area */}
         <section id="films" className="grid grid-cols-1 xl:grid-cols-12 gap-5">
           <div className="xl:col-span-8 glass p-6 space-y-6">
@@ -801,7 +1268,7 @@ export default function Dashboard() {
               <div>
                 <h2 className="text-2xl font-semibold">Vision rapide</h2>
                 <p className="text-xs text-slate-200/85">
-                  Charge perso: {assignmentMeta.myPendingMinutes} min en attente - Regle {assignmentPolicy.minReviewers}-{assignmentPolicy.maxReviewers} reviewers / film
+                  Charge perso : {assignmentMeta.myPendingMinutes} min en attente - {assignedFilms.length} films assignés - Règle {assignmentPolicy.minReviewers}-{assignmentPolicy.maxReviewers} évaluateurs / film
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -812,14 +1279,14 @@ export default function Dashboard() {
                       onClick={handleAutoAssign}
                       disabled={distributionBusy}
                     >
-                      {distributionBusy ? "Traitement..." : "Auto-repartir"}
+                      {distributionBusy ? "Traitement..." : "Auto-répartir"}
                     </button>
                     <button
                       className="btn-ghost rounded-full px-4 py-2 border border-white/10 disabled:opacity-60"
                       onClick={handleRebalance}
                       disabled={distributionBusy}
                     >
-                      {distributionBusy ? "Traitement..." : "Reequilibrer"}
+                      {distributionBusy ? "Traitement..." : "Rééquilibrer"}
                     </button>
                   </>
                 )}
@@ -832,7 +1299,7 @@ export default function Dashboard() {
                     cursor: adminKpis.selected >= adminKpis.quota ? "not-allowed" : "pointer",
                   }}
                 >
-                  Ajouter a la selection ({adminKpis.selected}/{adminKpis.quota})
+                  Ajouter à la sélection ({adminKpis.selected}/{adminKpis.quota})
                 </button>
               </div>
             </div>
@@ -841,251 +1308,344 @@ export default function Dashboard() {
               <p className="text-sm text-emerald-200">{assignmentInfoSuccess}</p>
             )}
 
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="stat-card glass-strong">
-                <div className="kpi-label text-slate-100">Films notés par vous</div>
-                <div className="kpi-value">{adminKpis.noted}</div>
-                <div className="kpi-trend text-emerald-300">+4 cette semaine</div>
-                <SparkLine data={[2, 5, 4, 7, 6, 9, 8]} stroke="#25d0ff" />
+
+          
+            <div className="stat-card glass-strong p-5 space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-lg font-semibold text-white">Vision synthèse</h3>
+                <span className="text-xs text-slate-100/80">
+                  {viewedAssignedCount}/{assignedFilms.length} traités
+                </span>
               </div>
-              <div className="stat-card">
-                <div className="kpi-label text-slate-100">Restants à voir</div>
-                <div className="kpi-value">{adminKpis.remaining}</div>
-                <div className="kpi-trend text-amber-200">Prioriser aujourd'hui</div>
-                <SparkLine data={[9, 8, 7, 6, 5, 4, 4]} stroke="#f6c452" />
-              </div>
-              <div className="stat-card">
-                <div className="kpi-label text-slate-100">Sélection officielle</div>
-                <div className="kpi-value">
-                  {adminKpis.selected}/{adminKpis.quota}
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <div className="kpi-label text-slate-100">Films vus par vous</div>
+                  <div className="kpi-value">{viewedAssignedCount}</div>
                 </div>
-                <div className="bar-track mt-2">
-                  <div className="bar-fill" style={{ width: `${selectionRatio}%` }} />
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <div className="kpi-label text-slate-100">Restants</div>
+                  <div className="kpi-value">{remainingAssignedCount}</div>
                 </div>
-                <div className="kpi-trend text-pink-200 mt-1">
-                  Quota cible {quotaTarget}
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <div className="kpi-label text-slate-100">Sélection officielle</div>
+                  <div className="kpi-value">
+                    {adminKpis.selected}/{adminKpis.quota}
+                  </div>
                 </div>
               </div>
+              <div className="bar-track">
+                <div className="bar-fill" style={{ width: `${selectionRatio}%` }} />
+              </div>
+              <div className="kpi-trend text-pink-200">Quota cible {quotaTarget}</div>
             </div>
 
             {/* Filters */}
-            <div className="flex flex-wrap gap-2">
-              {phaseFilters.map((p) => (
-                <Pill
-                  key={p}
-                  tone="amber"
-                  active={filters.phase === p}
-                  onClick={() => setFilters((f) => ({ ...f, phase: p }))}
+            <div className="space-y-3">
+              {showFilmFiltersCard ? (
+                <div className="list-card space-y-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300/90">
+                      Recherche et tri
+                    </p>
+                    <button
+                      type="button"
+                      className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-200 hover:bg-white/20"
+                      onClick={() => setShowFilmFiltersCard(false)}
+                    >
+                      Fermer
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-grow">
+                      <div className="pointer-events-none absolute inset-y-0 left-5 flex items-center">
+                        <svg
+                          className="h-5 w-5 text-slate-300/70"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2.5"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                          />
+                        </svg>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Rechercher un film..."
+                        value={searchQuery}
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        className="w-full rounded-3xl border-2 border-white/10 bg-white/5 py-4 pl-14 pr-4 text-sm font-bold text-white placeholder-slate-300/60 outline-none transition-all focus:border-cyan-300 focus:bg-white/10"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsFilmFilterModalOpen(true)}
+                      className="h-[56px] min-w-[56px] rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-900/30 transition-colors hover:bg-blue-700"
+                      aria-label="Ouvrir les filtres avancés"
+                      title="Filtres avancés"
+                    >
+                      <svg
+                        className="mx-auto h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2.5"
+                          d="M4 6h16M7 12h10M10 18h4"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  {hasAdvancedFilters && (
+                    <div className="flex flex-wrap gap-2">
+                      {sortBy !== "default" && (
+                        <button
+                          type="button"
+                          onClick={() => setSortBy("default")}
+                          className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-blue-700 hover:bg-blue-100"
+                        >
+                          Tri: {activeSortLabel} x
+                        </button>
+                      )}
+                      {(minRating > 0 || maxRating < 5) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMinRating(0);
+                            setMaxRating(5);
+                          }}
+                          className="rounded-full bg-amber-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-amber-700 hover:bg-amber-100"
+                        >
+                          Note {minRating}-{maxRating} x
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={resetFilmFilters}
+                        className="rounded-full bg-rose-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-rose-700 hover:bg-rose-100"
+                      >
+                        Réinitialiser
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="rounded-full bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-100 hover:bg-white/20"
+                  onClick={() => setShowFilmFiltersCard(true)}
                 >
-                  Phase : {p}
-                </Pill>
-              ))}
-              {notes.map((n) => (
-                <Pill
-                  key={n}
-                  active={filters.note === n}
-                  onClick={() => setFilters((f) => ({ ...f, note: n }))}
-                >
-                  Note {n}
-                </Pill>
-              ))}
+                  Afficher la barre de tri
+                </button>
+              )}
             </div>
 
             {/* Film list */}
             <div className="list-card space-y-3" data-testid="films-list">
-              <div className="flex items-center justify-between text-xs text-slate-300/80">
-                <span>Films affichés : {filteredFilms.length}</span>
-                <span>Tri : par défaut</span>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300/80">
+                <span>
+                  Films assignés affichés : {visibleFilms.length}/{filteredFilms.length} (total assigné : {assignedFilms.length})
+                </span>
+                <div className="flex items-center gap-2">
+                  <span>Tri : {activeSortLabel}</span>
+                  {filteredFilms.length > 1 && (
+                    <button
+                      type="button"
+                      className="rounded-full bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-slate-100 hover:bg-white/20"
+                      onClick={() => setIsFilmsListCompact((prev) => !prev)}
+                    >
+                      {isFilmsListCompact ? `Voir tout (${filteredFilms.length})` : "Rétrécir (1 film)"}
+                    </button>
+                  )}
+                </div>
               </div>
-              {filteredFilms.map((film) => (
-                <FilmRow
-                  key={`${film.id}-${film.title}`}
-                  film={film}
-                  filmsBasePath={filmsBasePath}
-                  onClaim={handleClaimFilm}
-                  onRelease={handleReleaseFilm}
-                  busyMovieId={assignmentBusyMovieId}
-                />
-              ))}
-              {filteredFilms.length === 0 && (
-                <div className="py-6 text-sm text-slate-300">Aucun film ne correspond aux filtres.</div>
+              {hiddenFilmsCount > 0 && (
+                <div className="text-xs text-slate-300/70">
+                  Mode compact actif : {hiddenFilmsCount} film(s) masques.
+                </div>
+              )}
+              {isFilmsListCompact ? (
+                compactFilm ? (
+                  <FilmRow
+                    key={`${compactFilm.id}-${compactFilm.title}`}
+                    film={compactFilm}
+                    filmsBasePath={filmsBasePath}
+                    onClaim={handleClaimFilm}
+                    onRelease={handleReleaseFilm}
+                    onRate={handleOpenRatingModal}
+                    canManagePhase2Selection={canManageSelectionForCurrentPhase}
+                    isPhase2Selected={phase2SelectedMovieIds.has(Number(compactFilm.id))}
+                    isSelectionDisabled={isSelectionDisabledForMovie(compactFilm.id)}
+                    selectionDisabledLabel={selectionDisabledLabel}
+                    onTogglePhase2Select={handleTogglePhase2Movie}
+                    phase2SelectionBusyMovieId={phase2SelectionBusyMovieId}
+                    busyMovieId={assignmentBusyMovieId}
+                    selectionAddLabel={selectionAddLabel}
+                    selectionRemoveLabel={selectionRemoveLabel}
+                  />
+                ) : null
+              ) : (
+                filteredFilms.map((film) => (
+                  <FilmRow
+                    key={`${film.id}-${film.title}`}
+                    film={film}
+                    filmsBasePath={filmsBasePath}
+                    onClaim={handleClaimFilm}
+                    onRelease={handleReleaseFilm}
+                    onRate={handleOpenRatingModal}
+                    canManagePhase2Selection={canManageSelectionForCurrentPhase}
+                    isPhase2Selected={phase2SelectedMovieIds.has(Number(film.id))}
+                    isSelectionDisabled={isSelectionDisabledForMovie(film.id)}
+                    selectionDisabledLabel={selectionDisabledLabel}
+                    onTogglePhase2Select={handleTogglePhase2Movie}
+                    phase2SelectionBusyMovieId={phase2SelectionBusyMovieId}
+                    busyMovieId={assignmentBusyMovieId}
+                    selectionAddLabel={selectionAddLabel}
+                    selectionRemoveLabel={selectionRemoveLabel}
+                  />
+                ))
+              )}
+              {visibleFilms.length === 0 && (
+                <div className="py-6 text-sm text-slate-300">
+                  {assignedFilms.length === 0
+                    ? "Aucun film ne vous est assigné pour le moment."
+                    : "Aucun film assigné ne correspond aux filtres."}
+                </div>
               )}
             </div>
           </div>
 
           {/* Admin side widgets */}
-          <div id="admin-widgets" className="xl:col-span-4 space-y-4">
-            <div className="glass p-5 flex items-center gap-4">
-              <DonutSplit accepted={2} pending={2} rejected={1} />
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-cyan-300" /> acceptés (2)
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-amber-300" /> En cours (2)
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-rose-300" /> refusés (1)
-                </div>
-                <p className="text-xs text-slate-100/80">
-                  Vue perso basée sur vos notations.
-                </p>
+          <div className="xl:col-span-4 space-y-4">
+            {showSelectionCard && (
+            <div className="glass p-5 space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-semibold text-white">{selectionCardTitle}</h3>
+                <button
+                  type="button"
+                  className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10"
+                  onClick={() => setIsPhase2SelectionCardOpen((prev) => !prev)}
+                >
+                  {isPhase2SelectionCardOpen ? "Fermer" : "Ouvrir"}
+                </button>
               </div>
-            </div>
 
-            <div className="glass p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Retards de notation</h3>
+              <div className="text-xs text-slate-100/85">
+                {phase2SelectionCount}/{phase2SelectionMinRequired} films selectionnes
               </div>
-              <ul className="space-y-2 text-sm text-slate-200">
-                <li>4 films en attente depuis 72h</li>
-                <li>2 films proches de la deadline (48h)</li>
-                <li>Quota {quotaTarget} : {adminKpis.selected}/{quotaTarget} utilisés</li>
-              </ul>
-              <div className="bar-track">
-                <div className="bar-fill" style={{ width: `${selectionRatio}%` }} />
+              <div className="bar-track h-2">
+                <div
+                  className="bar-fill"
+                  style={{
+                    width: `${Math.min(100, (phase2SelectionCount / Math.max(1, phase2SelectionMinRequired)) * 100)}%`,
+                    background: "linear-gradient(90deg,#22d3ee,#34d399)",
+                  }}
+                />
               </div>
+              <div className="text-xs text-slate-100/80">
+                {selectionDeadlineLabel}:{" "}
+                {selectionDeadlineIso
+                  ? new Date(selectionDeadlineIso).toLocaleString("fr-FR")
+                  : "non configuree"}
+              </div>
+              <div className="text-xs text-slate-100/80">
+                {selectionConditionsLabel}: {hasEnoughPhase2Selection ? `${phase2SelectionMinRequired} films OK` : `${phase2SelectionMinRequired} films manquants`} ·{" "}
+                {isSelectionDeadlineReached ? "deadline atteinte" : "deadline non atteinte"}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="btn-primary px-3 py-1.5 rounded-lg disabled:opacity-60"
+                  onClick={handleValidatePhase2BySuperadmin}
+                  disabled={!isSuperAdmin || phase2SelectionValidateBusy || !hasEnoughPhase2Selection}
+                >
+                  {phase2SelectionValidateBusy
+                    ? "Validation..."
+                    : phase2SelectionState.isReadyBySuperadmin
+                      ? selectionValidatedLabel
+                      : selectionValidationLabel}
+                </button>
+                {phase2SelectionState.isReadyBySuperadmin && (
+                  <span className="text-xs text-emerald-200/90">
+                    Valide par {phase2SelectionState.readyByName || "superadmin"}
+                  </span>
+                )}
+              </div>
+
+              {isPhase2SelectionCardOpen && (
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  {(phase2SelectionState.selectedMovies || []).length === 0 ? (
+                    <p className="text-xs text-slate-300/80">
+                      {isSelectionForPhase2
+                        ? "Aucun film selectionne pour la phase 2."
+                        : "Aucun film selectionne pour la phase 3."}
+                    </p>
+                  ) : (
+                    (phase2SelectionState.selectedMovies || []).map((movie) => {
+                      const movieId = Number(movie?.id);
+                      const isBusy = Number(phase2SelectionBusyMovieId) === movieId;
+                      return (
+                        <div
+                          key={`phase2-selected-${movieId}`}
+                          className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 flex items-center justify-between gap-3"
+                        >
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-white truncate">
+                              {movie?.title || "Sans titre"}
+                            </div>
+                            <div className="text-[11px] text-slate-300/80 truncate">
+                              {movie?.director || "Anonyme"}
+                            </div>
+                          </div>
+                          {canManageSelectionForCurrentPhase && (
+                            <button
+                              type="button"
+                              className="btn-ghost px-2 py-1 rounded-lg border border-white/10 text-[10px] disabled:opacity-60"
+                              disabled={isBusy}
+                              onClick={() => handleTogglePhase2Movie(movieId, true)}
+                            >
+                              {isBusy ? "..." : "Retirer"}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
             </div>
+            )}
 
             <div className="glass p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Vos indicateurs</h3>
-                <span className="text-xs text-slate-100/80">Auto-refresh 5 min</span>
+                <span className="text-xs text-slate-100/80">Basé sur vos actions réelles</span>
               </div>
-              <ProgressBar label="Notes déposées" value={68} color="linear-gradient(90deg,#25d0ff,#f6c452)" />
-              <ProgressBar label="Commentaires" value={54} color="linear-gradient(90deg,#f2438b,#25d0ff)" />
-              <ProgressBar label="Visionnage" value={72} color="linear-gradient(90deg,#f6c452,#f2438b)" />
+              <ProgressBar
+                label={`Notes déposées (${ratedAssignedCount}/${assignedTotal})`}
+                value={notesProgressValue}
+                color="linear-gradient(90deg,#25d0ff,#f6c452)"
+              />
+              <ProgressBar
+                label={`Commentaires (${commentedAssignedCount}/${assignedTotal})`}
+                value={commentsProgressValue}
+                color="linear-gradient(90deg,#f2438b,#25d0ff)"
+              />
+              <ProgressBar
+                label={`Visionnage valide (${viewedAssignedCount}/${assignedTotal})`}
+                value={viewingProgressValue}
+                color="linear-gradient(90deg,#f6c452,#f2438b)"
+              />
             </div>
           </div>
         </section>
-
-        {/* Super admin area */}
-        <section id="super-top" className="glass p-6 space-y-6">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-2xl font-semibold">Pilotage & gouvernance</h2>
-              <p className="dash-subtitle text-slate-100/90">
-                Comptes, phases, règles métier, logs et newsletter — tout au même endroit.
-              </p>
-            </div>
-            <button className="btn-primary rounded-full px-4 py-2">Créer un admin</button>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="stat-card glass-strong">
-              <div className="kpi-label text-slate-100">Films déposés</div>
-              <div className="kpi-value">{superStats.films}</div>
-              <div className="kpi-trend text-cyan-200">+12 vs hier</div>
-            </div>
-            <div className="stat-card">
-              <div className="kpi-label text-slate-100">Admins actifs</div>
-              <div className="kpi-value">{superStats.admins}</div>
-              <div className="kpi-trend text-emerald-200">+1 nouveau</div>
-            </div>
-            <div className="stat-card">
-              <div className="kpi-label text-slate-100">Progression phases</div>
-              <div className="kpi-value">{superStats.phasesProgress}%</div>
-              <div className="bar-track mt-2">
-                <div className="bar-fill" style={{ width: `${superStats.phasesProgress}%` }} />
-              </div>
-            </div>
-            <div className="stat-card">
-              <div className="kpi-label text-slate-100">Compte à rebours</div>
-              <div className="kpi-value text-xl">{superStats.countdown}</div>
-              <SparkLine data={[5, 4, 3, 3, 2, 1, 0]} stroke="#25d0ff" />
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2" id="accounts">
-            <div className="list-card space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Gestion des comptes</h3>
-              </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold">Idriss</div>
-                    <div className="text-xs text-slate-200/90">Super admin</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10">Logs</button>
-                    <button className="btn-primary px-3 py-1.5 rounded-lg">Modifier</button>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold">Léa</div>
-                    <div className="text-xs text-slate-200/90">Admin - Europe</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10">Désactiver</button>
-                    <button className="btn-primary px-3 py-1.5 rounded-lg">Promouvoir</button>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold">Yuto</div>
-                    <div className="text-xs text-slate-200/90">Admin - Asie</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="btn-ghost px-3 py-1.5 rounded-lg border border-white/10">Désactiver</button>
-                    <button className="btn-primary px-3 py-1.5 rounded-lg">Promouvoir</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="list-card space-y-3" id="phases">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Phases & règles</h3>
-              </div>
-              <ul className="space-y-2 text-sm">
-                <li>?? Dépôt : jusqu'au 28 fév 2026</li>
-                <li>????? Sélection : 1 mars ? 14 mars 2026</li>
-                <li>?? Annonce publique : 20 mars 2026</li>
-              </ul>
-              <div className="bar-track">
-                <div className="bar-fill" style={{ width: `${superStats.phasesProgress}%` }} />
-              </div>
-              <button className="btn-primary w-full mt-2 rounded-lg">Modifier les règles (quota {quotaTarget}, notation)</button>
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="list-card space-y-3 md:col-span-2" id="logs">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Logs & sécurité</h3>
-              </div>
-              <ul className="space-y-2 text-sm">
-                {logs.map((item) => (
-                  <li key={item} className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-300" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <div className="flex gap-2">
-                <button className="btn-ghost px-3 py-2 rounded-lg border border-white/10">Filtrer par admin</button>
-                <button className="btn-primary px-3 py-2 rounded-lg">Exporter CSV</button>
-              </div>
-            </div>
-
-            <div className="list-card space-y-3" id="newsletter">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Newsletter</h3>
-                <span className="text-xs text-slate-100/80">1 423 inscrits</span>
-              </div>
-              <p className="text-sm text-slate-200">
-                Export rapide pour annonce finale. Validation RGPD et opt-in déjà effectués.
-              </p>
-              <button className="btn-primary w-full rounded-lg">Exporter emails</button>
-              <button className="btn-ghost w-full rounded-lg border border-white/10">Voir abonnés</button>
-            </div>
-          </div>
-        </section>
-          </div>
-        </div>
-
         {/* Bottom nav mobile */}
         <div className="bottom-nav">
           <button
@@ -1105,26 +1665,202 @@ export default function Dashboard() {
             onClick={() => handleNav("films")}
           >
             Films
-          </button>
-          <button
-            className={activeNav === "super-top" ? "active" : ""}
-            onClick={() => handleNav("super-top")}
-          >
-            Super
-          </button>
-          <button
-            className={activeNav === "logs" ? "active" : ""}
-            onClick={() => handleNav("logs")}
-          >
-            Logs
-          </button>
+          </button>
           <button onClick={() => (window.location.href = homePath)}>Home</button>
         </div>
 
+        {isFilmFilterModalOpen && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-blue-950/80 backdrop-blur-md"
+              onClick={() => setIsFilmFilterModalOpen(false)}
+            ></div>
+
+            <div className="relative w-full max-w-md rounded-[36px] bg-white p-8 shadow-2xl">
+              <div className="mb-8 flex items-center justify-between">
+                <h2 className="text-2xl font-black uppercase tracking-tight text-blue-950">
+                  Filtres avancés
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setIsFilmFilterModalOpen(false)}
+                  className="rounded-full bg-slate-100 p-2 text-slate-500 hover:bg-slate-200"
+                >
+                  <svg
+                    className="h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="3"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-8">
+                <div>
+                  <p className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                    Trier par
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {sortOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setSortBy(option.value)}
+                        className={`rounded-xl py-3 text-[10px] font-black uppercase tracking-widest transition-colors ${
+                          sortBy === option.value
+                            ? "bg-blue-950 text-cyan-300"
+                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                      Note (min - max)
+                    </p>
+                    <span className="text-sm font-black text-blue-700">
+                      {minRating} - {maxRating}
+                    </span>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                        Min
+                      </p>
+                      <input
+                        type="range"
+                        min="0"
+                        max="5"
+                        step="1"
+                        value={minRating}
+                        onChange={(event) => {
+                          const nextMin = Number(event.target.value);
+                          setMinRating(nextMin);
+                          if (nextMin > maxRating) {
+                            setMaxRating(nextMin);
+                          }
+                        }}
+                        className="w-full accent-blue-600"
+                      />
+                    </div>
+                    <div>
+                      <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                        Max
+                      </p>
+                      <input
+                        type="range"
+                        min="0"
+                        max="5"
+                        step="1"
+                        value={maxRating}
+                        onChange={(event) => {
+                          const nextMax = Number(event.target.value);
+                          setMaxRating(nextMax);
+                          if (nextMax < minRating) {
+                            setMinRating(nextMax);
+                          }
+                        }}
+                        className="w-full accent-blue-600"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={resetFilmFilters}
+                  className="w-full rounded-2xl border border-red-200 bg-red-50 py-3 text-xs font-black uppercase tracking-widest text-red-600 hover:bg-red-100"
+                >
+                  Réinitialiser
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {ratingModalFilm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-blue-950/95 backdrop-blur-md"
+              onClick={handleCloseRatingModal}
+            ></div>
+            <div className="relative bg-white rounded-[50px] p-12 w-full max-w-sm shadow-2xl text-center">
+              <h3 className="text-3xl font-black text-blue-950 mb-8 uppercase tracking-tighter italic">
+                Noter ce film
+              </h3>
+              <p className="mb-4 text-sm font-bold text-slate-500 uppercase tracking-wider truncate">
+                {ratingModalFilm.title}
+              </p>
+              <div className="flex justify-center gap-3 mb-12">
+                {[1, 2, 3, 4, 5].map((num) => (
+                  <button
+                    key={num}
+                    onClick={() => setRatingModalScore(num)}
+                    className={`w-12 h-14 rounded-2xl font-black text-2xl transition-all ${ratingModalScore === num ? "bg-blue-600 text-white scale-110 shadow-xl" : "bg-slate-100 text-slate-300"}`}
+                    disabled={ratingModalLoading}
+                  >
+                    {num}
+                  </button>
+                ))}
+              </div>
+              <div className="mb-6 text-left">
+                <label className="mb-2 block text-xs font-black uppercase tracking-widest text-slate-500">
+                  Commentaire
+                </label>
+                <textarea
+                  value={ratingModalComment}
+                  onChange={(event) => setRatingModalComment(event.target.value)}
+                  maxLength={2000}
+                  rows={4}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:bg-white"
+                  placeholder="Votre commentaire (optionnel)"
+                />
+              </div>
+              {ratingModalError && (
+                <p className="mb-4 text-sm font-semibold text-rose-500">{ratingModalError}</p>
+              )}
+              <div className="flex flex-col gap-4">
+                <button
+                  onClick={handleSaveRating}
+                  className="w-full py-5 bg-blue-950 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-blue-800 transition-all disabled:opacity-60"
+                  disabled={ratingModalLoading || ratingModalScore < 1 || ratingModalScore > 5}
+                >
+                  {ratingModalLoading ? "..." : "Confirmer"}
+                </button>
+                {Number.isFinite(Number(ratingModalFilm?.myRating)) && (
+                  <button
+                    onClick={handleDeleteRating}
+                    className="text-red-500 font-bold uppercase text-xs tracking-widest py-2 disabled:opacity-60"
+                    disabled={ratingModalLoading}
+                  >
+                    Supprimer ma note
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
+    </div>
+    </div>
     </div>
     </>
   );
 }
+
+
 
 

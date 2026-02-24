@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import { getDbPool } from "../db.js";
 
@@ -10,7 +9,7 @@ const IS_PROD = process.env.NODE_ENV === "production";
 const SESSION_SECRET =
   process.env.SESSION_SECRET ||
   process.env.JWT_SECRET ||
-  `dev-session-secret-${crypto.randomBytes(8).toString("hex")}`;
+  "marsai-dev-session-secret";
 const WP_LOGIN_URL = `${WP_BASE_URL}/wp-login.php`;
 const WP_AUTH_MODE = String(process.env.WP_AUTH_MODE || "auto")
   .trim()
@@ -93,6 +92,15 @@ function extractTextareaValue(html = "", fieldName = "") {
   return decodeHtmlEntities(match?.[1] || "").trim();
 }
 
+function extractWpRestNonce(profileHtml = "") {
+  const html = String(profileHtml || "");
+  const match =
+    html.match(/wpApiSettings[\s\S]*?"nonce"\s*:\s*"([^"]+)"/i) ||
+    html.match(/"nonce"\s*:\s*"([a-zA-Z0-9]+)"/i);
+
+  return String(match?.[1] || "").trim();
+}
+
 function getSetCookieValues(response) {
   if (!response?.headers) return [];
   if (typeof response.headers.getSetCookie === "function") {
@@ -122,25 +130,61 @@ function cookieJarToHeader(cookieJar) {
 }
 
 async function hasWpAdminAccess(pathname, cookieHeader) {
-  const response = await fetch(`${WP_BASE_URL}${pathname}`, {
-    method: "GET",
-    redirect: "manual",
-    headers: {
-      Accept: "text/html",
-      Cookie: cookieHeader,
-    },
-  });
+  let response;
+  try {
+    response = await fetch(`${WP_BASE_URL}${pathname}`, {
+      method: "GET",
+      redirect: "follow",
+      headers: {
+        Accept: "text/html",
+        Cookie: cookieHeader,
+      },
+    });
+  } catch {
+    return false;
+  }
 
-  const location = (response.headers.get("location") || "").toLowerCase();
-  if (location.includes("wp-login.php")) return false;
+  const finalUrl = String(response.url || "").toLowerCase();
+  if (finalUrl.includes("wp-login.php")) return false;
 
   const html = await response.text();
   const denied =
     /you are not allowed to access this page/i.test(html) ||
-    /vous n.*autorisation/i.test(html) ||
-    /forbidden/i.test(html);
+    /sorry, you are not allowed/i.test(html) ||
+    /vous n.{0,20}etes pas autoris/i.test(html) ||
+    /vous n.{0,20}avez pas l.{0,10}autorisation/i.test(html) ||
+    /forbidden/i.test(html) ||
+    /id=["']loginform["']/i.test(html) ||
+    /name=["']log["']/i.test(html);
 
   return response.ok && !denied;
+}
+
+async function fetchWpRolesFromCookieSession({ cookieHeader, nonce }) {
+  if (!cookieHeader || !nonce) return [];
+
+  let response;
+  try {
+    response = await fetch(`${WP_BASE_URL}/wp-json/wp/v2/users/me?context=edit`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Cookie: cookieHeader,
+        "X-WP-Nonce": nonce,
+      },
+    });
+  } catch {
+    return [];
+  }
+
+  if (!response.ok) return [];
+
+  const payload = await response.json().catch(() => ({}));
+  const roles = Array.isArray(payload?.roles) ? payload.roles : [];
+
+  return roles
+    .map((role) => String(role || "").trim().toLowerCase())
+    .filter(Boolean);
 }
 
 async function authenticateWpFormSession({ identifier, password }) {
@@ -251,18 +295,48 @@ async function extractWpIdentityFromProfile({ profileHtml, cookieHeader, identif
   const roleFromProfile = String(roleClassMatch?.[1] || "").toLowerCase();
 
   let wpRoles = [];
+  let wpRoleSource = "unknown";
   if (roleFromProfile === "administrator") {
     wpRoles = ["administrator"];
+    wpRoleSource = "profile_html";
   } else if (roleFromProfile === "editor") {
     wpRoles = ["editor"];
+    wpRoleSource = "profile_html";
   } else {
-    const isSuperAdmin = await hasWpAdminAccess("/wp-admin/options-general.php", cookieHeader);
-    const isEditor = await hasWpAdminAccess("/wp-admin/edit-comments.php", cookieHeader);
-    wpRoles = isSuperAdmin ? ["administrator"] : isEditor ? ["editor"] : [];
+    const restNonce = extractWpRestNonce(profileHtml);
+    const rolesFromSessionApi = await fetchWpRolesFromCookieSession({
+      cookieHeader,
+      nonce: restNonce,
+    });
+
+    if (rolesFromSessionApi.includes("administrator")) {
+      wpRoles = ["administrator"];
+      wpRoleSource = "session_api";
+    } else if (rolesFromSessionApi.includes("editor")) {
+      wpRoles = ["editor"];
+      wpRoleSource = "session_api";
+    } else {
+      const [canAccessSettings, canAccessUsers, canModerateComments] = await Promise.all([
+        hasWpAdminAccess("/wp-admin/options-general.php", cookieHeader),
+        hasWpAdminAccess("/wp-admin/users.php", cookieHeader),
+        hasWpAdminAccess("/wp-admin/edit-comments.php", cookieHeader),
+      ]);
+
+      if (canAccessSettings || canAccessUsers) {
+        wpRoles = ["administrator"];
+        wpRoleSource = "capability_probe";
+      } else if (canModerateComments) {
+        wpRoles = ["editor"];
+        wpRoleSource = "capability_probe";
+      } else {
+        wpRoles = [];
+      }
+    }
   }
 
   if (!wpRoles.length && ["administrator", "editor"].includes(WP_FALLBACK_ROLE)) {
     wpRoles = [WP_FALLBACK_ROLE];
+    wpRoleSource = "fallback_env";
   }
 
   if (!wpRoles.length) {
@@ -275,6 +349,7 @@ async function extractWpIdentityFromProfile({ profileHtml, cookieHeader, identif
     displayName,
     email,
     wpRoles,
+    wpRoleSource,
   };
 }
 
@@ -414,6 +489,7 @@ async function fetchWordPressIdentity({ identifier, password }) {
       displayName: data.name || identifier,
       email,
       wpRoles: roles,
+      wpRoleSource: "rest_api",
     };
   }
 
@@ -473,6 +549,7 @@ async function fetchWordPressIdentity({ identifier, password }) {
           ? identifier
           : `${identifier}@wordpress.local`,
         wpRoles: ["administrator"],
+        wpRoleSource: "permission_probe_settings",
       };
     }
 
@@ -485,6 +562,7 @@ async function fetchWordPressIdentity({ identifier, password }) {
           ? identifier
           : `${identifier}@wordpress.local`,
         wpRoles: ["editor"],
+        wpRoleSource: "permission_probe_comments",
       };
     }
 

@@ -1,8 +1,17 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { Link, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
-import { getMovies } from "../api";
+import {
+  getCurrentSessionUser,
+  getMovies,
+  getPhase2SelectionStatus,
+  getPhase3SelectionStatus,
+  getPhase3WinnersPublic,
+  getSitePhaseState,
+  patchPhase2Selection,
+  patchPhase3Selection,
+} from "../api";
 
 const TOP_CAROUSEL_PREVIEW_SECONDS = 5;
 const TOP_CAROUSEL_ROTATION_MS = 5200;
@@ -29,6 +38,17 @@ const Gallery = () => {
   const [movies, setMovies] = useState([]);
   const [moviesLoading, setMoviesLoading] = useState(true);
   const [moviesError, setMoviesError] = useState("");
+  const [accessLoading, setAccessLoading] = useState(true);
+  const [isGalleryAllowed, setIsGalleryAllowed] = useState(true);
+  const [sessionUser, setSessionUser] = useState(null);
+  const [activeSitePhase, setActiveSitePhase] = useState("phase_1");
+  const [phase2SelectedMovieIds, setPhase2SelectedMovieIds] = useState(() => new Set());
+  const [phase3EligibleMovieIds, setPhase3EligibleMovieIds] = useState(() => new Set());
+  const [phase3EligibilityLoaded, setPhase3EligibilityLoaded] = useState(false);
+  const [phase3WinnerMovieIds, setPhase3WinnerMovieIds] = useState(() => new Set());
+  const [phase2SelectionMinRequired, setPhase2SelectionMinRequired] = useState(50);
+  const [phase2SelectionBusyMovieId, setPhase2SelectionBusyMovieId] = useState(null);
+  const [phase2SelectionError, setPhase2SelectionError] = useState("");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("default");
@@ -48,7 +68,46 @@ const Gallery = () => {
   ];
 
   const pageSize = 20;
-  const topMovies = movies.slice(0, 5);
+  const sessionRole = String(sessionUser?.role || "").toLowerCase();
+  const hasAdminSession = ["admin", "superadmin"].includes(sessionRole);
+  const canManagePhase2Selection =
+    activeSitePhase === "phase_1" && hasAdminSession;
+  const canManagePhase3Selection =
+    activeSitePhase === "phase_2" && hasAdminSession;
+  const canManagePhaseSelection = canManagePhase2Selection || canManagePhase3Selection;
+  const phase3EligibilityEnforced = phase3EligibilityLoaded && phase3EligibleMovieIds.size >= 50;
+
+  const toMovieIdSet = useCallback((list) =>
+    new Set(
+      (Array.isArray(list) ? list : [])
+        .map((movie) => Number(movie?.id))
+        .filter((movieId) => Number.isFinite(movieId) && movieId > 0),
+    ), []);
+
+  const applyPhase2SelectionSnapshot = useCallback((payload, fallbackMinRequired = 50) => {
+    const selectedMovies = Array.isArray(payload?.selectedMovies) ? payload.selectedMovies : [];
+    setPhase2SelectedMovieIds(toMovieIdSet(selectedMovies));
+    setPhase2SelectionMinRequired(Number(payload?.minRequired ?? fallbackMinRequired));
+  }, [toMovieIdSet]);
+
+  const applyPhase3EligibilitySnapshot = useCallback((payload) => {
+    setPhase3EligibleMovieIds(toMovieIdSet(payload?.selectedMovies));
+  }, [toMovieIdSet]);
+
+  const applyPhase3WinnersSnapshot = useCallback((payload) => {
+    setPhase3WinnerMovieIds(toMovieIdSet(payload?.selectedMovies));
+  }, [toMovieIdSet]);
+
+  const phase2SelectedCount = phase2SelectedMovieIds.size;
+  const phaseSelectionMinRequired = canManagePhase3Selection ? 5 : phase2SelectionMinRequired;
+  const showTopCarousel = activeSitePhase === "phase_3";
+  const phase3WinnerMovies = movies.filter((movie) =>
+    phase3WinnerMovieIds.has(Number(movie?.id)),
+  );
+  const topMovies =
+    showTopCarousel && phase3WinnerMovies.length > 0
+      ? phase3WinnerMovies.slice(0, 5)
+      : movies.slice(0, 5);
   const carouselShift = "clamp(90px, 18vw, 240px)";
   const carouselPositions = [
     { offset: -2, scale: 0.72, opacity: 0.35, blur: 2, z: 1 },
@@ -116,6 +175,128 @@ const Gallery = () => {
     let cancelled = false;
 
     (async () => {
+      setAccessLoading(true);
+      setPhase2SelectionError("");
+
+      try {
+        const sitePhase = await getSitePhaseState();
+        if (cancelled) return;
+
+        const phaseKey = String(sitePhase?.currentPhase || "phase_1").toLowerCase();
+        setActiveSitePhase(phaseKey);
+
+        let mePayload = null;
+        try {
+          mePayload = await getCurrentSessionUser();
+        } catch {
+          mePayload = null;
+        }
+
+        if (cancelled) return;
+        const user = mePayload?.user || null;
+        setSessionUser(user);
+
+        const role = String(user?.role || "").toLowerCase();
+        const hasAdminSession = role === "admin" || role === "superadmin";
+
+        if (phaseKey === "phase_1" && !hasAdminSession) {
+          setIsGalleryAllowed(false);
+          setMovies([]);
+          return;
+        }
+
+        setIsGalleryAllowed(true);
+
+        if (phaseKey === "phase_1" && hasAdminSession) {
+          setPhase3EligibilityLoaded(false);
+          try {
+            const selection = await getPhase2SelectionStatus();
+            if (!cancelled) {
+              applyPhase2SelectionSnapshot(selection, 50);
+              setPhase3EligibleMovieIds(new Set());
+              setPhase3WinnerMovieIds(new Set());
+            }
+          } catch {
+            if (!cancelled) {
+              setPhase2SelectedMovieIds(new Set());
+              setPhase2SelectionMinRequired(50);
+            }
+          }
+        } else if (phaseKey === "phase_2" && hasAdminSession) {
+          setPhase2SelectionMinRequired(5);
+          const [phase2PoolResult, phase3SelectionResult] = await Promise.allSettled([
+            getPhase2SelectionStatus(),
+            getPhase3SelectionStatus(),
+          ]);
+
+          if (!cancelled && phase2PoolResult.status === "fulfilled") {
+            applyPhase3EligibilitySnapshot(phase2PoolResult.value);
+            setPhase3EligibilityLoaded(true);
+          } else if (!cancelled) {
+            setPhase3EligibleMovieIds(new Set());
+            setPhase3EligibilityLoaded(false);
+          }
+
+          if (!cancelled && phase3SelectionResult.status === "fulfilled") {
+            applyPhase2SelectionSnapshot(phase3SelectionResult.value, 5);
+            applyPhase3WinnersSnapshot(phase3SelectionResult.value);
+          } else if (!cancelled) {
+            setPhase2SelectedMovieIds(new Set());
+            setPhase2SelectionMinRequired(5);
+          }
+
+          if (
+            !cancelled
+            && phase2PoolResult.status !== "fulfilled"
+            && phase3SelectionResult.status !== "fulfilled"
+          ) {
+            setPhase2SelectionError("");
+          }
+        } else if (phaseKey === "phase_3") {
+          setPhase2SelectedMovieIds(new Set());
+          setPhase2SelectionMinRequired(5);
+          setPhase3EligibleMovieIds(new Set());
+          setPhase3EligibilityLoaded(false);
+
+          try {
+            const winners = await getPhase3WinnersPublic();
+            if (!cancelled) {
+              applyPhase3WinnersSnapshot(winners);
+            }
+          } catch {
+            if (!cancelled) {
+              setPhase3WinnerMovieIds(new Set());
+            }
+          }
+        } else if (!cancelled) {
+          setPhase2SelectedMovieIds(new Set());
+          setPhase2SelectionMinRequired(phaseKey === "phase_2" ? 5 : 50);
+          setPhase3EligibleMovieIds(new Set());
+          setPhase3EligibilityLoaded(false);
+          setPhase3WinnerMovieIds(new Set());
+        }
+      } catch (error) {
+        if (cancelled) return;
+        setIsGalleryAllowed(true);
+        setMoviesError(error?.message || "Impossible de verifier l'acces galerie.");
+      } finally {
+        if (!cancelled) {
+          setAccessLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applyPhase2SelectionSnapshot, applyPhase3EligibilitySnapshot, applyPhase3WinnersSnapshot]);
+
+  useEffect(() => {
+    if (accessLoading || !isGalleryAllowed) return;
+
+    let cancelled = false;
+
+    (async () => {
       setMoviesLoading(true);
       setMoviesError("");
 
@@ -138,7 +319,7 @@ const Gallery = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [accessLoading, isGalleryAllowed]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -152,22 +333,28 @@ const Gallery = () => {
   }, [isFilterModalOpen]);
 
   useEffect(() => {
+    if (!showTopCarousel) {
+      setCarouselIndex(0);
+      return;
+    }
     if (topMovies.length === 0) {
       setCarouselIndex(0);
       return;
     }
     setCarouselIndex((prev) => prev % topMovies.length);
-  }, [topMovies.length]);
+  }, [showTopCarousel, topMovies.length]);
 
   useEffect(() => {
+    if (!showTopCarousel) return;
     if (topMovies.length <= 1) return;
     const id = setInterval(() => {
       setCarouselIndex((prev) => (prev + 1) % topMovies.length);
     }, TOP_CAROUSEL_ROTATION_MS);
     return () => clearInterval(id);
-  }, [topMovies.length]);
+  }, [showTopCarousel, topMovies.length]);
 
   useEffect(() => {
+    if (!showTopCarousel) return;
     const video = topCarouselVideoRef.current;
     if (!video || !activeTopMovie?.videoUrl) return;
 
@@ -212,7 +399,7 @@ const Gallery = () => {
       video.pause();
       video.currentTime = 0;
     };
-  }, [activeTopMovie?.id, activeTopMovie?.videoUrl]);
+  }, [showTopCarousel, activeTopMovie?.id, activeTopMovie?.videoUrl]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -224,6 +411,56 @@ const Gallery = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const handleTogglePhase2Selection = async (movieId, currentSelected) => {
+    if (!canManagePhaseSelection) return;
+
+    const safeMovieId = Number(movieId);
+    if (!Number.isFinite(safeMovieId) || safeMovieId <= 0) return;
+    if (
+      canManagePhase3Selection
+      && phase3EligibilityEnforced
+      && !currentSelected
+      && !phase3EligibleMovieIds.has(safeMovieId)
+    ) {
+      setPhase2SelectionError(
+        "Ce film n'est pas dans la selection phase 2 et ne peut pas etre promu en phase 3.",
+      );
+      return;
+    }
+
+    setPhase2SelectionError("");
+    setPhase2SelectionBusyMovieId(safeMovieId);
+
+    try {
+      const payload = canManagePhase2Selection
+        ? await patchPhase2Selection(safeMovieId, !currentSelected)
+        : await patchPhase3Selection(safeMovieId, !currentSelected);
+      applyPhase2SelectionSnapshot(payload);
+      if (canManagePhase3Selection) {
+        applyPhase3WinnersSnapshot(payload);
+      }
+    } catch (error) {
+      setPhase2SelectionError(
+        error?.message || "Impossible de modifier la selection en cours.",
+      );
+    } finally {
+      setPhase2SelectionBusyMovieId(null);
+    }
+  };
+
+  if (accessLoading) {
+    return (
+      <div className="min-h-screen bg-blue-950 flex items-center justify-center text-white font-black uppercase tracking-widest">
+        Verification des acces galerie...
+      </div>
+    );
+  }
+
+  if (!isGalleryAllowed) {
+    const callForProjectPath = i18n.language === "en" ? "/call-for-project" : "/appel-a-projet";
+    return <Navigate to={callForProjectPath} replace />;
+  }
 
   const seoTitle = t("nav.films", "Films");
   const seoDescription = t(
@@ -245,7 +482,7 @@ const Gallery = () => {
       <Seo title={seoTitle} description={seoDescription} />
       <div className="min-h-screen bg-blue-950 flex flex-col font-sans text-slate-800">
         <section className="relative w-full pb-36 md:pb-40 pt-10">
-          {activeTopMovie?.videoUrl && (
+          {showTopCarousel && activeTopMovie?.videoUrl && (
             <video
               key={`top-carousel-preview-${activeTopMovie.id}`}
               ref={topCarouselVideoRef}
@@ -266,7 +503,7 @@ const Gallery = () => {
               </span>
             </h1>
 
-            {topMovies.length > 0 && (
+            {showTopCarousel && topMovies.length > 0 && (
               <div className="mt-6 md:mt-10">
                 <p className="text-white/90 font-black uppercase tracking-widest text-xs md:text-sm mb-6">
                   {t(
@@ -434,6 +671,16 @@ const Gallery = () => {
                     )}
                   </div>
                 )}
+                {canManagePhaseSelection && (
+                  <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-black uppercase tracking-wider text-blue-900">
+                    {canManagePhase2Selection ? "Selection phase 2" : "Selection jury phase 3"}: {phase2SelectedCount}/{phaseSelectionMinRequired}
+                  </div>
+                )}
+                {phase2SelectionError && (
+                  <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
+                    {phase2SelectionError}
+                  </div>
+                )}
               </div>
 
               </div>
@@ -447,42 +694,86 @@ const Gallery = () => {
                   {moviesError}
                 </div>
               ) : filteredMovies.length > 0 ? (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-10">
-                  {paginatedMovies.map((movie) => (
-                    <Link to={`/movie/${movie.id}`} key={movie.id}>
-                      <div className="group relative aspect-[16/9] rounded-[35px] overflow-hidden shadow-2xl bg-blue-950 border border-slate-100">
-                        <img
-                          src={movie.img}
-                          alt={movie.title}
-                          className="w-full h-full object-cover opacity-90 group-hover:opacity-30 transition-all duration-700 transform group-hover:scale-110"
-                        />
-                        {movie.countryFlagPath && (
-                          <div className="absolute right-3 top-3 z-20 rounded-md bg-white/90 p-1 shadow-md">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12">
+                  {paginatedMovies.map((movie) => {
+                    const countryCode = String(
+                      movie.countryCode || movie.countryAlpha2 || "",
+                    ).trim().toLowerCase();
+                    const fallbackFlagPath = countryCode
+                      ? `/images/flags/${countryCode}.png`
+                      : "";
+                    const flagSrc = toFlagAssetPath(
+                      movie.countryFlagPath || fallbackFlagPath,
+                    );
+                    const flagAlt = countryCode ? countryCode.toUpperCase() : (movie.country || "pays");
+                    const movieId = Number(movie.id);
+                    const isSelectedForPhase2 = phase2SelectedMovieIds.has(movieId);
+                    const isSelectionBusy = Number(phase2SelectionBusyMovieId) === movieId;
+                    const isEligibleForPhase3 =
+                      !canManagePhase3Selection
+                      || !phase3EligibilityEnforced
+                      || phase3EligibleMovieIds.has(movieId);
+                    const isSelectionDisabled =
+                      canManagePhase3Selection && !isSelectedForPhase2 && !isEligibleForPhase3;
+
+                    return (
+                      <div key={movie.id} className="group space-y-3">
+                        <Link to={`/movie/${movie.id}`} className="block">
+                          <div className="relative aspect-video rounded-[30px] overflow-hidden shadow-xl bg-slate-100 mb-5 border border-slate-50">
                             <img
-                              src={toFlagAssetPath(movie.countryFlagPath)}
-                              alt={`Drapeau ${movie.country || "pays"}`}
-                              className="h-4 w-6 rounded-sm object-cover"
-                              loading="lazy"
+                              src={movie.img}
+                              alt={movie.title}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                             />
                           </div>
-                        )}
-                        <div className="absolute inset-0 flex flex-col items-center justify-center p-6 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                          <h3 className="text-white font-black text-xl text-center uppercase leading-none mb-4 tracking-tighter">
-                            {movie.title}
-                          </h3>
-                          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-blue-950 shadow-xl">
-                            <svg
-                              className="w-6 h-6 ml-1"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" />
-                            </svg>
+                          <div className="px-2">
+                            <h4 className="text-blue-950 font-black text-sm uppercase truncate mb-1 tracking-tight">
+                              {movie.title}
+                            </h4>
+                            <div className="flex items-center gap-2">
+                              {flagSrc ? (
+                                <img
+                                  src={flagSrc}
+                                  className="w-5 h-3.5 object-cover rounded-[2px] shadow-sm border border-slate-200"
+                                  alt={flagAlt}
+                                  onError={(event) => {
+                                    event.currentTarget.style.display = "none";
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-5 h-3.5 bg-slate-100 rounded-[2px]" />
+                              )}
+                              <p className="text-slate-400 text-[10px] font-black uppercase truncate tracking-[0.15em]">
+                                {movie.director || "Anonyme"}
+                              </p>
+                            </div>
                           </div>
-                        </div>
+                        </Link>
+                        {canManagePhaseSelection && (
+                          <button
+                            type="button"
+                            className={`w-full rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-wider transition-colors ${
+                              isSelectionDisabled
+                                ? "bg-slate-200 text-slate-500 cursor-not-allowed"
+                                : isSelectedForPhase2
+                                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                : "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                            } disabled:opacity-60`}
+                            onClick={() => handleTogglePhase2Selection(movieId, isSelectedForPhase2)}
+                            disabled={isSelectionBusy || isSelectionDisabled}
+                          >
+                            {isSelectionBusy
+                              ? "..."
+                              : isSelectionDisabled
+                                ? "Non retenu phase 2"
+                              : isSelectedForPhase2
+                                ? (canManagePhase2Selection ? "Retirer de la phase 2" : "Retirer de la phase 3")
+                                : (canManagePhase2Selection ? "Selectionner pour phase 2" : "Selectionner pour phase 3")}
+                          </button>
+                        )}
                       </div>
-                    </Link>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="py-20 text-center text-slate-300 font-black uppercase tracking-widest text-xl">

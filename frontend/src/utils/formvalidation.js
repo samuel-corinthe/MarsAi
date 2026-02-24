@@ -333,8 +333,8 @@ export const validateForm = (formData) => {
         continue;
       }
 
-      if (!name) {
-        errors.castMembers = "Chaque membre du casting doit avoir un nom.";
+      if (!name || !role) {
+        errors.castMembers = "Chaque membre du casting doit avoir un nom et un role.";
         break;
       }
 

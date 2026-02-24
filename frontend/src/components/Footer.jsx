@@ -1,8 +1,12 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { getCurrentSessionUser, getSitePhaseState } from "../api";
 
 const Footer = () => {
   const { t, i18n } = useTranslation();
+  const [hideGalleryForVisitors, setHideGalleryForVisitors] = useState(false);
+  const [hideSubmitForVisitors, setHideSubmitForVisitors] = useState(false);
   const currentYear = new Date().getFullYear();
   const homePath = i18n.language === "en" ? "/home" : "/accueil";
   const aboutPath = i18n.language === "en" ? "/about" : "/a-propos";
@@ -96,6 +100,53 @@ const Footer = () => {
     },
   ];
 
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const sitePhase = await getSitePhaseState();
+        if (cancelled) return;
+
+        const phaseKey = String(sitePhase?.currentPhase || "phase_1").toLowerCase();
+        const needsSessionCheck =
+          phaseKey === "phase_1" || phaseKey === "phase_2" || phaseKey === "phase_3";
+        if (!needsSessionCheck) {
+          setHideGalleryForVisitors(false);
+          setHideSubmitForVisitors(false);
+          return;
+        }
+
+        let hasAdminSession = false;
+        try {
+          const sessionPayload = await getCurrentSessionUser();
+          if (cancelled) return;
+
+          const role = String(sessionPayload?.user?.role || "").toLowerCase();
+          hasAdminSession = role === "admin" || role === "superadmin";
+        } catch {
+          hasAdminSession = false;
+        }
+
+        if (!cancelled) {
+          setHideGalleryForVisitors(phaseKey === "phase_1" && !hasAdminSession);
+          setHideSubmitForVisitors(
+            (phaseKey === "phase_2" || phaseKey === "phase_3") && !hasAdminSession,
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setHideGalleryForVisitors(false);
+          setHideSubmitForVisitors(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <footer className="relative bg-black border-t border-gray-900">
       <div className="h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent"></div>
@@ -167,7 +218,10 @@ const Footer = () => {
                   {section.title}
                 </h3>
                 <ul className="space-y-3">
-                  {section.links.map((link) => (
+                  {section.links
+                    .filter((link) => !hideGalleryForVisitors || !["/films", "/movies"].includes(link.path))
+                    .filter((link) => !hideSubmitForVisitors || !["/deposer-un-film", "/submit-film"].includes(link.path))
+                    .map((link) => (
                     <li key={link.path}>
                       <Link
                         to={link.path}
@@ -179,7 +233,7 @@ const Footer = () => {
                         </span>
                       </Link>
                     </li>
-                  ))}
+                    ))}
                 </ul>
               </div>
             ))}

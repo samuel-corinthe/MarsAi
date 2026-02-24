@@ -149,6 +149,58 @@ async function fetchWith404Fallback(
   );
 }
 
+async function fetchSameOriginWithFallback(
+  urls,
+  options = {},
+  errorContext = "API",
+) {
+  const candidates = [...new Set(urls.filter((url) => typeof url === "string" && url.startsWith("/")))];
+
+  let lastStatus = null;
+  let lastPayload = {};
+  let lastError = null;
+
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, options);
+      const rawBody = await res.text();
+      let payload = {};
+
+      if (rawBody) {
+        try {
+          payload = JSON.parse(rawBody);
+        } catch {
+          payload = {};
+        }
+      }
+
+      if (res.ok) {
+        return { payload, status: res.status };
+      }
+
+      lastStatus = res.status;
+      lastPayload = payload;
+
+      if (res.status === 404) {
+        continue;
+      }
+
+      break;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (lastError && lastStatus == null) {
+    throw new Error(lastError.message || "Impossible de joindre l'API backend.");
+  }
+
+  const fallbackStatus = lastStatus == null ? "unreachable" : lastStatus;
+  throw new Error(
+    lastPayload?.details || lastPayload?.error || `${errorContext} error ${fallbackStatus}`,
+  );
+}
+
 export const getPageBySlug = async (slug, lang = "fr") => {
   const response = await fetch(
     `https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-json/wp/v2/pages?slug=${slug}&lang=${lang}`,
@@ -346,6 +398,168 @@ export async function getAdminDashboardData({ signal } = {}) {
     );
   }
   return res.json();
+}
+
+export async function getSitePhaseState({ signal } = {}) {
+  const { payload } = await fetchSameOriginWithFallback(
+    ["/api/site-phase", "/MarsAi/api/site-phase"],
+    {
+      signal,
+      cache: "no-store",
+      credentials: "include",
+    },
+    "Site phase API",
+  );
+
+  return payload;
+}
+
+export async function updateSitePhaseState({ currentPhase, mode } = {}) {
+  const { payload } = await fetchSameOriginWithFallback(
+    ["/api/site-phase", "/MarsAi/api/site-phase"],
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        currentPhase,
+        mode,
+      }),
+    },
+    "Site phase API",
+  );
+
+  return payload;
+}
+
+export async function getPhase2SelectionStatus({ signal } = {}) {
+  try {
+    const { payload } = await fetchSameOriginWithFallback(
+      ["/api/site-phase/phase2-selection", "/MarsAi/api/site-phase/phase2-selection"],
+      {
+        signal,
+        cache: "no-store",
+        credentials: "include",
+      },
+      "Phase 2 selection API",
+    );
+
+    return payload;
+  } catch (error) {
+    const message = String(error?.message || "");
+    if (/\b404\b/.test(message)) {
+      return {
+        selectedCount: 0,
+        minRequired: 50,
+        selectedMovies: [],
+        isReadyBySuperadmin: false,
+        readyBy: null,
+        readyByName: null,
+        readyAt: null,
+      };
+    }
+    throw error;
+  }
+}
+
+export async function patchPhase2Selection(movieId, selected) {
+  const { payload } = await fetchSameOriginWithFallback(
+    ["/api/site-phase/phase2-selection", "/MarsAi/api/site-phase/phase2-selection"],
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ movieId, selected }),
+    },
+    "Phase 2 selection API",
+  );
+
+  return payload;
+}
+
+export async function validatePhase2Selection() {
+  const { payload } = await fetchSameOriginWithFallback(
+    ["/api/site-phase/phase2-selection/validate", "/MarsAi/api/site-phase/phase2-selection/validate"],
+    {
+      method: "POST",
+      credentials: "include",
+    },
+    "Phase 2 selection API",
+  );
+
+  return payload;
+}
+
+export async function getPhase3SelectionStatus({ signal } = {}) {
+  try {
+    const { payload } = await fetchSameOriginWithFallback(
+      ["/api/site-phase/phase3-selection", "/MarsAi/api/site-phase/phase3-selection"],
+      {
+        signal,
+        cache: "no-store",
+        credentials: "include",
+      },
+      "Phase 3 selection API",
+    );
+
+    return payload;
+  } catch (error) {
+    const message = String(error?.message || "");
+    if (/\b404\b/.test(message)) {
+      return {
+        selectedCount: 0,
+        minRequired: 5,
+        selectedMovies: [],
+        isReadyBySuperadmin: false,
+        readyBy: null,
+        readyByName: null,
+        readyAt: null,
+      };
+    }
+    throw error;
+  }
+}
+
+export async function getPhase3WinnersPublic({ signal } = {}) {
+  const { payload } = await fetchSameOriginWithFallback(
+    ["/api/site-phase/phase3-winners", "/MarsAi/api/site-phase/phase3-winners"],
+    {
+      signal,
+      cache: "no-store",
+      credentials: "include",
+    },
+    "Phase 3 winners API",
+  );
+
+  return payload;
+}
+
+export async function patchPhase3Selection(movieId, selected) {
+  const { payload } = await fetchSameOriginWithFallback(
+    ["/api/site-phase/phase3-selection", "/MarsAi/api/site-phase/phase3-selection"],
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ movieId, selected }),
+    },
+    "Phase 3 selection API",
+  );
+
+  return payload;
+}
+
+export async function validatePhase3Selection() {
+  const { payload } = await fetchSameOriginWithFallback(
+    ["/api/site-phase/phase3-selection/validate", "/MarsAi/api/site-phase/phase3-selection/validate"],
+    {
+      method: "POST",
+      credentials: "include",
+    },
+    "Phase 3 selection API",
+  );
+
+  return payload;
 }
 
 export async function getMyAssignments() {

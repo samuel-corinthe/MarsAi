@@ -188,14 +188,18 @@ i18n.use(initReactI18next).init({
             cast_member: "Membre",
             remove_cast_member: "Supprimer",
             cast_name_placeholder: "Nom *",
-            cast_role_placeholder: "Role",
+            cast_role_placeholder: "Role *",
             cast_avatar_placeholder: "Avatar URL (https://...)",
             casting_hint:
               "L'ordre saisi ici sera conserve dans la page details du film.",
+            cast_role_required_hint:
+              "Si vous ajoutez un membre, le role est obligatoire.",
             poster_label: "Image poster",
             poster_preview_alt: "Apercu du poster",
             poster_hint:
-              "JPG, PNG ou WebP, max 5 Mo. Cette image sera utilisee comme affiche de votre film.",
+              "JPG, PNG, WebP ou GIF, max 5 Mo apres optimisation.",
+            poster_auto_crop_hint:
+              "Recadrage automatique centre au format 2:3 avant envoi.",
             subtitle_label: "Sous-titres (fichier .srt)",
             honeypot_label: "Website (ne pas remplir si vous etes humain)",
             video_label: "Fichier video (MP4 uniquement)",
@@ -205,6 +209,14 @@ i18n.use(initReactI18next).init({
             antispam_label: "Verification anti-robot",
             antispam_hint:
               "Cette verification nous aide a proteger le concours contre les robots",
+            part_1_badge: "Partie 1/3",
+            part_1_title: "Informations participant",
+            part_2_badge: "Partie 2/3",
+            part_2_title: "Informations film",
+            part_3_badge: "Partie 3/3",
+            part_3_title: "Fichiers et verification",
+            step_back: "Precedent",
+            step_next: "Suivant",
           },
           button: {
             choose_video: "Choisir une video",
@@ -247,10 +259,16 @@ i18n.use(initReactI18next).init({
             altcha_missing: "Veuillez completer la verification de securite.",
             upload_failed:
               "Une erreur est survenue lors de l'envoi. Veuillez reessayer.",
-            poster_format: "Formats acceptes : JPG, PNG ou WebP",
+            poster_format: "Formats acceptes : JPG, PNG, WebP ou GIF",
             poster_too_large: "L'image est trop lourde (max 5 Mo)",
             subtitle_format: "Seul le format .srt est accepte",
             subtitle_too_large: "Fichier SRT trop lourd (max 1 Mo)",
+            cast_name_required: "Nom obligatoire",
+            cast_role_required: "Role obligatoire",
+            cast_name_too_long: "Nom trop long (max 120 caracteres)",
+            cast_role_too_long: "Role trop long (max 120 caracteres)",
+            cast_avatar_invalid: "URL avatar invalide (https:// obligatoire)",
+            summary_title: "Veuillez corriger les champs suivants :",
           },
         },
         altcha: {
@@ -559,14 +577,18 @@ i18n.use(initReactI18next).init({
             cast_member: "Member",
             remove_cast_member: "Remove",
             cast_name_placeholder: "Name *",
-            cast_role_placeholder: "Role",
+            cast_role_placeholder: "Role *",
             cast_avatar_placeholder: "Avatar URL (https://...)",
             casting_hint:
               "The order entered here will be kept on the movie details page.",
+            cast_role_required_hint:
+              "If you add a cast member, the role is required.",
             poster_label: "Poster image",
             poster_preview_alt: "Poster preview",
             poster_hint:
-              "JPG, PNG or WebP, max 5 MB. This image will be used as your movie poster.",
+              "JPG, PNG, WebP or GIF, max 5 MB after optimization.",
+            poster_auto_crop_hint:
+              "Automatic centered crop to 2:3 ratio before upload.",
             subtitle_label: "Subtitles (.srt file)",
             honeypot_label: "Website (do not fill this field if you are human)",
             video_label: "Video file (MP4 only)",
@@ -576,6 +598,14 @@ i18n.use(initReactI18next).init({
             antispam_label: "Anti-bot verification",
             antispam_hint:
               "This verification helps protect the contest against bots",
+            part_1_badge: "Part 1/3",
+            part_1_title: "Participant information",
+            part_2_badge: "Part 2/3",
+            part_2_title: "Movie information",
+            part_3_badge: "Part 3/3",
+            part_3_title: "Files and verification",
+            step_back: "Back",
+            step_next: "Next",
           },
           button: {
             choose_video: "Choose a video",
@@ -617,10 +647,16 @@ i18n.use(initReactI18next).init({
             select_video: "Please select a valid video.",
             altcha_missing: "Please complete the security check.",
             upload_failed: "An error occurred during upload. Please try again.",
-            poster_format: "Accepted formats: JPG, PNG or WebP",
+            poster_format: "Accepted formats: JPG, PNG, WebP or GIF",
             poster_too_large: "Image is too large (max 5 MB)",
             subtitle_format: "Only .srt format is accepted",
             subtitle_too_large: "SRT file is too large (max 1 MB)",
+            cast_name_required: "Name is required",
+            cast_role_required: "Role is required",
+            cast_name_too_long: "Name is too long (max 120 characters)",
+            cast_role_too_long: "Role is too long (max 120 characters)",
+            cast_avatar_invalid: "Invalid avatar URL (https:// required)",
+            summary_title: "Please fix the following fields:",
           },
         },
         altcha: {

@@ -23,7 +23,14 @@ export async function wordpressLogin(req, res) {
 
   try {
     const wpIdentity = await fetchWordPressIdentity({ identifier, password });
+    const localRole = await getLocalRoleByEmail(wpIdentity.email);
     let appRole = mapWpRolesToAppRole(wpIdentity.wpRoles);
+
+    if (appRole === "visitor") {
+      if (localRole) {
+        appRole = localRole;
+      }
+    }
 
     if (appRole === "visitor") {
       if (["administrator", "superadmin"].includes(WP_FALLBACK_ROLE)) {
@@ -33,11 +40,12 @@ export async function wordpressLogin(req, res) {
       }
     }
 
-    if (appRole === "visitor") {
-      const localRole = await getLocalRoleByEmail(wpIdentity.email);
-      if (localRole) {
-        appRole = localRole;
-      }
+    if (
+      appRole === "admin" &&
+      localRole === "superadmin" &&
+      String(wpIdentity?.wpRoleSource || "") === "fallback_env"
+    ) {
+      appRole = "superadmin";
     }
 
     if (appRole === "visitor") {
@@ -162,8 +170,12 @@ export async function updateMeProfile(req, res) {
     });
 
     let appRole = mapWpRolesToAppRole(wpIdentity.wpRoles);
+    const roleSource = String(wpIdentity?.wpRoleSource || "");
     if (appRole === "visitor" && ["admin", "superadmin"].includes(String(session.role || ""))) {
       appRole = session.role;
+    }
+    if (appRole === "admin" && String(session.role || "") === "superadmin" && roleSource === "fallback_env") {
+      appRole = "superadmin";
     }
 
     if (appRole === "visitor") {
