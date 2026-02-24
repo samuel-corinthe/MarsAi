@@ -117,21 +117,19 @@ export default function App() {
       {!hideChrome && <Navbar />}
       <div className="flex-1">
         <Routes>
-          {/* Dashboard hors i18n */}
+          {/* 1. DASHBOARD (Hors i18n) */}
           <Route path="/dashboard" element={<DashboardEntry />} />
 
-          {/* 1. ANGLAIS & ARABE (avec préfixe :lang) */}
+          {/* 2. ROUTES AVEC LANGUE (en/ar) */}
           <Route path="/:lang" element={<LangConfig />}>
-            {/* On filtre pour que ça ne match que 'en' ou 'ar' */}
-            {["en", "ar"].map((l) => (
-              <Route key={l} path="" element={<Outlet />}>
-                {routesDefinition}
-              </Route>
-            ))}
+            {/* Ici, l'index captera exactement "/en" ou "/ar" */}
+            <Route index element={<WpPage isHome={true} />} />
+            {routesDefinition}
           </Route>
 
-          {/* 2. FRANÇAIS (sans préfixe, à la racine) */}
+          {/* 3. ROUTES PAR DÉFAUT (fr) */}
           <Route path="/" element={<LangConfig />}>
+            <Route index element={<WpPage isHome={true} />} />
             {routesDefinition}
           </Route>
 

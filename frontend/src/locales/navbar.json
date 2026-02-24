@@ -60,5 +60,36 @@
       "privacy": "Privacy Policy",
       "rights": "All rights reserved."
     }
+  },
+  "ar": {
+    "nav": {
+      "home": "الرئيسية",
+      "about": "من نحن",
+      "films": "الأفلام",
+      "agenda": "البرنامج",
+      "callForProjects": "دعوة للمشاريع",
+      "jury": "لجنة التحكيم",
+      "partners": "شركاؤنا",
+      "more": "المزيد",
+      "terms_gv": "شروط البيع ",
+      "terms_gu": "شروط الاستخدام",
+      "privacy": "الخصوصية",
+      "legal": "إشعار قانوني",
+      "examplePage": "صفحة تجريبية",
+      "contact": "اتصل بنا",
+      "language": "اللغة",
+      "login": "تسجيل الدخول",
+      "submitFilm": "تقديم فيلم"
+    },
+    "footer": {
+      "description": "أول مهرجان دولي مخصص للأفلام التي تم إنشاؤها بواسطة الذكاء الاصطناعي. احتفاء بالإبداع المعزز والابتكار السينمائي.",
+      "festival": "المهرجان",
+      "participate": "المشاركة",
+      "legal_title": "قانون",
+      "newsletter": "النشرة الإخبارية",
+      "competition": "أفلام المسابقة",
+      "privacy": "سياسة الخصوصية",
+      "rights": "جميع الحقوق محفوظة."
+    }
   }
 }
