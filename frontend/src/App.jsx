@@ -58,7 +58,7 @@ export default function App() {
       <Route path="newsletter" element={<Newsletter />} />
       <Route path="a-propos" element={<About />} />
       <Route path="about" element={<About />} />
-      <Route path="حول" element={<About />} />
+      <Route path="about-ar" element={<About />} />
 
       <Route path="partenaires" element={<Partenaires />} />
       <Route path="partner" element={<Partenaires />} />
