@@ -5,6 +5,7 @@ import Seo from "../components/Seo";
 import { MovieSchema, BreadcrumbSchema } from "../components/Schema";
 import MascotCameraPlayer from "../components/MascotCameraPlayer";
 import SocialIcon from "../components/ui/SocialIcon";
+import { useTheme } from "../context/ThemeContext";
 import {
   deleteMyMovieRating,
   getCurrentSessionUser,
@@ -133,6 +134,28 @@ function toDirectPreviewVideoUrl(...values) {
   return "";
 }
 
+function toSafeDownloadFileName(title) {
+  const base = String(title || "film")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `${base || "film"}.mp4`;
+}
+
+function buildMovieDownloadPath(movieId) {
+  if (!Number.isFinite(Number(movieId)) || Number(movieId) <= 0) {
+    return "";
+  }
+  if (typeof window !== "undefined") {
+    const pathname = String(window.location?.pathname || "").toLowerCase();
+    if (pathname === "/marsai" || pathname.startsWith("/marsai/")) {
+      return `/MarsAi/api/movies/${movieId}/download`;
+    }
+  }
+  return `/api/movies/${movieId}/download`;
+}
+
 function getSocialEntries(movie) {
   const socialLinks = movie?.socialLinks;
   if (!socialLinks || typeof socialLinks !== "object") return [];
@@ -155,6 +178,7 @@ function getSocialEntries(movie) {
 const MovieDetails = () => {
   const { id } = useParams();
   const { t, i18n } = useTranslation();
+  const { isLight } = useTheme();
   const homePath = i18n.language === "en" ? "/home" : "/accueil";
   const galleryPath = i18n.language === "en" ? "/movies" : "/films";
 
@@ -162,6 +186,7 @@ const MovieDetails = () => {
   const [movieLoading, setMovieLoading] = useState(true);
   const [movieError, setMovieError] = useState("");
 
+  const [hasSession, setHasSession] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -284,6 +309,7 @@ const MovieDetails = () => {
       setRatingLoading(false);
 
       if (!Number.isFinite(movieId) || movieId <= 0) {
+        setHasSession(false);
         setIsAdmin(false);
         setOfficialRating(null);
         setOfficialComment("");
@@ -295,9 +321,13 @@ const MovieDetails = () => {
         const sessionPayload = await getCurrentSessionUser();
         if (cancelled) return;
 
+        const hasActiveSession =
+          Boolean(sessionPayload?.authenticated) || Boolean(sessionPayload?.user);
+        setHasSession(hasActiveSession);
+
         const role = String(sessionPayload?.user?.role || "").toLowerCase();
         const canRate =
-          Boolean(sessionPayload?.authenticated) &&
+          hasActiveSession &&
           (role === "admin" || role === "superadmin");
         setIsAdmin(canRate);
 
@@ -324,6 +354,7 @@ const MovieDetails = () => {
         }
       } catch {
         if (!cancelled) {
+          setHasSession(false);
           setIsAdmin(false);
           setOfficialRating(null);
           setOfficialComment("");
@@ -389,7 +420,7 @@ const MovieDetails = () => {
           description={t("movie_details.back_to_gallery")}
           noIndex
         />
-        <div className="min-h-screen bg-blue-950 text-white flex flex-col items-center justify-center p-6">
+        <div className={`min-h-screen flex flex-col items-center justify-center p-6 ${isLight ? "bg-[#f4f8ff] text-slate-900" : "bg-blue-950 text-white"}`}>
           <p className="text-xl font-black uppercase tracking-widest">
             {t("movie_details.loading", "Chargement...")}
           </p>
@@ -406,7 +437,7 @@ const MovieDetails = () => {
           description={t("movie_details.back_to_gallery")}
           noIndex
         />
-        <div className="min-h-screen bg-blue-950 text-white flex flex-col items-center justify-center p-6">
+        <div className={`min-h-screen flex flex-col items-center justify-center p-6 ${isLight ? "bg-[#f4f8ff] text-slate-900" : "bg-blue-950 text-white"}`}>
           <h1 className="text-3xl font-black mb-4 uppercase tracking-tighter">
             {t("movie_details.not_found")}
           </h1>
@@ -415,7 +446,7 @@ const MovieDetails = () => {
           )}
           <Link
             to={galleryPath}
-            className="bg-cyan-500 text-blue-950 px-8 py-3 rounded-full font-bold uppercase tracking-widest hover:bg-cyan-400 transition-all"
+            className={`px-8 py-3 rounded-full font-bold uppercase tracking-widest transition-all ${isLight ? "bg-sky-600 text-white hover:bg-sky-500" : "bg-cyan-500 text-blue-950 hover:bg-cyan-400"}`}
           >
             {t("movie_details.back_to_gallery")}
           </Link>
@@ -451,6 +482,8 @@ const MovieDetails = () => {
   const canWatchMovie = shouldUseYoutubePlayer
     ? Boolean(youtubeEmbedUrl)
     : Boolean(directPlayerVideoUrl);
+  const downloadFileName = toSafeDownloadFileName(movie.title);
+  const downloadableVideoUrl = buildMovieDownloadPath(movie.id);
   const movieSchemaDurationMinutes = extractDurationMinutes(movie.duration);
   const movieGenreList = Array.isArray(movie.genre) ? movie.genre : [];
   const breadcrumbItems = [
@@ -467,6 +500,47 @@ const MovieDetails = () => {
       url: `/movie/${movie.id}`,
     },
   ];
+  const theme = isLight
+    ? {
+      page: "bg-[#f4f8ff] text-slate-900",
+      nav: "border-slate-200 bg-white/90",
+      backBtn:
+        "border-sky-300/60 bg-sky-100 text-sky-700 hover:border-sky-400 hover:bg-sky-500 hover:text-white",
+      hero: "from-sky-200 via-sky-300 to-indigo-300",
+      heroOverlay: "bg-white/30",
+      heroGradient: "from-white/40 via-sky-100/45 to-[#f4f8ff]",
+      meta: "text-slate-700",
+      watchBtn: "bg-sky-600 hover:bg-sky-500 text-white",
+      disabledWatchBtn: "bg-slate-300 text-slate-600",
+      panel: "bg-white text-slate-800",
+      adminCard: "bg-white border border-slate-200",
+      adminTitle: "text-slate-900",
+      adminText: "text-slate-600",
+      adminBtn: "bg-sky-600 text-white hover:bg-sky-500",
+      techCard: "bg-white border border-slate-200",
+      techTitle: "text-slate-900",
+      modalOverlay: "bg-slate-900/70",
+    }
+    : {
+      page: "bg-blue-950 text-white",
+      nav: "border-white/10 bg-blue-950/85",
+      backBtn:
+        "border-cyan-300/30 bg-white/10 text-white hover:border-cyan-300 hover:bg-cyan-500 hover:text-blue-950",
+      hero: "from-blue-900 to-blue-950",
+      heroOverlay: "bg-blue-950/60",
+      heroGradient: "from-blue-800/60 via-blue-900/75 to-blue-950",
+      meta: "text-slate-300",
+      watchBtn: "bg-cyan-500 hover:bg-cyan-400 text-blue-950",
+      disabledWatchBtn: "bg-slate-500 text-white",
+      panel: "bg-white text-slate-800",
+      adminCard: "bg-blue-950 border border-white/10",
+      adminTitle: "text-white",
+      adminText: "text-cyan-100/90",
+      adminBtn: "bg-white text-blue-950 hover:bg-cyan-400",
+      techCard: "bg-slate-50 border border-slate-100",
+      techTitle: "text-blue-950",
+      modalOverlay: "bg-blue-950/95",
+    };
 
   return (
     <>
@@ -481,12 +555,12 @@ const MovieDetails = () => {
         genre={movieGenreList}
       />
       <BreadcrumbSchema items={breadcrumbItems} />
-      <div className="min-h-screen bg-blue-950 text-white font-sans relative">
-        <div className="sticky top-0 z-30 border-b border-white/10 bg-blue-950/85 backdrop-blur-md">
+      <div className={`movie-details-page min-h-screen font-sans relative ${theme.page}`}>
+        <div className={`sticky top-0 z-30 border-b backdrop-blur-md ${theme.nav}`}>
           <div className="mx-auto w-full max-w-7xl px-4 py-3 sm:px-6">
             <Link
               to={galleryPath}
-              className="inline-flex max-w-full items-center gap-2 rounded-full border border-cyan-300/30 bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.15em] text-white shadow-lg shadow-black/30 transition-all hover:border-cyan-300 hover:bg-cyan-500 hover:text-blue-950 sm:text-xs"
+              className={`inline-flex max-w-full items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-black uppercase tracking-[0.15em] shadow-lg shadow-black/30 transition-all sm:text-xs ${theme.backBtn}`}
             >
               <svg
                 className="h-4 w-4 shrink-0"
@@ -506,7 +580,7 @@ const MovieDetails = () => {
           </div>
         </div>
 
-        <section className="relative w-full pt-20 md:pt-32 pb-20 overflow-hidden bg-gradient-to-b from-blue-900 to-blue-950">
+        <section className={`relative w-full pt-20 md:pt-32 pb-20 overflow-hidden bg-gradient-to-b ${theme.hero}`}>
           {heroPreviewVideoUrl && (
             <video
               ref={heroVideoRef}
@@ -517,8 +591,8 @@ const MovieDetails = () => {
               preload="metadata"
             />
           )}
-          <div className="absolute inset-0 bg-blue-950/60" />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-blue-800/60 via-blue-900/75 to-blue-950" />
+          <div className={`absolute inset-0 ${theme.heroOverlay}`} />
+          <div className={`pointer-events-none absolute inset-0 bg-gradient-to-b ${theme.heroGradient}`} />
           <div className="relative z-10 container mx-auto px-6">
             <div className="flex flex-col md:flex-row gap-10 md:gap-16 items-center md:items-start">
               <div className="w-64 h-70 md:w-80 shrink-0 shadow-2xl rounded-[40px] overflow-hidden border-4 border-white/10">
@@ -534,28 +608,60 @@ const MovieDetails = () => {
                   {movie.title}
                 </h1>
 
-                <div className="flex justify-center md:justify-start items-center gap-6 text-slate-300 font-medium mb-10 text-lg">
+                <div className={`flex justify-center md:justify-start items-center gap-6 font-medium mb-10 text-lg ${theme.meta}`}>
                   <span>{releaseDateDisplay}</span>
                   <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></span>
                   <span>{durationDisplay}</span>
                 </div>
 
-                {canWatchMovie ? (
-                  <button
-                    type="button"
-                    onClick={() => setIsPlayerOpen(true)}
-                    className="inline-block bg-cyan-500 hover:bg-cyan-400 text-blue-950 font-black px-12 py-5 rounded-2xl transition-all shadow-lg shadow-cyan-500/20 mx-auto md:mx-0 uppercase tracking-widest text-sm"
-                  >
-                    {t("movie_details.watch_movie")}
-                  </button>
-                ) : (
-                  <button
-                    className="bg-slate-500 text-white font-black px-12 py-5 rounded-2xl transition-all mx-auto md:mx-0 uppercase tracking-widest text-sm cursor-not-allowed"
-                    disabled
-                  >
-                    {t("movie_details.watch_movie")}
-                  </button>
-                )}
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                  {canWatchMovie ? (
+                    <button
+                      type="button"
+                      onClick={() => setIsPlayerOpen(true)}
+                      className={`inline-block font-black px-12 py-5 rounded-2xl transition-all shadow-lg shadow-cyan-500/20 mx-auto md:mx-0 uppercase tracking-widest text-sm ${theme.watchBtn}`}
+                    >
+                      {t("movie_details.watch_movie")}
+                    </button>
+                  ) : (
+                    <button
+                      className={`font-black px-12 py-5 rounded-2xl transition-all mx-auto md:mx-0 uppercase tracking-widest text-sm cursor-not-allowed ${theme.disabledWatchBtn}`}
+                      disabled
+                    >
+                      {t("movie_details.watch_movie")}
+                    </button>
+                  )}
+
+                  {sessionChecked && hasSession && downloadableVideoUrl && (
+                    <a
+                      href={downloadableVideoUrl}
+                      download={downloadFileName}
+                      className={`inline-flex h-[60px] w-[60px] shrink-0 items-center justify-center self-center rounded-xl border shadow-sm backdrop-blur-sm transition ${
+                        isLight
+                          ? "border-slate-300 bg-white/95 text-slate-700 hover:border-sky-400 hover:text-sky-700"
+                          : "border-cyan-300/40 bg-slate-900/35 text-white/90 hover:border-cyan-300 hover:bg-cyan-500/20 hover:text-cyan-200"
+                      }`}
+                      aria-label={t("movie_details.download_movie", "Telecharger le film")}
+                      title={t("movie_details.download_movie", "Telecharger le film")}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="h-6 w-6"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 3v12" />
+                        <path d="m7 10 5 5 5-5" />
+                        <path d="M5 21h14" />
+                      </svg>
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -702,25 +808,25 @@ const MovieDetails = () => {
                 </div>
 
                 {sessionChecked && isAdmin && (
-                  <div className="mt-16 p-8 bg-blue-950 rounded-[40px] flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl border border-white/10">
+                  <div className={`mt-16 p-8 rounded-[40px] flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl ${theme.adminCard}`}>
                     <div>
                       <p className="text-cyan-400 font-bold text-xs uppercase tracking-widest mb-1">
                         {t("movie_details.admin_db_access")}
                       </p>
-                      <h4 className="text-white font-black text-2xl uppercase tracking-tighter">
+                      <h4 className={`font-black text-2xl uppercase tracking-tighter ${theme.adminTitle}`}>
                         {t("movie_details.admin_note")} :{" "}
                         {officialRating
                           ? `${officialRating}/5`
                           : t("movie_details.admin_not_rated")}
                       </h4>
-                      <p className="mt-2 text-sm text-cyan-100/90">
+                      <p className={`mt-2 text-sm ${theme.adminText}`}>
                         {t("movie_details.admin_comment")} :{" "}
                         {officialComment || t("movie_details.admin_no_comment")}
                       </p>
                     </div>
                     <button
                       onClick={openRatingModal}
-                      className="bg-white text-blue-950 font-black px-10 py-4 rounded-2xl hover:bg-cyan-400 transition-all uppercase tracking-widest text-sm disabled:opacity-60"
+                      className={`font-black px-10 py-4 rounded-2xl transition-all uppercase tracking-widest text-sm disabled:opacity-60 ${theme.adminBtn}`}
                       disabled={ratingLoading}
                     >
                       {ratingLoading ? "..." : t("movie_details.admin_manage_note")}
@@ -732,8 +838,8 @@ const MovieDetails = () => {
                 )}
               </div>
 
-              <div className="bg-slate-50 rounded-[40px] p-8 border border-slate-100 h-fit shadow-sm">
-                <h3 className="font-black text-blue-950 mb-8 uppercase text-sm tracking-[0.2em]">
+              <div className={`rounded-[40px] p-8 h-fit shadow-sm ${theme.techCard}`}>
+                <h3 className={`font-black mb-8 uppercase text-sm tracking-[0.2em] ${theme.techTitle}`}>
                   {t("movie_details.tech_specs")}
                 </h3>
                 <div className="space-y-6">
@@ -775,7 +881,7 @@ const MovieDetails = () => {
         {sessionChecked && isAdmin && isModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div
-              className="absolute inset-0 bg-blue-950/95 backdrop-blur-md"
+              className={`absolute inset-0 backdrop-blur-md ${theme.modalOverlay}`}
               onClick={() => setIsModalOpen(false)}
             ></div>
             <div className="relative bg-white rounded-[50px] p-12 w-full max-w-sm shadow-2xl text-center">

@@ -43,18 +43,6 @@ function resolvePhaseCountdown(sitePhase, nowTs, language) {
 }
 
 const VARIANTS = {
-  home: {
-    phase3ClassName:
-      "mt-8 mx-auto max-w-xl rounded-2xl border border-slate-300/20 bg-slate-900/45 backdrop-blur-md px-6 py-4 text-xs font-semibold uppercase tracking-[0.15em] text-slate-200",
-    phase3Text: {
-      en: "Phase 3 active - no countdown",
-      fr: "Phase 3 active - pas de decompte",
-    },
-    wrapperClassName:
-      "mt-8 mx-auto max-w-3xl rounded-2xl border border-cyan-300/30 bg-slate-900/45 backdrop-blur-md p-5",
-    counterLabelClassName: "text-[10px] uppercase tracking-[0.2em] text-slate-200",
-    nextTextClassName: "mt-4 text-xs text-slate-100/90",
-  },
   callForProject: {
     phase3ClassName:
       "mb-10 rounded-2xl border border-blue-300/30 bg-blue-900/40 p-4 text-sm text-blue-100",
@@ -73,9 +61,10 @@ export default function PhaseCountdownBanner({
   sitePhase,
   language = "fr",
   variant = "home",
+  isLight = false,
 }) {
   const [nowTs, setNowTs] = useState(0);
-  const styles = VARIANTS[variant] || VARIANTS.home;
+  const styles = VARIANTS[variant] || VARIANTS.callForProject;
 
   useEffect(() => {
     const immediateId = setTimeout(() => setNowTs(Date.now()), 0);
@@ -97,10 +86,73 @@ export default function PhaseCountdownBanner({
 
   if (!sitePhase || nowTs <= 0) return null;
 
+  const useLargeInlineCountdown =
+    variant === "home" || variant === "callForProject";
+
   if (!phaseCountdown) {
+    if (useLargeInlineCountdown) return null;
     return (
       <div className={styles.phase3ClassName}>
         {language === "en" ? styles.phase3Text.en : styles.phase3Text.fr}
+      </div>
+    );
+  }
+
+  if (useLargeInlineCountdown) {
+    const containerClassName =
+      variant === "callForProject" ? "mt-0" : "mt-8";
+    const homeTitleClassName = isLight
+      ? "text-cyan-800"
+      : "text-cyan-200";
+    const homeValueClassName = isLight
+      ? "text-slate-950"
+      : "text-white [text-shadow:0_8px_30px_rgba(56,189,248,0.35)]";
+    const homeLabelClassName = isLight
+      ? "text-cyan-700"
+      : "text-cyan-300/90";
+    const homeSeparatorClassName = isLight
+      ? "text-cyan-700/70"
+      : "text-cyan-300/70";
+    const homeNextClassName = isLight
+      ? "text-slate-700"
+      : "text-slate-100/90";
+    const units = [
+      { label: language === "en" ? "D" : "J", value: countdown.days },
+      { label: "H", value: countdown.hours },
+      { label: "M", value: countdown.minutes },
+      { label: "S", value: countdown.seconds },
+    ];
+
+    return (
+      <div className={containerClassName}>
+        <p className={`text-center text-[10px] font-black uppercase tracking-[0.25em] sm:text-[11px] ${homeTitleClassName}`}>
+          {phaseCountdown.title}
+        </p>
+
+        <div className="mt-3 flex flex-wrap items-end justify-center gap-y-3 sm:gap-y-4">
+          {units.map((item, index) => (
+            <div key={item.label} className="flex items-end">
+              <div className="min-w-[68px] text-center sm:min-w-[88px]">
+                <div className={`tabular-nums text-5xl font-black leading-none tracking-tight sm:text-6xl md:text-7xl ${homeValueClassName}`}>
+                  {String(item.value).padStart(2, "0")}
+                </div>
+                <div className={`mt-1 text-[10px] font-black uppercase tracking-[0.24em] ${homeLabelClassName}`}>
+                  {item.label}
+                </div>
+              </div>
+              {index < units.length - 1 ? (
+                <span className={`mb-2 px-1 text-2xl font-black sm:text-3xl ${homeSeparatorClassName}`}>:</span>
+              ) : null}
+            </div>
+          ))}
+        </div>
+
+        <p className={`mt-3 text-center text-[11px] uppercase tracking-[0.18em] sm:text-xs ${homeNextClassName}`}>
+          {language === "en" ? "Next phase:" : "Prochaine phase:"}{" "}
+          <span className={isLight ? "font-black text-slate-900" : "font-black text-cyan-100"}>
+            {phaseCountdown.next}
+          </span>
+        </p>
       </div>
     );
   }

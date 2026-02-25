@@ -1231,7 +1231,7 @@ export default function Dashboard() {
                     <button
                       type="button"
                       onClick={() => setIsFilmFilterModalOpen(true)}
-                      className="h-[56px] min-w-[56px] rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-900/30 transition-colors hover:bg-blue-700"
+                      className="h-[56px] min-w-[56px] rounded-2xl bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-900/35 transition-colors hover:bg-cyan-400"
                       aria-label="Ouvrir les filtres avancés"
                       title="Filtres avancés"
                     >
@@ -1256,7 +1256,7 @@ export default function Dashboard() {
                         <button
                           type="button"
                           onClick={() => setSortBy("default")}
-                          className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-blue-700 hover:bg-blue-100"
+                          className="rounded-full bg-cyan-400/20 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-cyan-200 hover:bg-cyan-400/30"
                         >
                           Tri: {activeSortLabel} x
                         </button>
@@ -1528,7 +1528,7 @@ export default function Dashboard() {
 
             <div className="relative w-full max-w-md rounded-[36px] bg-white p-8 shadow-2xl">
               <div className="mb-8 flex items-center justify-between">
-                <h2 className="text-2xl font-black uppercase tracking-tight text-white">
+                <h2 className="text-2xl font-black uppercase tracking-tight text-cyan-700">
                   Filtres avancés
                 </h2>
                 <button
@@ -1580,7 +1580,7 @@ export default function Dashboard() {
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                       Note (min - max)
                     </p>
-                    <span className="text-sm font-black text-blue-700">
+                    <span className="text-sm font-black text-cyan-700">
                       {minRating} - {maxRating}
                     </span>
                   </div>

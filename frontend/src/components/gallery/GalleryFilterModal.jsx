@@ -1,5 +1,6 @@
 export default function GalleryFilterModal({
   isOpen,
+  isLight,
   onClose,
   sortOptions,
   sortBy,
@@ -15,18 +16,34 @@ export default function GalleryFilterModal({
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-blue-950/80 backdrop-blur-md"
+        className={`absolute inset-0 backdrop-blur-md ${
+          isLight ? "bg-[#031233]/62" : "bg-cyan-950/80"
+        }`}
         onClick={onClose}
       ></div>
 
-      <div className="relative w-full max-w-md rounded-[36px] bg-white p-8 shadow-2xl">
+      <div
+        className={`relative w-full max-w-md rounded-[36px] p-8 shadow-2xl ${
+          isLight
+            ? "border border-cyan-200/80 bg-[linear-gradient(150deg,rgba(248,252,255,0.98),rgba(230,243,255,0.95))]"
+            : "bg-white"
+        }`}
+      >
         <div className="mb-8 flex items-center justify-between">
-          <h2 className="text-2xl font-black uppercase tracking-tight text-blue-950">
+          <h2
+            className={`text-2xl font-black uppercase tracking-tight ${
+              isLight ? "text-cyan-900" : "text-cyan-700"
+            }`}
+          >
             Filtres Avances
           </h2>
           <button
             onClick={onClose}
-            className="rounded-full bg-slate-100 p-2 text-slate-500 hover:bg-slate-200"
+            className={`rounded-full p-2 ${
+              isLight
+                ? "bg-cyan-100 text-cyan-700 hover:bg-cyan-200"
+                : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+            }`}
           >
             <svg
               className="h-5 w-5"
@@ -56,8 +73,12 @@ export default function GalleryFilterModal({
                   onClick={() => onSortChange(option.value)}
                   className={`rounded-xl py-3 text-[10px] font-black uppercase tracking-widest transition-colors ${
                     sortBy === option.value
-                      ? "bg-blue-950 text-cyan-300"
-                      : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                      ? isLight
+                        ? "bg-[#0b1f46] text-cyan-300"
+                        : "bg-cyan-950 text-cyan-200"
+                      : isLight
+                        ? "bg-cyan-50 text-slate-600 hover:bg-cyan-100"
+                        : "bg-slate-100 text-slate-500 hover:bg-slate-200"
                   }`}
                 >
                   {option.label}
@@ -71,7 +92,11 @@ export default function GalleryFilterModal({
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                 Note (min - max)
               </p>
-              <span className="text-sm font-black text-blue-700">
+              <span
+                className={`text-sm font-black ${
+                  isLight ? "text-cyan-800" : "text-cyan-700"
+                }`}
+              >
                 {minRating} - {maxRating}
               </span>
             </div>
@@ -87,7 +112,7 @@ export default function GalleryFilterModal({
                   step="1"
                   value={minRating}
                   onChange={(event) => onMinRatingChange(Number(event.target.value))}
-                  className="w-full accent-blue-600"
+                  className={`w-full ${isLight ? "accent-cyan-600" : "accent-cyan-500"}`}
                 />
               </div>
               <div>
@@ -101,7 +126,7 @@ export default function GalleryFilterModal({
                   step="1"
                   value={maxRating}
                   onChange={(event) => onMaxRatingChange(Number(event.target.value))}
-                  className="w-full accent-blue-600"
+                  className={`w-full ${isLight ? "accent-cyan-600" : "accent-cyan-500"}`}
                 />
               </div>
             </div>
@@ -109,7 +134,11 @@ export default function GalleryFilterModal({
 
           <button
             onClick={onReset}
-            className="w-full rounded-2xl border border-red-200 bg-red-50 py-3 text-xs font-black uppercase tracking-widest text-red-600 hover:bg-red-100"
+            className={`w-full rounded-2xl border py-3 text-xs font-black uppercase tracking-widest ${
+              isLight
+                ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+            }`}
           >
             Reinitialiser
           </button>

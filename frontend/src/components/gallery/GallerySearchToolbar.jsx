@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 
 export default function GallerySearchToolbar({
   searchRef,
+  isLight,
   searchQuery,
   onSearchQueryChange,
   onSearchFocus,
@@ -24,11 +25,11 @@ export default function GallerySearchToolbar({
 }) {
   return (
     <div className="w-full max-w-2xl">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-grow" ref={searchRef}>
           <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
             <svg
-              className="w-5 h-5 text-slate-400"
+              className={`h-5 w-5 ${isLight ? "text-cyan-700/70" : "text-slate-400"}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -52,17 +53,31 @@ export default function GallerySearchToolbar({
             onChange={(event) => {
               onSearchQueryChange(event.target.value);
             }}
-            className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-slate-100 rounded-3xl text-lg font-bold text-blue-950 focus:bg-white focus:border-blue-600 outline-none transition-all shadow-sm"
+            className={`w-full rounded-3xl border-2 py-5 pl-14 pr-6 text-lg font-bold outline-none transition-all ${
+              isLight
+                ? "border-cyan-100 bg-[linear-gradient(145deg,rgba(248,252,255,0.96),rgba(232,244,255,0.92))] text-slate-900 shadow-[0_14px_34px_rgba(2,23,55,0.12)] focus:border-cyan-400 focus:bg-white"
+                : "border-slate-100 bg-slate-50 text-blue-950 shadow-sm focus:border-blue-600 focus:bg-white"
+            }`}
           />
 
           {showSuggestions && suggestions.length > 0 && (
-            <div className="absolute z-[100] w-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
+            <div
+              className={`absolute z-[100] mt-2 w-full overflow-hidden rounded-2xl border shadow-2xl ${
+                isLight
+                  ? "border-cyan-100 bg-[linear-gradient(145deg,rgba(248,252,255,0.98),rgba(231,243,255,0.95))]"
+                  : "border-slate-100 bg-white"
+              }`}
+            >
               {suggestions.map((movie) => (
                 <Link
                   key={movie.id}
                   to={`/movie/${movie.id}`}
                   onClick={onSuggestionClick}
-                  className="w-full flex items-center gap-4 px-6 py-4 hover:bg-blue-50 transition-colors border-b last:border-none border-slate-50"
+                  className={`flex w-full items-center gap-4 border-b px-6 py-4 transition-colors last:border-none ${
+                    isLight
+                      ? "border-cyan-50 hover:bg-cyan-50/70"
+                      : "border-slate-50 hover:bg-blue-50"
+                  }`}
                 >
                   <img
                     src={movie.img}
@@ -70,7 +85,11 @@ export default function GallerySearchToolbar({
                     className="w-16 h-9 object-cover rounded-lg shadow-md"
                   />
                   <div>
-                    <p className="font-black text-blue-950 text-sm uppercase tracking-tighter">
+                    <p
+                      className={`font-black text-sm uppercase tracking-tighter ${
+                        isLight ? "text-blue-950" : "text-cyan-400"
+                      }`}
+                    >
                       {movie.title}
                     </p>
                   </div>
@@ -82,7 +101,11 @@ export default function GallerySearchToolbar({
 
         <button
           onClick={onOpenFilters}
-          className="h-[68px] min-w-[68px] rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-300/40 hover:bg-blue-700 transition-colors"
+          className={`h-12 w-full rounded-2xl text-white shadow-lg transition-colors sm:h-[68px] sm:min-w-[68px] sm:w-auto ${
+            isLight
+              ? "bg-gradient-to-r from-cyan-500 to-sky-500 shadow-cyan-400/40 hover:brightness-105"
+              : "bg-cyan-500 shadow-cyan-900/40 hover:bg-cyan-400"
+          }`}
           aria-label="Ouvrir les filtres avances"
           title="Filtres avances"
         >
@@ -107,7 +130,11 @@ export default function GallerySearchToolbar({
           {sortBy !== "default" && (
             <button
               onClick={onResetSort}
-              className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-blue-700 hover:bg-blue-100"
+              className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${
+                isLight
+                  ? "bg-cyan-100 text-cyan-800 hover:bg-cyan-200"
+                  : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+              }`}
             >
               Tri: {activeSortLabel} x
             </button>
@@ -124,7 +151,13 @@ export default function GallerySearchToolbar({
       )}
 
       {canManagePhaseSelection && (
-        <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-black uppercase tracking-wider text-blue-900">
+        <div
+          className={`mt-4 rounded-2xl border px-4 py-3 text-xs font-black uppercase tracking-wider ${
+            isLight
+              ? "border-cyan-200/80 bg-cyan-100/70 text-cyan-900"
+              : "border-blue-100 bg-blue-50 text-blue-900"
+          }`}
+        >
           {canManagePhase2Selection ? "Selection phase 2" : "Selection jury phase 3"}: {phase2SelectedCount}/{phaseSelectionMinRequired}
         </div>
       )}

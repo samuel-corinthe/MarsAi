@@ -4,6 +4,7 @@ import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
   ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
 
@@ -302,6 +303,30 @@ export async function deleteObjectFromPublicUrl(publicUrl) {
     skipped: false,
     reason: null,
     objectKey,
+  };
+}
+
+export async function downloadObjectFromPublicUrl(publicUrl) {
+  const objectKey = extractObjectKeyFromPublicUrl(publicUrl);
+  if (!objectKey) {
+    return null;
+  }
+
+  const client = getS3Client();
+  const response = await client.send(
+    new GetObjectCommand({
+      Bucket: bucketName,
+      Key: objectKey,
+    }),
+  );
+
+  return {
+    objectKey,
+    stream: response?.Body || null,
+    contentType: response?.ContentType || "application/octet-stream",
+    contentLength: Number.isFinite(Number(response?.ContentLength))
+      ? Number(response.ContentLength)
+      : null,
   };
 }
 

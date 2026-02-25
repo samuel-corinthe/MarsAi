@@ -509,7 +509,7 @@ const Gallery = () => {
       <BreadcrumbSchema items={breadcrumbItems} />
       <div
         className={`min-h-screen flex flex-col font-sans ${
-          isLight ? "bg-blue-950 text-slate-100" : "bg-[#05060f] text-slate-100"
+          isLight ? "bg-[#07163a] text-slate-100" : "bg-[#05060f] text-slate-100"
         }`}
       >
         <GalleryHeroCarousel
@@ -525,23 +525,24 @@ const Gallery = () => {
         />
 
         <section className="relative flex-grow">
-          <div className={`absolute -top-20 left-0 w-full h-20 ${isLight ? "bg-blue-950" : "bg-[#05060f]"}`}>
+          <div className={`absolute -top-20 left-0 w-full h-20 ${isLight ? "bg-[#05060f]" : "bg-[#05060f]"}`}>
             <div
               className={`w-full h-full rounded-tl-[80px] md:rounded-tl-[120px] ${
-                isLight ? "bg-white" : "bg-slate-900"
+                isLight ? "bg-[#e7f1ff]" : "bg-slate-900"
               }`}
             ></div>
           </div>
 
           <div
             className={`min-h-[500px] w-full relative z-20 pb-20 ${
-              isLight ? "bg-white" : "bg-slate-900"
+              isLight ? "bg-[#e7f1ff]" : "bg-slate-900"
             }`}
           >
             <div className="container mx-auto px-6 md:px-20 pt-8">
               <div className="flex flex-col items-center gap-8 mb-16">
                 <GallerySearchToolbar
                   searchRef={searchRef}
+                  isLight={isLight}
                   searchQuery={searchQuery}
                   onSearchQueryChange={(value) => {
                     setSearchQuery(value);
@@ -612,6 +613,7 @@ const Gallery = () => {
                       <GalleryMovieCard
                         key={movie.id}
                         movie={movie}
+                        isLight={isLight}
                         flagSrc={flagSrc}
                         flagAlt={flagAlt}
                         canManagePhaseSelection={canManagePhaseSelection}
@@ -628,7 +630,7 @@ const Gallery = () => {
                   })}
                 </div>
               ) : (
-                <div className={`py-20 text-center font-black uppercase tracking-widest text-xl ${isLight ? "text-slate-300" : "text-slate-400"}`}>
+                <div className={`py-20 text-center font-black uppercase tracking-widest text-xl ${isLight ? "text-slate-500" : "text-slate-400"}`}>
                   {t("gallery.no_results", "Aucun resultat trouve")}
                 </div>
               )}
@@ -647,6 +649,7 @@ const Gallery = () => {
 
       <GalleryFilterModal
         isOpen={isFilterModalOpen}
+        isLight={isLight}
         onClose={() => setIsFilterModalOpen(false)}
         sortOptions={sortOptions}
         sortBy={sortBy}

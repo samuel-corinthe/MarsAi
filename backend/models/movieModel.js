@@ -6,9 +6,19 @@ export async function findAllMovies(pool) {
         c.alpha2 AS country_alpha2,
         c.name_fr AS country_name_fr,
         c.name_eng AS country_name_eng,
-        c.flag_path AS country_flag_path
+        c.flag_path AS country_flag_path,
+        COALESCE(r.avg_rating, 0) AS avg_rating,
+        COALESCE(r.notes_count, 0) AS notes_count
       FROM movies m
       LEFT JOIN countries c ON c.id = m.country_id
+      LEFT JOIN (
+        SELECT
+          movie_id,
+          AVG(score) AS avg_rating,
+          COUNT(*) AS notes_count
+        FROM movie_admin_ratings
+        GROUP BY movie_id
+      ) r ON r.movie_id = m.id
       ORDER BY m.id DESC
     `,
   );
@@ -24,9 +34,19 @@ export async function findMovieById(pool, movieId) {
         c.alpha2 AS country_alpha2,
         c.name_fr AS country_name_fr,
         c.name_eng AS country_name_eng,
-        c.flag_path AS country_flag_path
+        c.flag_path AS country_flag_path,
+        COALESCE(r.avg_rating, 0) AS avg_rating,
+        COALESCE(r.notes_count, 0) AS notes_count
       FROM movies m
       LEFT JOIN countries c ON c.id = m.country_id
+      LEFT JOIN (
+        SELECT
+          movie_id,
+          AVG(score) AS avg_rating,
+          COUNT(*) AS notes_count
+        FROM movie_admin_ratings
+        GROUP BY movie_id
+      ) r ON r.movie_id = m.id
       WHERE m.id = ?
       LIMIT 1
     `,

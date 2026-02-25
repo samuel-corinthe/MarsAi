@@ -215,6 +215,64 @@ export async function getAgendaPosts() {
   return await res.json();
 }
 
+function stripHtmlToText(html = "") {
+  const raw = String(html || "");
+  if (!raw) return "";
+
+  if (typeof window !== "undefined" && typeof window.DOMParser !== "undefined") {
+    const doc = new window.DOMParser().parseFromString(raw, "text/html");
+    return String(doc?.body?.textContent || "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  return raw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function truncateText(value = "", max = 180) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  return text.length > max ? `${text.slice(0, max).trim()}...` : text;
+}
+
+export async function getRecentAgendaEvents({ lang = "fr", limit = 5 } = {}) {
+  const agendaCategoryId = String(lang).toLowerCase() === "en" ? 51 : 14;
+  const safeLimit = Math.max(1, Math.min(20, Number(limit) || 5));
+
+  const url =
+    "https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-json/wp/v2/posts"
+    + `?categories=${agendaCategoryId}`
+    + `&_embed`
+    + `&per_page=${safeLimit}`
+    + `&order=desc`
+    + `&orderby=date`
+    + `&lang=${encodeURIComponent(lang)}`;
+
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Agenda events WP error ${res.status}`);
+
+  const posts = await res.json();
+  if (!Array.isArray(posts)) return [];
+
+  return posts.slice(0, safeLimit).map((post) => {
+    const titleHtml = String(post?.title?.rendered || "").trim();
+    const excerptHtml = String(
+      post?.excerpt?.rendered || post?.content?.rendered || "",
+    ).trim();
+    const featuredImage =
+      post?._embedded?.["wp:featuredmedia"]?.[0]?.source_url || "";
+
+    return {
+      id: Number(post?.id) || 0,
+      title: stripHtmlToText(titleHtml),
+      excerpt: truncateText(stripHtmlToText(excerptHtml), 180),
+      image: String(featuredImage || "").trim(),
+      wpLink: String(post?.link || "").trim(),
+      date: String(post?.date || "").trim(),
+    };
+  });
+}
+
 export async function getMoviesPaginated({
   page,
   pageSize,

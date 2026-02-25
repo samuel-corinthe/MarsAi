@@ -300,6 +300,8 @@ function mapMovieRow(row) {
     countryFlagPath,
     countryId: Number.isFinite(Number(row.country_id)) ? Number(row.country_id) : null,
     viewCount: Number.isFinite(Number(row.view_count)) ? Number(row.view_count) : 0,
+    rating: Number.isFinite(Number(row.avg_rating)) ? Number(row.avg_rating) : 0,
+    notesCount: Number.isFinite(Number(row.notes_count)) ? Number(row.notes_count) : 0,
     submittedBy: decodeHtmlEntities(row.submitted_by || ""),
     submissionStatus: String(row.submission_status || ""),
     videoUrl: playbackVideoUrl,

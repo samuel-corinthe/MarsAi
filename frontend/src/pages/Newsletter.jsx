@@ -3,9 +3,11 @@ import Seo from "../components/Seo";
 import { BreadcrumbSchema } from "../components/Schema";
 import { useTranslation } from "react-i18next";
 import { subscribeNewsletterForm } from "../api";
+import { useTheme } from "../context/ThemeContext";
 
 export default function Newsletter() {
   const { t, i18n } = useTranslation();
+  const { isLight } = useTheme();
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -123,6 +125,71 @@ export default function Newsletter() {
       url: "/newsletter",
     },
   ];
+  const theme = isLight
+    ? {
+      page: "site-page newsletter-page text-slate-900",
+      heroOverlay: "from-sky-300/20 via-transparent to-transparent",
+      badge: "border-sky-300/70 bg-sky-100 text-sky-700",
+      title: "text-slate-900",
+      titleAccent: "from-sky-600 via-cyan-500 to-indigo-500",
+      subtitle: "text-slate-600",
+      statsBorder: "border-sky-200/80",
+      statValue: "from-sky-600 to-cyan-500",
+      statLabel: "text-slate-500",
+      panel: "border-slate-200 bg-white",
+      panelTitle: "text-slate-900",
+      panelSubtitle: "text-slate-600",
+      label: "text-slate-700",
+      input: "border-slate-300 bg-white text-slate-900 focus:border-sky-400",
+      checkboxText: "text-slate-600 group-hover:text-slate-800",
+      helper: "text-slate-500",
+      helperLink: "text-sky-700 hover:underline",
+      success: "border-emerald-300/70 bg-emerald-50",
+      successTitle: "text-emerald-700",
+      successText: "text-emerald-800",
+      successHint: "text-emerald-700/90",
+      sectionBorder: "border-sky-200/80",
+      sectionTitle: "text-slate-900",
+      sectionSubtitle: "text-slate-600",
+      benefitCard: "border-slate-200 bg-white hover:border-sky-300/70",
+      benefitTitle: "text-slate-900",
+      benefitText: "text-slate-600",
+      faqCard: "border-slate-200 bg-white",
+      faqTitle: "text-slate-900",
+      faqText: "text-slate-600",
+    }
+    : {
+      page: "min-h-screen bg-[#020617] text-slate-100",
+      heroOverlay: "from-cyan-400/10 via-transparent to-transparent",
+      badge: "border-cyan-300/35 bg-cyan-400/10 text-cyan-200",
+      title: "text-white",
+      titleAccent: "from-cyan-300 via-sky-300 to-indigo-300",
+      subtitle: "text-slate-300",
+      statsBorder: "border-slate-800/80",
+      statValue: "from-cyan-300 to-sky-300",
+      statLabel: "text-slate-400",
+      panel: "border-slate-700 bg-gradient-to-br from-[#0f172a] to-[#020617]",
+      panelTitle: "text-white",
+      panelSubtitle: "text-slate-400",
+      label: "text-slate-300",
+      input: "border-slate-700 bg-slate-900 text-white focus:border-cyan-300",
+      checkboxText: "text-slate-400 group-hover:text-slate-300",
+      helper: "text-slate-500",
+      helperLink: "text-cyan-300 hover:underline",
+      success: "border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-teal-500/10",
+      successTitle: "text-white",
+      successText: "text-slate-300",
+      successHint: "text-slate-400",
+      sectionBorder: "border-slate-800/80",
+      sectionTitle: "text-white",
+      sectionSubtitle: "text-slate-400",
+      benefitCard: "border-slate-700 bg-gradient-to-br from-[#0f172a] to-[#020617] hover:border-cyan-300/55",
+      benefitTitle: "text-white",
+      benefitText: "text-slate-400",
+      faqCard: "border-slate-700 bg-[#0f172a]/90",
+      faqTitle: "text-white",
+      faqText: "text-slate-400",
+    };
 
   return (
     <>
@@ -132,11 +199,11 @@ export default function Newsletter() {
       />
       <BreadcrumbSchema items={breadcrumbItems} />
 
-      <div className="min-h-screen bg-[#020617] text-slate-100">
+      <div className={theme.page}>
         <section className="relative overflow-hidden px-4 pb-20 pt-32">
-          <div className="absolute inset-0 bg-gradient-to-b from-cyan-400/10 via-transparent to-transparent"></div>
+          <div className={`absolute inset-0 bg-gradient-to-b ${theme.heroOverlay}`}></div>
           <div className="relative z-10 mx-auto max-w-4xl space-y-6 text-center">
-            <div className="inline-flex items-center space-x-2 rounded-full border border-cyan-300/35 bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-200">
+            <div className={`inline-flex items-center space-x-2 rounded-full border px-4 py-2 text-sm font-semibold ${theme.badge}`}>
               <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
                 <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
@@ -144,28 +211,28 @@ export default function Newsletter() {
               <span>{t("newsletter.hero.badge")}</span>
             </div>
 
-            <h1 className="text-4xl font-black uppercase leading-tight text-white md:text-6xl lg:text-7xl">
+            <h1 className={`text-4xl font-black uppercase leading-tight md:text-6xl lg:text-7xl ${theme.title}`}>
               {t("newsletter.hero.title_main")}
               <br />
-              <span className="bg-gradient-to-r from-cyan-300 via-sky-300 to-indigo-300 bg-clip-text text-transparent">
+              <span className={`bg-gradient-to-r bg-clip-text text-transparent ${theme.titleAccent}`}>
                 {t("newsletter.hero.title_accent")}
               </span>
             </h1>
 
-            <p className="mx-auto max-w-2xl text-lg leading-relaxed text-slate-300 md:text-xl">
+            <p className={`mx-auto max-w-2xl text-lg leading-relaxed md:text-xl ${theme.subtitle}`}>
               {t("newsletter.hero.description")}
             </p>
           </div>
         </section>
 
-        <section className="border-y border-slate-800/80 py-12 px-4">
+        <section className={`border-y py-12 px-4 ${theme.statsBorder}`}>
           <div className="mx-auto grid max-w-4xl grid-cols-3 gap-4 md:gap-8">
             {stats.map((stat, index) => (
               <div key={index} className="space-y-2 text-center">
-                <div className="text-3xl font-black text-transparent bg-gradient-to-r from-cyan-300 to-sky-300 bg-clip-text md:text-5xl">
+                <div className={`text-3xl font-black text-transparent bg-gradient-to-r bg-clip-text md:text-5xl ${theme.statValue}`}>
                   {stat.number}
                 </div>
-                <div className="text-xs text-slate-400 md:text-base">
+                <div className={`text-xs md:text-base ${theme.statLabel}`}>
                   {stat.label}
                 </div>
               </div>
@@ -176,17 +243,17 @@ export default function Newsletter() {
         <section className="px-4 py-20">
           <div className="mx-auto max-w-2xl">
             {!isSubmitted ? (
-              <div className="rounded-3xl border border-slate-700 bg-gradient-to-br from-[#0f172a] to-[#020617] p-6 shadow-2xl md:p-12">
+              <div className={`rounded-3xl border p-6 shadow-2xl md:p-12 ${theme.panel}`}>
                 <div className="mb-8 text-center">
-                  <h2 className="mb-3 text-3xl font-black uppercase text-white md:text-4xl">
+                  <h2 className={`mb-3 text-3xl font-black uppercase md:text-4xl ${theme.panelTitle}`}>
                     {t("newsletter.form.title")}
                   </h2>
-                  <p className="text-slate-400">{t("newsletter.form.subtitle")}</p>
+                  <p className={theme.panelSubtitle}>{t("newsletter.form.subtitle")}</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-300">
+                    <label className={`mb-2 block text-sm font-medium ${theme.label}`}>
                       {t("newsletter.form.label_name")}
                     </label>
                     <input
@@ -195,13 +262,13 @@ export default function Newsletter() {
                       value={formData.firstName}
                       onChange={handleInputChange}
                       required
-                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none transition-all focus:border-cyan-300"
+                      className={`w-full rounded-lg border px-4 py-3 outline-none transition-all ${theme.input}`}
                       placeholder={t("newsletter.form.placeholder_name")}
                     />
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-300">
+                    <label className={`mb-2 block text-sm font-medium ${theme.label}`}>
                       {t("newsletter.form.label_email")}
                     </label>
                     <input
@@ -210,13 +277,13 @@ export default function Newsletter() {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
-                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none transition-all focus:border-cyan-300"
+                      className={`w-full rounded-lg border px-4 py-3 outline-none transition-all ${theme.input}`}
                       placeholder={t("newsletter.form.placeholder_email")}
                     />
                   </div>
 
                   <div className="space-y-3">
-                    <label className="mb-3 block text-sm font-medium text-slate-300">
+                    <label className={`mb-3 block text-sm font-medium ${theme.label}`}>
                       {t("newsletter.form.label_preferences")}
                     </label>
                     {["news", "films", "events", "partners"].map((id) => (
@@ -230,18 +297,18 @@ export default function Newsletter() {
                           onChange={() => handleCheckboxChange(id)}
                           className="h-5 w-5 cursor-pointer rounded border-slate-700 bg-slate-900 text-cyan-300"
                         />
-                        <span className="text-slate-400 transition-colors group-hover:text-slate-300">
+                        <span className={`transition-colors ${theme.checkboxText}`}>
                           {t(`newsletter.preferences.${id}`)}
                         </span>
                       </label>
                     ))}
                   </div>
 
-                  <p className="text-xs leading-relaxed text-slate-500">
+                  <p className={`text-xs leading-relaxed ${theme.helper}`}>
                     {t("newsletter.form.rgpd")}
                     <a
                       href="/privacy"
-                      className="ml-1 text-cyan-300 hover:underline"
+                      className={`ml-1 ${theme.helperLink}`}
                     >
                       {t("newsletter.form.privacy_link")}
                     </a>
@@ -257,14 +324,14 @@ export default function Newsletter() {
                 </form>
               </div>
             ) : (
-              <div className="animate-fadeIn rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 p-6 text-center md:p-12">
-                <h3 className="mb-4 text-3xl font-black uppercase text-white md:text-4xl">
+              <div className={`animate-fadeIn rounded-3xl border p-6 text-center md:p-12 ${theme.success}`}>
+                <h3 className={`mb-4 text-3xl font-black uppercase md:text-4xl ${theme.successTitle}`}>
                   {t("newsletter.form.success_title")}
                 </h3>
-                <p className="mb-6 text-lg text-slate-300">
+                <p className={`mb-6 text-lg ${theme.successText}`}>
                   {t("newsletter.form.success_msg")}
                 </p>
-                <p className="text-sm text-slate-400">
+                <p className={`text-sm ${theme.successHint}`}>
                   {t("newsletter.form.success_hint")}
                 </p>
               </div>
@@ -272,13 +339,13 @@ export default function Newsletter() {
           </div>
         </section>
 
-        <section className="border-t border-slate-800/80 px-4 py-20">
+        <section className={`border-t px-4 py-20 ${theme.sectionBorder}`}>
           <div className="mx-auto max-w-6xl">
             <div className="mb-16 text-center">
-              <h2 className="mb-4 text-3xl font-black uppercase text-white md:text-5xl">
+              <h2 className={`mb-4 text-3xl font-black uppercase md:text-5xl ${theme.sectionTitle}`}>
                 {t("newsletter.benefits.title")}
               </h2>
-              <p className="text-xl text-slate-400">
+              <p className={`text-xl ${theme.sectionSubtitle}`}>
                 {t("newsletter.benefits.subtitle")}
               </p>
             </div>
@@ -286,15 +353,15 @@ export default function Newsletter() {
               {benefitCards.map((benefit) => (
                 <div
                   key={benefit.id}
-                  className="group rounded-2xl border border-slate-700 bg-gradient-to-br from-[#0f172a] to-[#020617] p-6 transition-all hover:border-cyan-300/55 md:p-8"
+                  className={`group rounded-2xl border p-6 transition-all md:p-8 ${theme.benefitCard}`}
                 >
                   <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-300 to-sky-400 text-slate-950 transition-transform group-hover:scale-110">
                     {benefit.icon}
                   </div>
-                  <h3 className="mb-3 text-xl font-bold text-white md:text-2xl">
+                  <h3 className={`mb-3 text-xl font-bold md:text-2xl ${theme.benefitTitle}`}>
                     {t(`newsletter.benefits.${benefit.id}.title`)}
                   </h3>
-                  <p className="leading-relaxed text-slate-400">
+                  <p className={`leading-relaxed ${theme.benefitText}`}>
                     {t(`newsletter.benefits.${benefit.id}.desc`)}
                   </p>
                 </div>
@@ -305,19 +372,19 @@ export default function Newsletter() {
 
         <section className="px-4 py-20">
           <div className="mx-auto max-w-3xl">
-            <h2 className="mb-12 text-center text-3xl font-black uppercase text-white md:text-4xl">
+            <h2 className={`mb-12 text-center text-3xl font-black uppercase md:text-4xl ${theme.sectionTitle}`}>
               {t("newsletter.faq.title")}
             </h2>
             <div className="space-y-4">
               {["q1", "q2", "q3"].map((key) => (
                 <div
                   key={key}
-                  className="rounded-xl border border-slate-700 bg-[#0f172a]/90 p-6"
+                  className={`rounded-xl border p-6 ${theme.faqCard}`}
                 >
-                  <h3 className="mb-2 text-lg font-bold text-white">
+                  <h3 className={`mb-2 text-lg font-bold ${theme.faqTitle}`}>
                     {t(`newsletter.faq.${key}`)}
                   </h3>
-                  <p className="leading-relaxed text-slate-400">
+                  <p className={`leading-relaxed ${theme.faqText}`}>
                     {t(`newsletter.faq.${key.replace("q", "a")}`)}
                   </p>
                 </div>

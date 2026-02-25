@@ -5,6 +5,7 @@ import { getVideoMetadata, validateVideoFrontend, VIDEO_CONSTRAINTS } from '../u
 import { validateForm, FORM_CONSTRAINTS, exceedsMaxLength } from '../utils/formvalidation';
 import { useTranslation } from 'react-i18next';
 import { getCurrentSessionUser, getSitePhaseState } from '../api';
+import { useTheme } from '../context/ThemeContext';
 import 'altcha';
 
 function normalizeBasePath(value = '') {
@@ -233,6 +234,7 @@ function isTerminalYoutubeStatus(status) {
 
 export default function YoutubeUpload() {
     const { t, i18n } = useTranslation();
+    const { isLight } = useTheme();
     const [file, setFile] = useState(null);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -897,11 +899,34 @@ export default function YoutubeUpload() {
     const errorSummaryEntries = Object.entries(errors).filter(([field, message]) => (
         currentStepFields.includes(field) && String(message || '').trim().length > 0
     ));
+    const uploadSteps = [
+        { id: 1, badge: t('upload.form.part_1_badge', 'Partie 1/3'), title: t('upload.form.part_1_title', 'Informations participant') },
+        { id: 2, badge: t('upload.form.part_2_badge', 'Partie 2/3'), title: t('upload.form.part_2_title', 'Informations film') },
+        { id: 3, badge: t('upload.form.part_3_badge', 'Partie 3/3'), title: t('upload.form.part_3_title', 'Fichiers et verification') },
+    ];
+    const stepProgressPercent = Math.round(((currentStep - 1) / Math.max(1, uploadSteps.length - 1)) * 100);
+    const shellClass = isLight
+        ? 'border-slate-200/90 bg-white/95 text-slate-900 shadow-[0_20px_55px_rgba(15,23,42,0.14)]'
+        : 'border-slate-500/35 bg-slate-900/55 text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.35)]';
+    const headerClass = isLight
+        ? 'border-slate-200/90 text-slate-900'
+        : 'border-slate-500/35 text-white';
+    const headerSubtitleClass = isLight ? 'text-slate-600' : 'text-slate-300';
+    const progressPanelClass = isLight
+        ? 'border-slate-200/90 bg-slate-50/90'
+        : 'border-slate-500/45 bg-slate-900/60';
+    const progressTrackClass = isLight ? 'bg-slate-200' : 'bg-slate-700/70';
+    const stepDefaultClass = isLight
+        ? 'border-slate-300/90 bg-white'
+        : 'border-slate-600/70 bg-slate-900/35';
+    const stepDefaultBadgeClass = isLight ? 'bg-slate-200 text-slate-700' : 'bg-slate-700 text-slate-200';
+    const stepMetaClass = isLight ? 'text-slate-500' : 'text-slate-300';
+    const stepTitleClass = isLight ? 'text-slate-700' : 'text-slate-100';
 
     if (uploadAccessLoading) {
         return (
             <div className="section app-container upload-modern-page py-12">
-                <div className="upload-modern-shell max-w-2xl mx-auto rounded-2xl border border-slate-500/35 bg-slate-900/55 p-8 text-center text-slate-100 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
+                <div className={`upload-modern-shell max-w-2xl mx-auto rounded-2xl border p-8 text-center ${shellClass}`}>
                     Verification des droits d upload...
                 </div>
             </div>
@@ -920,16 +945,76 @@ export default function YoutubeUpload() {
                 <div className="absolute -left-20 top-52 h-72 w-72 rounded-full bg-indigo-500/12 blur-3xl"></div>
             </div>
 
-            <div className="upload-modern-shell relative mx-auto max-w-2xl overflow-hidden rounded-2xl border border-slate-500/35 bg-slate-900/55 shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-                <div className="border-b border-slate-500/35 p-8 text-white">
+            <div className={`upload-modern-shell relative mx-auto max-w-2xl overflow-hidden rounded-2xl border ${shellClass}`}>
+                <div className={`border-b p-8 ${headerClass}`}>
                     <p className="inline-flex rounded-full border border-cyan-300/45 bg-cyan-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
                         Upload
                     </p>
                     <h1 className="text-3xl font-bold">{t('upload.page_title')}</h1>
-                    <p className="mt-2 text-slate-300">{t('upload.page_subtitle')}</p>
+                    <p className={`mt-2 ${headerSubtitleClass}`}>{t('upload.page_subtitle')}</p>
                 </div>
 
                 <form onSubmit={handleUpload} className="upload-modern-form p-8 space-y-6" noValidate>
+                    <div className={`rounded-xl border p-4 md:p-5 ${progressPanelClass}`}>
+                        <div className="mb-3 flex items-center justify-between gap-2">
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
+                                {t('upload.form.progress_label', 'Avancement du formulaire')}
+                            </p>
+                            <p className={`text-xs font-semibold ${stepMetaClass}`}>
+                                {currentStep}/{uploadSteps.length}
+                            </p>
+                        </div>
+
+                        <div className={`h-2 w-full overflow-hidden rounded-full ${progressTrackClass}`}>
+                            <div
+                                className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-sky-400 transition-all duration-300 ease-out"
+                                style={{ width: `${stepProgressPercent}%` }}
+                            />
+                        </div>
+
+                        <ol className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+                            {uploadSteps.map((step) => {
+                                const isCurrent = step.id === currentStep;
+                                const isDone = step.id < currentStep;
+                                return (
+                                    <li
+                                        key={step.id}
+                                        aria-current={isCurrent ? 'step' : undefined}
+                                        className={`rounded-lg border px-3 py-2 transition-all ${
+                                            isCurrent
+                                                ? 'border-cyan-300/65 bg-cyan-400/12'
+                                                : isDone
+                                                    ? 'border-emerald-300/50 bg-emerald-400/12'
+                                                    : stepDefaultClass
+                                        }`}
+                                    >
+                                        <div className="flex items-start gap-2">
+                                            <span
+                                                className={`mt-[2px] inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${
+                                                    isCurrent
+                                                        ? 'bg-cyan-300 text-slate-900'
+                                                        : isDone
+                                                            ? 'bg-emerald-300 text-slate-900'
+                                                            : stepDefaultBadgeClass
+                                                }`}
+                                            >
+                                                {isDone ? '✓' : step.id}
+                                            </span>
+                                            <div className="min-w-0">
+                                                <p className={`text-[10px] font-black uppercase tracking-[0.14em] ${stepMetaClass}`}>
+                                                    {step.badge}
+                                                </p>
+                                                <p className={`mt-0.5 text-xs font-semibold leading-snug ${stepTitleClass}`}>
+                                                    {step.title}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </li>
+                                );
+                            })}
+                        </ol>
+                    </div>
+
                     <div className="space-y-6">
                     <section className={`rounded-xl border border-slate-200 p-4 md:p-5 space-y-6 ${currentStep === 1 ? '' : 'hidden'}`}>
                         <div className="space-y-1">
@@ -1836,7 +1921,44 @@ export default function YoutubeUpload() {
                     </div>
                 </form>
 
-                <style>{`
+                <style>{isLight ? `
+                    .upload-modern-page {
+                        background: linear-gradient(180deg, #f4f8ff 0%, #ebf4ff 55%, #f8fcff 100%);
+                    }
+
+                    .upload-modern-shell {
+                        backdrop-filter: blur(10px);
+                    }
+
+                    .upload-modern-form .rounded-xl.border {
+                        border-color: rgba(148, 163, 184, 0.45);
+                        background: rgba(255, 255, 255, 0.92);
+                    }
+
+                    .upload-modern-form label {
+                        color: #334155 !important;
+                    }
+
+                    .upload-modern-form input:not([type='file']):not(.sr-only),
+                    .upload-modern-form textarea,
+                    .upload-modern-form select {
+                        border-color: rgba(148, 163, 184, 0.55) !important;
+                        background: #ffffff !important;
+                        color: #0f172a !important;
+                    }
+
+                    .upload-modern-form input::placeholder,
+                    .upload-modern-form textarea::placeholder {
+                        color: #64748b !important;
+                    }
+
+                    .upload-modern-form input:focus,
+                    .upload-modern-form textarea:focus,
+                    .upload-modern-form select:focus {
+                        border-color: rgba(14, 165, 233, 0.75) !important;
+                        box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.24) !important;
+                    }
+                ` : `
                     .upload-modern-page {
                         background: linear-gradient(180deg, #020617 0%, #102042 52%, #020617 100%);
                     }

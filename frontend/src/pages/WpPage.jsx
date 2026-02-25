@@ -1,14 +1,15 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
 import { BreadcrumbSchema, ArticleSchema } from "../components/Schema";
-import { getPageBySlug, sendContactForm } from "../api";
+import { getPageBySlug, getSitePhaseState, sendContactForm } from "../api";
 import Home from "./Home";
 import JuryWpage from "./jury";
 import NotFound from "./NotFound";
 import LegalPage from "./LegalPage";
 import CallForProject from "./Appel a projet";
+import { useTheme } from "../context/ThemeContext";
 
 const normalizeAgendaTagKey = (value = "") =>
   String(value)
@@ -164,6 +165,7 @@ const findMatchingAgendaArticle = (previousArticle, items, targetLanguage) => {
 export default function WpPage({ isHome = false, fixedSlug = null }) {
   const { slug: routeSlug } = useParams();
   const { t, i18n } = useTranslation();
+  const { isLight } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -226,10 +228,12 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   const [error, setError] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [datePage, setDatePage] = useState(0);
+  const [canAccessCallForProject, setCanAccessCallForProject] = useState(null);
 
   const [agendaItems, setAgendaItems] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedArticle, setSelectedArticle] = useState(null);
+  const isCallForProjectRoute = slug === "appel-a-projet" || slug === "call-for-project";
 
   const getCategoryColor = (catId) => {
     const colors = {
@@ -315,6 +319,31 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
       .replace(".", "");
     return { day: d.getDate(), monthShort, monthLong, weekday, weekdayShort };
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      if (!isCallForProjectRoute) {
+        setCanAccessCallForProject(true);
+        return;
+      }
+
+      try {
+        const sitePhase = await getSitePhaseState();
+        if (cancelled) return;
+        const phaseKey = String(sitePhase?.currentPhase || "phase_1").toLowerCase();
+        setCanAccessCallForProject(phaseKey === "phase_1");
+      } catch {
+        if (cancelled) return;
+        setCanAccessCallForProject(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isCallForProjectRoute]);
 
   useEffect(() => {
     let cancelled = false;
@@ -522,6 +551,13 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     }
   };
 
+  if (isCallForProjectRoute && canAccessCallForProject === false) {
+    return <Navigate to={i18n.language === "en" ? "/movies" : "/films"} replace />;
+  }
+  if (isCallForProjectRoute && canAccessCallForProject == null) {
+    return <div className="app-container page">Chargement</div>;
+  }
+
   if (loading) return <div className="app-container page">Chargement</div>;
   if (error) {
     return (
@@ -551,6 +587,76 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
       url: `/${slug}`,
     },
   ];
+  const contactTheme = isLight
+    ? {
+      page: "from-[#dbe9ff] via-[#d4e5ff] to-[#eaf4ff] text-slate-900",
+      badge: "border-cyan-300/65 bg-cyan-100/80 text-cyan-800",
+      iconBorder: "border-cyan-400/70",
+      title: "text-slate-950",
+      subtitle: "text-slate-700",
+      divider: "border-cyan-200/80",
+      card: "border-cyan-200/80 bg-[linear-gradient(150deg,rgba(248,252,255,0.95),rgba(230,243,255,0.9))] shadow-[0_20px_50px_rgba(2,23,55,0.16)]",
+      label: "text-slate-700",
+      input:
+        "border-cyan-200/85 bg-[#f7fbff] text-slate-900 placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-300/40",
+      iconText: "text-cyan-700",
+      infoTitle: "text-cyan-800",
+      infoText: "text-slate-700",
+      mapBorder: "border-cyan-200/80",
+    }
+    : {
+      page: "from-[#020617] via-[#0b1732] to-[#020617] text-slate-100",
+      badge: "border-cyan-300/45 bg-cyan-400/10 text-cyan-200",
+      iconBorder: "border-cyan-400/70",
+      title: "text-white",
+      subtitle: "text-slate-300",
+      divider: "border-cyan-300/20",
+      card: "border-slate-500/35 bg-slate-900/45 shadow-[0_20px_60px_rgba(0,0,0,0.35)]",
+      label: "text-slate-300",
+      input:
+        "border-slate-500/45 bg-slate-950/65 text-white placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-400/30",
+      iconText: "text-cyan-200",
+      infoTitle: "text-cyan-200",
+      infoText: "text-slate-300",
+      mapBorder: "border-slate-500/35",
+    };
+  const agendaTheme = isLight
+    ? {
+      page: "from-[#dbe9ff] via-[#d4e5ff] to-[#eaf4ff] text-slate-900",
+      badge: "border-cyan-300/65 bg-cyan-100/80 text-cyan-800",
+      title: "text-slate-950",
+      subtitle: "text-slate-700",
+      backBtn: "border-cyan-300/60 bg-cyan-100/80 text-cyan-800 hover:bg-cyan-200/70",
+      glassCard: "border-cyan-200/80 bg-[linear-gradient(150deg,rgba(248,252,255,0.95),rgba(230,243,255,0.9))] shadow-[0_20px_50px_rgba(2,23,55,0.14)]",
+      articleTitle: "text-slate-950",
+      articleBody: "prose prose-slate mt-6 max-w-none prose-headings:text-slate-950 prose-p:text-slate-700 prose-a:text-cyan-800 prose-strong:text-slate-950",
+      pill: "border-cyan-300/65 bg-cyan-100/80 text-cyan-800",
+      empty: "text-slate-500",
+      dateCurrent: "border-cyan-300/70 bg-gradient-to-br from-cyan-300 to-sky-300 text-slate-900 shadow-lg",
+      dateDefault: "border-cyan-200/80 bg-[#f7fbff] text-slate-700 hover:border-cyan-300/70 hover:bg-cyan-100/70",
+      cardTitle: "text-slate-950",
+      cardText: "text-slate-700",
+      cta: "text-cyan-700 hover:text-cyan-600",
+      dateCardText: "text-slate-700",
+    }
+    : {
+      page: "from-[#020617] via-[#0b1732] to-[#020617] text-slate-100",
+      badge: "border-cyan-300/45 bg-cyan-400/10 text-cyan-200",
+      title: "text-white",
+      subtitle: "text-slate-300",
+      backBtn: "border-cyan-300/35 bg-cyan-400/10 text-cyan-100 hover:bg-cyan-400/20",
+      glassCard: "border-slate-500/35 bg-slate-900/45 shadow-[0_20px_60px_rgba(0,0,0,0.35)]",
+      articleTitle: "text-white",
+      articleBody: "agenda-article prose prose-invert mt-6 max-w-none prose-headings:text-white prose-p:text-slate-200 prose-a:text-cyan-200 prose-strong:text-white",
+      pill: "border-cyan-300/35 bg-cyan-400/10 text-cyan-100",
+      empty: "text-slate-300",
+      dateCurrent: "border-cyan-200/65 bg-gradient-to-br from-cyan-400 to-sky-500 text-slate-950 shadow-lg",
+      dateDefault: "border-slate-500/35 bg-slate-950/55 text-white hover:border-cyan-300/45 hover:bg-cyan-400/10",
+      cardTitle: "text-white",
+      cardText: "text-slate-300",
+      cta: "text-cyan-200 hover:text-cyan-100",
+      dateCardText: "text-white",
+    };
 
   if (slug === "appel-a-projet" || slug === "call-for-project") {
     return <CallForProject page={page} />;
@@ -571,7 +677,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
 
   if (slug === "contact") {
     return (
-      <main className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#020617] via-[#0b1732] to-[#020617] text-slate-100">
+      <main className={`wp-contact-page relative min-h-screen overflow-hidden bg-gradient-to-b ${contactTheme.page}`}>
         <Seo title={seoTitle} description={seoDescription} lang={seoLang} />
         <BreadcrumbSchema items={breadcrumbItems} />
         <div className="pointer-events-none absolute inset-0">
@@ -581,10 +687,10 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
 
         <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-10">
           <div>
-            <p className="inline-flex rounded-full border border-cyan-300/45 bg-cyan-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
+            <p className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] ${contactTheme.badge}`}>
               {t("contact.badge")}
             </p>
-            <div className="mt-4 h-16 w-16 rounded-full border-4 border-cyan-400/70 flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+            <div className={`mt-4 h-16 w-16 rounded-full border-4 flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.35)] ${contactTheme.iconBorder}`}>
               <svg
                 className="w-7 h-7"
                 fill="none"
@@ -600,24 +706,24 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               </svg>
             </div>
             <h1
-              className="mt-4 text-3xl font-black uppercase tracking-tight text-white sm:text-4xl md:text-5xl"
+              className={`mt-4 text-3xl font-black uppercase tracking-tight sm:text-4xl md:text-5xl ${contactTheme.title}`}
               dangerouslySetInnerHTML={{ __html: page.title.rendered }}
             />
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300 sm:text-base">
+            <p className={`mt-3 max-w-2xl text-sm leading-relaxed sm:text-base ${contactTheme.subtitle}`}>
               {seoDescription?.replace(/<[^>]+>/g, "")}
             </p>
           </div>
 
-          <div className="mt-10 grid gap-8 border-t border-cyan-300/20 pt-8 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className={`mt-10 grid gap-8 border-t pt-8 lg:grid-cols-[1.1fr_0.9fr] ${contactTheme.divider}`}>
             <form
               onSubmit={handleSubmit}
-              className="space-y-5 rounded-[28px] border border-slate-500/35 bg-slate-900/45 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:p-8"
+              className={`space-y-5 rounded-[28px] border p-6 sm:p-8 ${contactTheme.card}`}
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="flex flex-col gap-2">
                   <label
                     htmlFor="name"
-                    className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-300"
+                    className={`text-[10px] font-black uppercase tracking-[0.22em] ${contactTheme.label}`}
                   >
                     {t("contact.form.label_name")}
                   </label>
@@ -627,7 +733,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                     name="name"
                     placeholder={t("contact.form.placeholder_name")}
                     autoComplete="name"
-                    className="w-full rounded-2xl border border-slate-500/45 bg-slate-950/65 px-4 py-3 text-white placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-400/30 outline-none transition"
+                    className={`w-full rounded-2xl border px-4 py-3 outline-none transition ${contactTheme.input}`}
                     required
                   />
                 </div>
@@ -635,7 +741,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                 <div className="flex flex-col gap-2">
                   <label
                     htmlFor="email"
-                    className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-300"
+                    className={`text-[10px] font-black uppercase tracking-[0.22em] ${contactTheme.label}`}
                   >
                     {t("contact.form.label_email")}
                   </label>
@@ -645,7 +751,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                     name="email"
                     placeholder={t("contact.form.placeholder_email")}
                     autoComplete="email"
-                    className="w-full rounded-2xl border border-slate-500/45 bg-slate-950/65 px-4 py-3 text-white placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-400/30 outline-none transition"
+                    className={`w-full rounded-2xl border px-4 py-3 outline-none transition ${contactTheme.input}`}
                     required
                   />
                 </div>
@@ -654,7 +760,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               <div className="flex flex-col gap-2">
                 <label
                   htmlFor="subject"
-                  className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-300"
+                  className={`text-[10px] font-black uppercase tracking-[0.22em] ${contactTheme.label}`}
                 >
                   {t("contact.form.label_subject")}
                 </label>
@@ -663,7 +769,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                   id="subject"
                   name="subject"
                   placeholder={t("contact.form.placeholder_subject")}
-                  className="w-full rounded-2xl border border-slate-500/45 bg-slate-950/65 px-4 py-3 text-white placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-400/30 outline-none transition"
+                  className={`w-full rounded-2xl border px-4 py-3 outline-none transition ${contactTheme.input}`}
                   required
                 />
               </div>
@@ -671,7 +777,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               <div className="flex flex-col gap-2">
                 <label
                   htmlFor="message"
-                  className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-300"
+                  className={`text-[10px] font-black uppercase tracking-[0.22em] ${contactTheme.label}`}
                 >
                   {t("contact.form.label_message")}
                 </label>
@@ -680,7 +786,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                   name="message"
                   rows="6"
                   placeholder={t("contact.form.placeholder_message")}
-                  className="w-full resize-none rounded-2xl border border-slate-500/45 bg-slate-950/65 px-4 py-3 text-white placeholder:text-slate-400 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-400/30 outline-none transition"
+                  className={`w-full resize-none rounded-2xl border px-4 py-3 outline-none transition ${contactTheme.input}`}
                   required
                 ></textarea>
               </div>
@@ -697,11 +803,11 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
             </form>
 
             <div className="space-y-6">
-              <div className="space-y-4 rounded-[28px] border border-slate-500/35 bg-slate-900/45 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:p-6">
+              <div className={`space-y-4 rounded-[28px] border p-5 sm:p-6 ${contactTheme.card}`}>
                 <div className="flex items-center gap-3">
                   <div className="w-11 h-11 rounded-full border border-cyan-400/40 flex items-center justify-center">
                     <svg
-                      className="w-5 h-5 text-cyan-200"
+                      className={`w-5 h-5 ${contactTheme.iconText}`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -727,16 +833,16 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-cyan-200">
+                    <p className={`text-[10px] font-black uppercase tracking-[0.22em] ${contactTheme.infoTitle}`}>
                       {t("contact.info.location_title")}
                     </p>
-                    <p className="text-sm text-slate-300">
+                    <p className={`text-sm ${contactTheme.infoText}`}>
                       {t("contact.info.address")}
                     </p>
                   </div>
                 </div>
 
-                <div className="aspect-[4/3] overflow-hidden rounded-2xl border border-slate-500/35">
+                <div className={`aspect-[4/3] overflow-hidden rounded-2xl border ${contactTheme.mapBorder}`}>
                   <iframe
                     title="Carte MarsAI"
                     src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2903.003971135914!2d5.368781999999999!3d43.3141763!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x12c9c13ddc0211b9%3A0xd1642ae4b32c4bc4!2s%C3%89cole%20La%20Plateforme_%20Marseille%20-%20Entr%C3%A9e%20Sud!5e0!3m2!1sfr!2sfr!4v1770039690847!5m2!1sfr!2sfr"
@@ -757,13 +863,23 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
 
   const isAgenda = slug === "agenda" || slug === "schedule";
   const selectedParts = selectedDate ? formatDateParts(selectedDate) : null;
+  const genericPageTheme = isLight
+    ? {
+      page: "min-h-screen bg-gradient-to-b from-[#dbe9ff] via-[#d4e5ff] to-[#eaf4ff] text-slate-900 p-4 md:p-12",
+      prose: "prose prose-slate max-w-none rounded-xl border border-cyan-200/80 bg-[linear-gradient(150deg,rgba(248,252,255,0.95),rgba(230,243,255,0.9))] p-8 shadow-[0_20px_50px_rgba(2,23,55,0.14)]",
+    }
+    : {
+      page: "min-h-screen bg-gradient-to-b from-[#020617] via-[#0b1732] to-[#020617] text-slate-100 p-4 md:p-12",
+      prose:
+        "prose prose-invert max-w-none rounded-xl border border-cyan-300/20 bg-slate-900/55 p-8 shadow-[0_20px_60px_rgba(0,0,0,0.35)]",
+    };
 
   return (
     <main
       className={
         isAgenda
-          ? "relative min-h-screen overflow-hidden bg-gradient-to-b from-[#020617] via-[#0b1732] to-[#020617] text-slate-100"
-          : "min-h-screen bg-[#fcfcfc] text-[#333] p-4 md:p-12"
+          ? `wp-agenda-page relative min-h-screen overflow-hidden bg-gradient-to-b ${agendaTheme.page}`
+          : genericPageTheme.page
       }
     >
       <Seo title={seoTitle} description={seoDescription} lang={seoLang} />
@@ -792,7 +908,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
         {isAgenda ? (
           <>
             <div className="pt-10 pb-8">
-              <p className="inline-flex rounded-full border border-cyan-300/45 bg-cyan-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
+              <p className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] ${agendaTheme.badge}`}>
                 {t("agenda.subtitle")}
               </p>
               <div className="mt-4 flex items-center gap-4">
@@ -812,11 +928,11 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                   </svg>
                 </div>
                 <h1
-                  className="text-3xl font-black uppercase tracking-tight text-white sm:text-4xl md:text-5xl"
+                  className={`text-3xl font-black uppercase tracking-tight sm:text-4xl md:text-5xl ${agendaTheme.title}`}
                   dangerouslySetInnerHTML={{ __html: page.title.rendered }}
                 />
               </div>
-              <p className="mt-3 max-w-3xl text-sm leading-relaxed text-slate-300 sm:text-base">
+              <p className={`mt-3 max-w-3xl text-sm leading-relaxed sm:text-base ${agendaTheme.subtitle}`}>
                 {seoDescription?.replace(/<[^>]+>/g, "")}
               </p>
             </div>
@@ -825,13 +941,13 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               <div className="mt-2">
                 <button
                   onClick={() => setSelectedArticle(null)}
-                  className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-300/35 bg-cyan-400/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-100 transition hover:bg-cyan-400/20"
+                  className={`mb-6 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition ${agendaTheme.backBtn}`}
                 >
                   <span aria-hidden="true">←</span>
                   {t("agenda.back_to_agenda")}
                 </button>
 
-                <article className="rounded-[30px] border border-slate-500/35 bg-slate-900/45 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:p-8">
+                <article className={`rounded-[30px] border p-5 sm:p-8 ${agendaTheme.glassCard}`}>
                   {selectedArticle.image ? (
                     <div className="relative mb-6 aspect-[16/9] overflow-hidden rounded-3xl border border-slate-500/35">
                       <img
@@ -845,17 +961,17 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                   ) : null}
 
                   <h2
-                    className="text-2xl font-black uppercase tracking-tight text-white sm:text-3xl"
+                    className={`text-2xl font-black uppercase tracking-tight sm:text-3xl ${agendaTheme.articleTitle}`}
                     dangerouslySetInnerHTML={{
                       __html: selectedArticle.titre,
                     }}
                   />
 
                   <div className="mt-5 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.15em]">
-                    <span className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1 text-cyan-100">
+                    <span className={`rounded-full border px-3 py-1 ${agendaTheme.pill}`}>
                       {t("agenda.hour_label")}: {selectedArticle.heure}
                     </span>
-                    <span className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1 text-cyan-100">
+                    <span className={`rounded-full border px-3 py-1 ${agendaTheme.pill}`}>
                       {t("agenda.place_label")}: {selectedArticle.lieu}
                     </span>
                     {selectedArticle.subCategories?.map((cat) => (
@@ -873,7 +989,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                   </div>
 
                   <div
-                    className="agenda-article prose prose-invert mt-6 max-w-none prose-headings:text-white prose-p:text-slate-200 prose-a:text-cyan-200 prose-strong:text-white"
+                    className={agendaTheme.articleBody}
                     dangerouslySetInnerHTML={{
                       __html: selectedArticle.contenu,
                     }}
@@ -882,7 +998,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               </div>
             ) : (
               <>
-                <div className="mt-4 rounded-[28px] border border-slate-500/35 bg-slate-900/45 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:p-6">
+                <div className={`mt-4 rounded-[28px] border p-4 sm:p-6 ${agendaTheme.glassCard}`}>
                   {canPaginateDates && (
                     <div className="mb-4 flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-100">
                       <button
@@ -924,8 +1040,8 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                             onClick={() => setSelectedDate(dateStr)}
                             className={`h-24 w-28 rounded-2xl border px-2 py-2 text-center transition sm:h-28 sm:w-32 ${
                               isSelected
-                                ? "border-cyan-200/65 bg-gradient-to-br from-cyan-400 to-sky-500 text-slate-950 shadow-lg"
-                                : "border-slate-500/35 bg-slate-950/55 text-white hover:border-cyan-300/45 hover:bg-cyan-400/10"
+                                ? agendaTheme.dateCurrent
+                                : agendaTheme.dateDefault
                             }`}
                           >
                             <p className="text-[9px] font-black uppercase tracking-[0.18em] opacity-80">
@@ -946,7 +1062,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                         );
                       })
                     ) : (
-                      <div className="py-6 text-sm text-slate-300">
+                      <div className={`py-6 text-sm ${agendaTheme.empty}`}>
                         {t("agenda.no_events_available")}
                       </div>
                     )}
@@ -955,14 +1071,14 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
 
                 {selectedParts && (
                   <div className="mt-6 flex justify-center">
-                    <div className="rounded-3xl border border-slate-500/35 bg-slate-900/45 px-7 py-4 text-center shadow-[0_20px_60px_rgba(0,0,0,0.35)]">
-                      <p className="text-4xl font-black leading-none text-white">
+                    <div className={`rounded-3xl border px-7 py-4 text-center ${agendaTheme.glassCard}`}>
+                      <p className={`text-4xl font-black leading-none ${agendaTheme.dateCardText}`}>
                         {selectedParts.day}
                       </p>
-                      <p className="mt-1 text-xs font-black uppercase tracking-[0.2em] text-slate-300">
+                      <p className={`mt-1 text-xs font-black uppercase tracking-[0.2em] ${agendaTheme.subtitle}`}>
                         {selectedParts.weekday}
                       </p>
-                      <p className="mt-1 text-[11px] font-black uppercase tracking-[0.16em] text-cyan-200">
+                      <p className={`mt-1 text-[11px] font-black uppercase tracking-[0.16em] ${agendaTheme.badge.includes("text-sky") ? "text-sky-700" : "text-cyan-200"}`}>
                         {selectedParts.monthLong}
                       </p>
                     </div>
@@ -974,7 +1090,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                     activeEvents.map((ev) => (
                       <article
                         key={ev.id}
-                        className="group rounded-[28px] border border-slate-500/35 bg-slate-900/45 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)] transition hover:-translate-y-1 hover:border-cyan-300/45"
+                        className={`group rounded-[28px] border p-4 transition hover:-translate-y-1 ${agendaTheme.glassCard}`}
                       >
                         <div className="relative mb-4 h-36 overflow-hidden rounded-2xl border border-slate-500/35 bg-slate-950/60">
                           {ev.image ? (
@@ -985,7 +1101,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                               loading="lazy"
                             />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">
+                            <div className={`flex h-full w-full items-center justify-center text-[10px] font-black uppercase tracking-[0.2em] ${agendaTheme.empty}`}>
                               {t("agenda.event_badge")}
                             </div>
                           )}
@@ -1008,25 +1124,25 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                         </div>
 
                         <h3
-                          className="text-lg font-black uppercase tracking-tight text-white"
+                          className={`text-lg font-black uppercase tracking-tight ${agendaTheme.cardTitle}`}
                           dangerouslySetInnerHTML={{ __html: ev.titre }}
                         />
-                        <p className="mt-2 text-sm leading-relaxed text-slate-300">
+                        <p className={`mt-2 text-sm leading-relaxed ${agendaTheme.cardText}`}>
                           {ev.resume}
                         </p>
 
                         <div className="mt-4 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-[0.14em]">
-                          <span className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1 text-cyan-100">
+                          <span className={`rounded-full border px-3 py-1 ${agendaTheme.pill}`}>
                             {t("agenda.hour_label")}: {ev.heure}
                           </span>
-                          <span className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1 text-cyan-100">
+                          <span className={`rounded-full border px-3 py-1 ${agendaTheme.pill}`}>
                             {t("agenda.place_label")}: {ev.lieu}
                           </span>
                         </div>
 
                         <button
                           onClick={() => setSelectedArticle(ev)}
-                          className="mt-4 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200 transition hover:text-cyan-100"
+                          className={`mt-4 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] transition ${agendaTheme.cta}`}
                         >
                           <span>{t("agenda.read_article")}</span>
                           <span aria-hidden="true">➙</span>
@@ -1034,7 +1150,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                       </article>
                     ))
                   ) : (
-                    <div className="col-span-full rounded-[28px] border border-slate-500/35 bg-slate-900/45 p-8 text-center text-slate-300">
+                    <div className={`col-span-full rounded-[28px] border p-8 text-center ${agendaTheme.glassCard} ${agendaTheme.empty}`}>
                       {t("agenda.no_events_today")}
                     </div>
                   )}
@@ -1044,7 +1160,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
           </>
         ) : (
           <div
-            className="prose prose-slate max-w-none bg-white p-8 rounded-xl border border-[#eaeaea]"
+            className={genericPageTheme.prose}
             dangerouslySetInnerHTML={{ __html: page.content.rendered }}
           />
         )}

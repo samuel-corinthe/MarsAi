@@ -3,6 +3,7 @@ import useHomeModelViewerController from "../controllers/useHomeModelViewerContr
 export default function HomeModelViewer({
   src,
   poster,
+  fallbackSrc = "/images/robot.png",
   className = "",
   alt = "Objet 3D",
   only = "all",
@@ -11,14 +12,16 @@ export default function HomeModelViewer({
     wrapperRef,
     ready,
     shouldRender,
+    canRender3D,
     canAutoRotate,
     interactionPrompt,
   } = useHomeModelViewerController({ src, only });
 
-  if (!src) return null;
+  if (!src && !fallbackSrc) return null;
   if (!shouldRender) return null;
 
   const autoRotateProps = canAutoRotate ? { "auto-rotate": "" } : {};
+  const show3D = Boolean(src && canRender3D && ready);
 
   return (
     <div
@@ -27,7 +30,7 @@ export default function HomeModelViewer({
       aria-hidden="true"
       style={{ touchAction: "pan-y" }}
     >
-      {ready ? (
+      {show3D ? (
         <model-viewer
           {...autoRotateProps}
           src={src}
@@ -44,7 +47,17 @@ export default function HomeModelViewer({
           style={{ width: "100%", height: "100%" }}
         />
       ) : (
-        <div className="w-full h-full rounded-full bg-gradient-to-br from-cyan-400/30 via-blue-500/10 to-transparent border border-cyan-300/30 shadow-[0_20px_80px_rgba(0,0,0,0.45)]" />
+        fallbackSrc ? (
+          <img
+            src={fallbackSrc}
+            alt={alt}
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full rounded-2xl border border-cyan-300/30 object-cover shadow-[0_20px_80px_rgba(0,0,0,0.45)]"
+          />
+        ) : (
+          <div className="h-full w-full rounded-2xl border border-cyan-300/30 bg-gradient-to-br from-cyan-400/30 via-blue-500/10 to-transparent shadow-[0_20px_80px_rgba(0,0,0,0.45)]" />
+        )
       )}
     </div>
   );

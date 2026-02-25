@@ -26,6 +26,7 @@ export default function Navbar() {
   const [utilityMenuOpen, setUtilityMenuOpen] = useState(false);
   const [hideGalleryForVisitors, setHideGalleryForVisitors] = useState(false);
   const [hideSubmitForVisitors, setHideSubmitForVisitors] = useState(false);
+  const [hideCallForProjects, setHideCallForProjects] = useState(false);
   const [hasSession, setHasSession] = useState(false);
 
   useEffect(() => {
@@ -38,6 +39,17 @@ export default function Navbar() {
     setMobileMenuOpen(false);
     setUtilityMenuOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,12 +67,14 @@ export default function Navbar() {
         const hasAdminSession = role === "admin" || role === "superadmin";
 
         setHasSession(Boolean(sessionPayload?.authenticated) || Boolean(sessionPayload?.user));
+        setHideCallForProjects(phaseKey === "phase_2" || phaseKey === "phase_3");
         setHideGalleryForVisitors(phaseKey === "phase_1" && !hasAdminSession);
         setHideSubmitForVisitors(
           (phaseKey === "phase_2" || phaseKey === "phase_3") && !hasAdminSession,
         );
       } catch {
         if (cancelled) return;
+        setHideCallForProjects(false);
         setHideGalleryForVisitors(false);
         setHideSubmitForVisitors(false);
         setHasSession(false);
@@ -209,9 +223,11 @@ export default function Navbar() {
     [t, i18n.language],
   );
 
-  const visibleMainNav = hideGalleryForVisitors
-    ? mainNav.filter((item) => item.id !== "films")
-    : mainNav;
+  const visibleMainNav = mainNav.filter((item) => {
+    if (hideGalleryForVisitors && item.id === "films") return false;
+    if (hideCallForProjects && item.id === "call") return false;
+    return true;
+  });
   const mobileNavItems = useMemo(() => {
     const merged = [...visibleMainNav, ...utilityNav];
     const seen = new Set();
@@ -228,8 +244,8 @@ export default function Navbar() {
       className={`sticky top-0 z-[80] border-b transition-all duration-300 ${
         isLight
           ? (isScrolled
-            ? "border-sky-300/55 bg-white/95 shadow-[0_10px_30px_rgba(15,23,42,0.14)] backdrop-blur-xl"
-            : "border-sky-200/80 bg-white/90 backdrop-blur-md")
+            ? "border-cyan-300/60 bg-[linear-gradient(120deg,rgba(235,245,255,0.94),rgba(219,235,255,0.9))] shadow-[0_12px_32px_rgba(2,132,199,0.2)] backdrop-blur-xl"
+            : "border-cyan-200/70 bg-[linear-gradient(120deg,rgba(244,250,255,0.9),rgba(230,242,255,0.86))] backdrop-blur-md")
           : (isScrolled
             ? "border-cyan-300/30 bg-slate-950/92 shadow-[0_12px_40px_rgba(2,6,23,0.55)] backdrop-blur-xl"
             : "border-slate-700/60 bg-slate-950/72 backdrop-blur-md")
@@ -244,8 +260,8 @@ export default function Navbar() {
               </svg>
             </span>
             <span className="flex flex-col leading-none">
-              <span className={`text-xl font-black uppercase tracking-tight ${isLight ? "text-slate-900" : "text-white"}`}>marsAI</span>
-              <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${isLight ? "text-sky-700/90" : "text-cyan-300/90"}`}>
+              <span className={`text-xl font-black uppercase tracking-tight ${isLight ? "text-slate-950" : "text-white"}`}>marsAI</span>
+              <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${isLight ? "text-cyan-700/90" : "text-cyan-300/90"}`}>
                 Festival 2026
               </span>
             </span>
@@ -260,9 +276,9 @@ export default function Navbar() {
                   item.id === "call" ? "tracking-[0.08em]" : "tracking-[0.12em]"
                 } transition-colors ${
                   isActive(item.path)
-                    ? (isLight ? "bg-sky-100 text-sky-700" : "bg-cyan-400/16 text-cyan-200")
+                    ? (isLight ? "bg-cyan-100/80 text-cyan-800" : "bg-cyan-400/16 text-cyan-200")
                     : (isLight
-                      ? "text-slate-700 hover:bg-sky-50 hover:text-sky-700"
+                      ? "text-slate-700 hover:bg-cyan-50/80 hover:text-cyan-800"
                       : "text-slate-200/90 hover:bg-slate-800/70 hover:text-white")
                 }`}
               >
@@ -276,7 +292,7 @@ export default function Navbar() {
                 onClick={() => setUtilityMenuOpen((prev) => !prev)}
                 className={`inline-flex items-center gap-1 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-black uppercase tracking-[0.12em] ${
                   isLight
-                    ? "text-slate-700 hover:bg-sky-50 hover:text-sky-700"
+                    ? "text-slate-700 hover:bg-cyan-50/80 hover:text-cyan-800"
                     : "text-slate-200/90 hover:bg-slate-800/70 hover:text-white"
                 }`}
               >
@@ -295,7 +311,7 @@ export default function Navbar() {
               {utilityMenuOpen && (
                 <div className={`absolute right-0 mt-2 w-64 overflow-hidden rounded-2xl p-2 ${
                   isLight
-                    ? "border border-sky-200 bg-white shadow-[0_18px_44px_rgba(15,23,42,0.16)]"
+                    ? "border border-cyan-200/80 bg-[linear-gradient(145deg,rgba(248,252,255,0.96),rgba(226,240,255,0.92))] shadow-[0_18px_44px_rgba(2,132,199,0.16)]"
                     : "border border-slate-600/70 bg-slate-900/95 shadow-[0_18px_44px_rgba(2,6,23,0.7)]"
                 }`}>
                   {utilityNav.map((item) => (
@@ -304,7 +320,7 @@ export default function Navbar() {
                       to={item.path}
                       className={`block rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
                         isLight
-                          ? "text-slate-700 hover:bg-sky-50 hover:text-sky-700"
+                          ? "text-slate-700 hover:bg-cyan-50/80 hover:text-cyan-800"
                           : "text-slate-200 hover:bg-cyan-400/10 hover:text-cyan-200"
                       }`}
                     >
@@ -317,14 +333,18 @@ export default function Navbar() {
           </nav>
 
           <div className="hidden items-center gap-2 md:flex">
-            <div className="mr-1 inline-flex items-center rounded-full border border-slate-600/80 bg-slate-900/70 p-1">
+            <div className={`mr-1 inline-flex items-center rounded-full border p-1 ${
+              isLight
+                ? "border-cyan-200/80 bg-white/70"
+                : "border-slate-600/80 bg-slate-900/70"
+            }`}>
               <button
                 type="button"
                 onClick={() => handleLanguageChange("fr")}
                 className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${
                   i18n.language === "fr"
-                    ? (isLight ? "bg-sky-100 text-sky-700" : "bg-cyan-400/18 text-cyan-200")
-                    : (isLight ? "text-slate-600 hover:text-slate-900" : "text-slate-300 hover:text-white")
+                    ? (isLight ? "bg-cyan-100/80 text-cyan-800" : "bg-cyan-400/18 text-cyan-200")
+                    : (isLight ? "text-slate-600 hover:text-cyan-800" : "text-slate-300 hover:text-white")
                 }`}
               >
                 FR
@@ -334,8 +354,8 @@ export default function Navbar() {
                 onClick={() => handleLanguageChange("en")}
                 className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${
                   i18n.language === "en"
-                    ? (isLight ? "bg-sky-100 text-sky-700" : "bg-cyan-400/18 text-cyan-200")
-                    : (isLight ? "text-slate-600 hover:text-slate-900" : "text-slate-300 hover:text-white")
+                    ? (isLight ? "bg-cyan-100/80 text-cyan-800" : "bg-cyan-400/18 text-cyan-200")
+                    : (isLight ? "text-slate-600 hover:text-cyan-800" : "text-slate-300 hover:text-white")
                 }`}
               >
                 EN
@@ -349,7 +369,7 @@ export default function Navbar() {
                 aria-label={profileLabel}
                 className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border transition-colors ${
                   isLight
-                    ? "border-sky-300 bg-white text-sky-700 hover:border-sky-400 hover:text-sky-800"
+                    ? "border-cyan-200/80 bg-white/80 text-cyan-700 hover:border-cyan-400 hover:text-cyan-800"
                     : "border-slate-500/80 bg-slate-900/80 text-cyan-200 hover:border-cyan-300/70 hover:text-white"
                 }`}
               >
@@ -371,7 +391,7 @@ export default function Navbar() {
               title={themeToggleLabel}
               className={`order-last ml-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border transition ${
                 isLight
-                  ? "border-sky-300 bg-white text-amber-500 hover:border-sky-400 hover:text-amber-600"
+                  ? "border-cyan-200/80 bg-white/80 text-amber-500 hover:border-cyan-400 hover:text-amber-600"
                   : "border-slate-500/80 bg-slate-900/80 text-cyan-200 hover:border-cyan-300/70 hover:text-white"
               }`}
             >
@@ -388,7 +408,10 @@ export default function Navbar() {
             </button>
 
             {!hideSubmitForVisitors && (
-              <Link to={submitFilmPath} className="site-btn-primary">
+              <Link
+                to={submitFilmPath}
+                className="site-btn-primary inline-flex min-h-[44px] items-center justify-center text-center leading-none"
+              >
                 {t("nav.submitFilm")}
               </Link>
             )}
@@ -399,7 +422,7 @@ export default function Navbar() {
             onClick={() => setMobileMenuOpen((prev) => !prev)}
             className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border transition-colors xl:hidden ${
               isLight
-                ? "border-sky-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700"
+                ? "border-cyan-200/80 bg-white/80 text-slate-700 hover:border-cyan-400 hover:text-cyan-700"
                 : "border-slate-600/70 bg-slate-900/80 text-slate-100 hover:border-cyan-300/70 hover:text-cyan-200"
             }`}
             aria-expanded={mobileMenuOpen}
@@ -417,10 +440,14 @@ export default function Navbar() {
       </div>
 
       {mobileMenuOpen && (
-        <div className={`border-t px-4 py-4 xl:hidden ${
-          isLight ? "border-sky-200 bg-white/95" : "border-slate-700/60 bg-slate-950/96"
-        }`}>
-          <div className="site-container px-0">
+          <div
+          className={`absolute inset-x-0 top-full z-[90] border-t px-4 py-4 xl:hidden max-h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain ${
+            isLight
+              ? "border-cyan-200/80 bg-[linear-gradient(160deg,rgba(244,250,255,0.96),rgba(226,240,255,0.94))]"
+              : "border-slate-700/60 bg-slate-950/96"
+          }`}
+        >
+          <div className="site-container px-0 pb-6">
             <div className="space-y-1">
               {mobileNavItems.map((item) => (
                 <Link
@@ -428,8 +455,8 @@ export default function Navbar() {
                   to={item.path}
                   className={`block rounded-xl px-3 py-3 text-sm font-bold uppercase tracking-[0.12em] ${
                     isActive(item.path)
-                      ? (isLight ? "bg-sky-100 text-sky-700" : "bg-cyan-400/16 text-cyan-200")
-                      : (isLight ? "text-slate-700 hover:bg-sky-50" : "text-slate-100/90 hover:bg-slate-800/80")
+                      ? (isLight ? "bg-cyan-100/80 text-cyan-800" : "bg-cyan-400/16 text-cyan-200")
+                      : (isLight ? "text-slate-700 hover:bg-cyan-50/80" : "text-slate-100/90 hover:bg-slate-800/80")
                   }`}
                 >
                   {item.name}
@@ -437,35 +464,46 @@ export default function Navbar() {
               ))}
             </div>
 
-            <div className="mt-4 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleLanguageChange("fr")}
-                className={`rounded-lg border px-3 py-2 text-xs font-black uppercase tracking-[0.12em] ${
-                  i18n.language === "fr"
-                    ? (isLight
-                      ? "border-sky-300 bg-sky-100 text-sky-700"
-                      : "border-cyan-400/40 bg-cyan-400/16 text-cyan-200")
-                    : (isLight ? "border-sky-200 text-slate-600" : "border-slate-600/70 text-slate-300")
-                }`}
+            {!hideSubmitForVisitors && (
+              <Link
+                to={submitFilmPath}
+                className="site-btn-primary mt-4 inline-flex min-h-[44px] w-full items-center justify-center px-4 py-3 text-center text-[11px] leading-none"
               >
-                FR
-              </button>
-              <button
-                type="button"
-                onClick={() => handleLanguageChange("en")}
-                className={`rounded-lg border px-3 py-2 text-xs font-black uppercase tracking-[0.12em] ${
-                  i18n.language === "en"
-                    ? (isLight
-                      ? "border-sky-300 bg-sky-100 text-sky-700"
-                      : "border-cyan-400/40 bg-cyan-400/16 text-cyan-200")
-                    : (isLight ? "border-sky-200 text-slate-600" : "border-slate-600/70 text-slate-300")
-                }`}
-              >
-                EN
-              </button>
+                {t("nav.submitFilm")}
+              </Link>
+            )}
 
-              <div className="ml-auto flex items-center gap-2">
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:justify-between">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleLanguageChange("fr")}
+                    className={`rounded-lg border px-3 py-2 text-xs font-black uppercase tracking-[0.12em] ${
+                    i18n.language === "fr"
+                      ? (isLight
+                        ? "border-cyan-300 bg-cyan-100/80 text-cyan-800"
+                        : "border-cyan-400/40 bg-cyan-400/16 text-cyan-200")
+                      : (isLight ? "border-cyan-200/80 text-slate-600" : "border-slate-600/70 text-slate-300")
+                  }`}
+                >
+                  FR
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleLanguageChange("en")}
+                  className={`rounded-lg border px-3 py-2 text-xs font-black uppercase tracking-[0.12em] ${
+                    i18n.language === "en"
+                      ? (isLight
+                        ? "border-cyan-300 bg-cyan-100/80 text-cyan-800"
+                        : "border-cyan-400/40 bg-cyan-400/16 text-cyan-200")
+                      : (isLight ? "border-cyan-200/80 text-slate-600" : "border-slate-600/70 text-slate-300")
+                  }`}
+                >
+                  EN
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 {hasSession && (
                   <Link
                     to="/dashboard"
@@ -473,7 +511,7 @@ export default function Navbar() {
                     aria-label={profileLabel}
                     className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border ${
                       isLight
-                        ? "border-sky-300 bg-white text-sky-700"
+                        ? "border-cyan-300 bg-white/80 text-cyan-700"
                         : "border-slate-600/70 bg-slate-900/80 text-cyan-200"
                     }`}
                   >
@@ -488,19 +526,13 @@ export default function Navbar() {
                   </Link>
                 )}
 
-                {!hideSubmitForVisitors && (
-                  <Link to={submitFilmPath} className="site-btn-primary px-4 py-2.5 text-[11px]">
-                    {t("nav.submitFilm")}
-                  </Link>
-                )}
-
                 <button
                   type="button"
                   onClick={toggleTheme}
                   aria-label={themeToggleLabel}
                   className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border ${
                     isLight
-                      ? "border-sky-300 bg-white text-amber-500 hover:border-sky-400 hover:text-amber-600"
+                      ? "border-cyan-300 bg-white/80 text-amber-500 hover:border-cyan-400 hover:text-amber-600"
                       : "border-slate-600/70 bg-slate-900/80 text-cyan-200 hover:border-cyan-300/70 hover:text-white"
                   }`}
                 >

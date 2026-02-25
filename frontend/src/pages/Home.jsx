@@ -4,17 +4,23 @@ import HomeModelViewer from "../components/HomeModelViewer";
 import Seo from "../components/Seo";
 import { OrganizationSchema, EventSchema, WebSiteSchema } from "../components/Schema";
 import { useTranslation } from "react-i18next";
-import { getSitePhaseState } from "../api";
+import { getRecentAgendaEvents, getSitePhaseState } from "../api";
 import PhaseCountdownBanner from "../components/phases/PhaseCountdownBanner";
+import { useTheme } from "../context/ThemeContext";
 
 export default function Home({ page }) {
   const { i18n, t } = useTranslation();
+  const { isLight } = useTheme();
   const [sitePhase, setSitePhase] = useState(null);
   const [phaseLoaded, setPhaseLoaded] = useState(false);
+  const [latestAgendaEvents, setLatestAgendaEvents] = useState([]);
   const modelSrc =
     import.meta.env.VITE_HOME_MODEL_URL ||
     `${import.meta.env.BASE_URL}models/walking_robot_mr.glb`;
   const modelPoster = import.meta.env.VITE_HOME_MODEL_POSTER_URL || "";
+  const modelFallbackSrc = isLight
+    ? "/images/robot_light.png"
+    : "/images/robot_night.png";
   const submitFilmPath =
     i18n.language === "en" ? "/submit-film" : "/deposer-un-film";
   const participateVideoUrl =
@@ -27,6 +33,7 @@ export default function Home({ page }) {
   const aboutPath = i18n.language === "en" ? "/about" : "/a-propos";
   const moviesPath = i18n.language === "en" ? "/movies" : "/films";
   const currentPhaseKey = String(sitePhase?.currentPhase || "phase_1").toLowerCase();
+  const isCallForProjectsVisible = currentPhaseKey === "phase_1";
   const isCallForProjectsPhase = currentPhaseKey === "phase_1";
   const heroCtaPath = isCallForProjectsPhase ? submitFilmPath : moviesPath;
   const heroCtaBadge = i18n.language === "en"
@@ -41,6 +48,10 @@ export default function Home({ page }) {
   const heroCtaAria = i18n.language === "en"
     ? (isCallForProjectsPhase ? "Submit your film" : "Open movie gallery")
     : (isCallForProjectsPhase ? "Deposer un film" : "Ouvrir la galerie des films");
+  const isCallForProjectsHref = (href) => {
+    const normalized = String(href || "").toLowerCase();
+    return normalized.includes("/appel-a-projet") || normalized.includes("/call-for-project");
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +71,28 @@ export default function Home({ page }) {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const items = await getRecentAgendaEvents({
+          lang: i18n.language,
+          limit: 5,
+        });
+        if (!cancelled) {
+          setLatestAgendaEvents(Array.isArray(items) ? items : []);
+        }
+      } catch {
+        if (!cancelled) setLatestAgendaEvents([]);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [i18n.language]);
 
   const parsed = useMemo(() => {
     const html = page?.content?.rendered || "";
@@ -205,6 +238,61 @@ export default function Home({ page }) {
   const seoTitle = page?.title?.rendered || parsed.title || "Accueil";
   const seoDescription =
     parsed.heroLead || page?.excerpt?.rendered || page?.content?.rendered || "";
+  const theme = isLight
+    ? {
+      main: "bg-[#dbe9ff] text-slate-900",
+      heroOverlay: "from-[#021639]/35 via-[#0a2f5f]/42 to-[#dbe9ff]/82",
+      heroHalo: "bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.28),_transparent_52%)]",
+      heroCard: "border-cyan-300/50 bg-[#f7fbff]/62 shadow-[0_24px_58px_rgba(2,132,199,0.2)]",
+      heroBadge: "text-cyan-800/90",
+      heroTitle: "text-slate-950",
+      heroSubtitle: "text-slate-800/90",
+      introSection: "bg-[#d8e9ff]",
+      introCard: "border-cyan-200/80 bg-[linear-gradient(150deg,rgba(248,252,255,0.94),rgba(230,242,255,0.9))] shadow-[0_20px_50px_rgba(2,23,55,0.16)]",
+      introTitle: "text-slate-900",
+      introLead: "text-slate-700",
+      introLink: "bg-gradient-to-r from-cyan-400 to-sky-500 text-slate-950 hover:brightness-105",
+      aboutSection: "bg-[#d3e5ff]",
+      aboutCard: "bg-[linear-gradient(155deg,rgba(248,252,255,0.95),rgba(226,240,255,0.92))] border-cyan-200/75 shadow-[0_20px_50px_rgba(2,23,55,0.16)]",
+      aboutTitle: "text-slate-900",
+      aboutText: "text-slate-700/95",
+      aboutViewer: "bg-[#eaf4ff] border-cyan-200/75",
+      aboutLab: "text-cyan-700",
+      newsSection: "bg-[#d6e8ff]",
+      newsTitle: "text-cyan-700",
+      newsPoster: "bg-[linear-gradient(155deg,rgba(249,253,255,0.96),rgba(231,243,255,0.92))] border-cyan-200/75",
+      newsArticleTitle: "text-slate-900 group-hover:text-cyan-700",
+      newsExcerpt: "text-slate-700",
+      newsLink: "text-cyan-700 hover:text-slate-900 border-cyan-500",
+      focusColor: "#0284c7",
+    }
+    : {
+      main: "bg-[#0f172a] text-white",
+      heroOverlay: "from-[#020617]/55 via-[#020617]/65 to-[#020617]/90",
+      heroHalo: "bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.25),_transparent_48%)]",
+      heroCard: "border-cyan-200/25 bg-slate-900/35 hover:border-cyan-200/60 hover:bg-slate-900/55",
+      heroBadge: "text-cyan-200/90",
+      heroTitle: "text-white",
+      heroSubtitle: "text-slate-100/90",
+      introSection: "bg-[#0f172a]",
+      introCard: "border-cyan-300/20 bg-[#111b33]/80 shadow-xl",
+      introTitle: "text-white",
+      introLead: "text-[#cbd5e1]",
+      introLink: "bg-[#38bdf8] text-[#0f172a] hover:bg-white",
+      aboutSection: "bg-[#0f172a]",
+      aboutCard: "bg-[#1e293b] border-[#334155] shadow-xl",
+      aboutTitle: "text-white",
+      aboutText: "text-[#e2e8f0]",
+      aboutViewer: "bg-[#0f172a] border-[#334155]",
+      aboutLab: "text-cyan-200/90",
+      newsSection: "bg-[#0f172a]",
+      newsTitle: "text-[#38bdf8]",
+      newsPoster: "bg-[#1e293b] border-[#334155] shadow-lg",
+      newsArticleTitle: "text-white group-hover:text-[#38bdf8]",
+      newsExcerpt: "text-[#94a3b8]",
+      newsLink: "text-[#38bdf8] hover:text-white border-[#38bdf8]",
+      focusColor: "#38bdf8",
+    };
 
   return (
     <>
@@ -212,7 +300,7 @@ export default function Home({ page }) {
       <OrganizationSchema />
       <EventSchema />
       <WebSiteSchema />
-      <main className="w-full overflow-hidden bg-[#0f172a] text-white font-['Montserrat']">
+      <main className={`w-full overflow-hidden font-['Montserrat'] ${theme.main}`}>
 
       {/* Texture Grain - opacite reduite pour ne pas gener la lecture */}
       <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 mix-blend-overlay pointer-events-none z-[60]"></div>
@@ -228,51 +316,69 @@ export default function Home({ page }) {
           playsInline
           preload="metadata"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#020617]/55 via-[#020617]/65 to-[#020617]/90" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.25),_transparent_48%)]" />
+        <div className={`absolute inset-0 bg-gradient-to-b ${theme.heroOverlay}`} />
+        <div className={`absolute inset-0 ${theme.heroHalo}`} />
 
         <Link
           to={heroCtaPath}
           aria-label={heroCtaAria}
           className="relative z-20 flex min-h-screen w-full items-center justify-center px-4 text-center sm:px-6"
         >
-          <div className="group w-full max-w-3xl rounded-[2rem] border border-cyan-200/25 bg-slate-900/35 px-4 py-8 backdrop-blur-md transition-all duration-500 hover:scale-[1.02] hover:border-cyan-200/60 hover:bg-slate-900/55 sm:rounded-[2.5rem] sm:px-8 sm:py-10 md:px-14 md:py-14">
-            <p className="mb-4 text-[11px] font-black uppercase tracking-[0.35em] text-cyan-200/90">
+          <div className={`group w-full max-w-3xl rounded-[2rem] border px-4 py-8 backdrop-blur-md transition-all duration-500 hover:scale-[1.02] sm:rounded-[2.5rem] sm:px-8 sm:py-10 md:px-14 md:py-14 ${theme.heroCard}`}>
+            <p className={`mb-4 text-[10px] font-black uppercase tracking-[0.22em] sm:text-[11px] sm:tracking-[0.35em] ${theme.heroBadge}`}>
               {heroCtaBadge}
             </p>
-            <h2 className="text-4xl font-black uppercase tracking-tight text-white sm:text-5xl md:text-7xl">
+            <h2 className={`text-4xl font-black uppercase tracking-tight sm:text-5xl md:text-7xl ${theme.heroTitle}`}>
               {heroCtaTitle}
             </h2>
-            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-slate-100/90 sm:mt-6 sm:text-sm sm:tracking-[0.2em] md:text-base">
+            <p className={`mt-5 text-xs font-semibold uppercase tracking-[0.16em] sm:mt-6 sm:text-sm sm:tracking-[0.2em] md:text-base ${theme.heroSubtitle}`}>
               {heroCtaSubtitle}
             </p>
           </div>
         </Link>
+
+        {/* Transition douce vers la section suivante */}
+        <div
+          aria-hidden
+          className={`pointer-events-none absolute inset-x-0 bottom-0 z-30 h-44 md:h-56 bg-gradient-to-b ${
+            isLight
+              ? "from-transparent via-[#cfe4ff]/76 to-[#d8e9ff]"
+              : "from-transparent via-[#0b1428]/72 to-[#0f172a]"
+          }`}
+        />
+        <div
+          aria-hidden
+          className={`pointer-events-none absolute -bottom-10 left-1/2 z-30 h-24 w-[140%] -translate-x-1/2 rounded-t-[100%] blur-[1px] ${
+            isLight ? "bg-[#d8e9ff]/98" : "bg-[#0f172a]/98"
+          }`}
+        />
       </section>
 
       {/* --- INTRO + COMPTEUR --- */}
-      <section className="relative py-16 md:py-24 bg-[#0f172a]">
-        <div className="max-w-6xl mx-auto px-6 md:px-10">
-          <div className="rounded-[2.5rem] border border-cyan-300/20 bg-[#111b33]/80 p-8 md:p-12 shadow-xl">
+      <section className={`relative py-16 md:py-24 ${theme.introSection}`}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-10">
+          <div className={`rounded-[2.5rem] border p-8 md:p-12 ${theme.introCard}`}>
             <h1
-              className="text-3xl md:text-6xl font-black uppercase tracking-tight leading-[0.95] text-white"
+              className={`text-3xl md:text-6xl font-black uppercase tracking-tight leading-[0.95] ${theme.introTitle}`}
               dangerouslySetInnerHTML={{ __html: parsed.title }}
             />
 
             {parsed.heroLead && (
-              <p className="mt-6 text-[#cbd5e1] text-base md:text-xl max-w-3xl font-medium leading-relaxed">
+              <p className={`mt-6 text-base md:text-xl max-w-3xl font-medium leading-relaxed ${theme.introLead}`}>
                 {parsed.heroLead}
               </p>
             )}
 
             <div className="mt-10 flex flex-col sm:flex-row gap-4">
-              {parsed.heroLinks.map((l, i) =>
+              {parsed.heroLinks
+                .filter((l) => isCallForProjectsVisible || !isCallForProjectsHref(l.href))
+                .map((l, i) =>
                 l.href.startsWith("/") ? (
                   <Link
                     key={i}
                     to={l.href}
                     aria-label={`Acceder a ${l.text}`}
-                    className="px-8 py-4 rounded-full bg-[#38bdf8] text-[#0f172a] font-black uppercase tracking-widest text-[11px] hover:bg-white transition-colors shadow-lg text-center"
+                    className={`w-full sm:w-auto px-8 py-4 rounded-full font-black uppercase tracking-widest text-[11px] transition-colors shadow-lg text-center ${theme.introLink}`}
                   >
                     {l.text}
                   </Link>
@@ -281,7 +387,7 @@ export default function Home({ page }) {
                     key={i}
                     href={l.href}
                     aria-label={`Acceder a ${l.text}`}
-                    className="px-8 py-4 rounded-full bg-[#38bdf8] text-[#0f172a] font-black uppercase tracking-widest text-[11px] hover:bg-white transition-colors shadow-lg text-center"
+                    className={`w-full sm:w-auto px-8 py-4 rounded-full font-black uppercase tracking-widest text-[11px] transition-colors shadow-lg text-center ${theme.introLink}`}
                   >
                     {l.text}
                   </a>
@@ -289,12 +395,13 @@ export default function Home({ page }) {
               )}
             </div>
 
-            {phaseLoaded && (
+            {phaseLoaded && currentPhaseKey !== "phase_3" && (
               <div className="mt-8">
                 <PhaseCountdownBanner
                   sitePhase={sitePhase}
                   language={i18n.language}
                   variant="home"
+                  isLight={isLight}
                 />
               </div>
             )}
@@ -304,26 +411,27 @@ export default function Home({ page }) {
 
       {/* --- ABOUT (Plus clair pour la lecture prolongee) --- */}
       {(parsed.aboutTitle || parsed.aboutText) && (
-        <section className="relative py-24 md:py-40 bg-[#0f172a]">
-          <div className="max-w-5xl mx-auto px-10">
-            <div className="bg-[#1e293b] border border-[#334155] rounded-[3rem] p-5 md:p-20 shadow-xl">
+        <section className={`relative py-24 md:py-40 ${theme.aboutSection}`}>
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 md:px-10">
+            <div className={`rounded-[3rem] border p-5 md:p-20 ${theme.aboutCard}`}>
               <div className="grid md:grid-cols-2 gap-16 items-center">
                 <div>
-                  <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight text-white mb-8">
+                  <h2 className={`text-3xl md:text-5xl font-black uppercase tracking-tight mb-8 ${theme.aboutTitle}`}>
                     {parsed.aboutTitle}
                   </h2>
-                  <p className="text-[#e2e8f0] text-lg leading-relaxed font-medium">
+                  <p className={`text-lg leading-relaxed font-medium ${theme.aboutText}`}>
                     {parsed.aboutText}
                   </p>
                 </div>
-                <div className="rounded-3xl bg-[#0f172a] border border-[#334155] overflow-hidden shadow-inner p-6 md:p-8">
+                <div className={`rounded-3xl border overflow-hidden shadow-inner p-6 md:p-8 ${theme.aboutViewer}`}>
                   <HomeModelViewer
                     src={modelSrc}
                     poster={modelPoster || undefined}
+                    fallbackSrc={modelFallbackSrc}
                     alt="Objet 3D MarsAI"
-                    className="mx-auto w-56 h-56 md:w-72 md:h-72 cursor-grab active:cursor-grabbing"
+                    className="h-64 w-full md:h-80 cursor-grab active:cursor-grabbing"
                   />
-                  <p className="mt-6 text-center text-xs font-black uppercase tracking-[0.25em] text-cyan-200/90">
+                  <p className={`mt-6 text-center text-xs font-black uppercase tracking-[0.25em] ${theme.aboutLab}`}>
                     MarsAI Lab
                   </p>
                 </div>
@@ -333,31 +441,40 @@ export default function Home({ page }) {
         </section>
       )}
 
-      {/* --- NEWS (Cartes plus contrastees et aeres) --- */}
-      {parsed.articles.length > 0 && (
-        <section className="relative py-20 md:py-32 bg-[#0f172a]">
-          <div className="max-w-4xl mx-auto px-10 md:px-4">
-            <h3 className="text-2xl md:text-4xl font-black uppercase tracking-[0.4em] text-[#38bdf8] mb-24 text-center">
+      {/* --- NEWS (Events agenda WordPress) --- */}
+      {latestAgendaEvents.length > 0 && (
+        <section className={`relative py-20 md:py-32 ${theme.newsSection}`}>
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 md:px-4">
+            <h3 className={`text-2xl md:text-4xl font-black uppercase tracking-[0.4em] mb-24 text-center ${theme.newsTitle}`}>
               {t("home_news", "Actualites")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-16 md:gap-12 justify-items-center">
-              {parsed.articles.slice(0, 6).map((a, i) => (
-                <article key={i} className="group w-full max-w-[280px] flex flex-col">
-                  <div className="aspect-[3/4] rounded-[2.5rem] bg-[#1e293b] mb-8 overflow-hidden border border-[#334155] shadow-lg">
-                    <div className="w-full h-full bg-gradient-to-t from-[#0f172a] to-transparent" />
+              {latestAgendaEvents.map((event) => (
+                <article key={event.id || event.title} className="group w-full max-w-[280px] flex flex-col">
+                  <div className={`aspect-[3/4] rounded-[2.5rem] mb-8 overflow-hidden border ${theme.newsPoster}`}>
+                    {event.image ? (
+                      <img
+                        src={event.image}
+                        alt=""
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-t from-[#0f172a] to-transparent" />
+                    )}
                   </div>
-                  <h4 className="text-xl font-extrabold uppercase tracking-tight text-white group-hover:text-[#38bdf8] transition-colors">
-                    {a.title}
+                  <h4 className={`text-xl font-extrabold uppercase tracking-tight transition-colors ${theme.newsArticleTitle}`}>
+                    {event.title}
                   </h4>
-                  <p className="mt-4 text-[#94a3b8] text-sm font-medium leading-relaxed line-clamp-3">
-                    {a.excerpt}
+                  <p className={`mt-4 text-sm font-medium leading-relaxed line-clamp-3 ${theme.newsExcerpt}`}>
+                    {event.excerpt}
                   </p>
-                  {a.link && (
-                    <a href={a.link}
-                       className="inline-block mt-6 text-[11px] font-black uppercase tracking-widest text-[#38bdf8] hover:text-white transition-colors border-b-2 border-[#38bdf8] pb-1 w-fit">
+                  <Link
+                    to={agendaPath}
+                    className={`inline-block mt-6 text-[11px] font-black uppercase tracking-widest transition-colors border-b-2 pb-1 w-fit ${theme.newsLink}`}
+                  >
                       {t("agenda.read_article", "Lire l'article")}
-                    </a>
-                  )}
+                  </Link>
                 </article>
               ))}
             </div>
@@ -367,9 +484,8 @@ export default function Home({ page }) {
 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;900&display=swap');
-        body { background-color: #0f172a; color: #ffffff; }
         /* Focus visible pour l'accessibilite clavier */
-        a:focus { outline: 3px solid #38bdf8; outline-offset: 4px; border-radius: 4px; }
+        a:focus { outline: 3px solid ${theme.focusColor}; outline-offset: 4px; border-radius: 4px; }
       `}</style>
       </main>
     </>

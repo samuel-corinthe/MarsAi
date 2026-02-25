@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 
 export default function GalleryMovieCard({
   movie,
+  isLight,
   flagSrc,
   flagAlt,
   canManagePhaseSelection,
@@ -15,7 +16,13 @@ export default function GalleryMovieCard({
   return (
     <div className="group space-y-3">
       <Link to={`/movie/${movie.id}`} className="block">
-        <div className="relative aspect-video rounded-[30px] overflow-hidden shadow-xl bg-slate-100 mb-5 border border-slate-50">
+        <div
+          className={`relative mb-5 aspect-video overflow-hidden rounded-[30px] border shadow-xl ${
+            isLight
+              ? "border-cyan-100 bg-[linear-gradient(150deg,rgba(248,252,255,0.95),rgba(232,243,255,0.92))] shadow-[0_18px_40px_rgba(2,23,55,0.14)]"
+              : "border-slate-50 bg-slate-100"
+          }`}
+        >
           <img
             src={movie.img}
             alt={movie.title}
@@ -23,14 +30,20 @@ export default function GalleryMovieCard({
           />
         </div>
         <div className="px-2">
-          <h4 className="text-blue-950 font-black text-sm uppercase truncate mb-1 tracking-tight">
+          <h4
+            className={`font-black text-sm uppercase truncate mb-1 tracking-tight ${
+              isLight ? "text-slate-900" : "text-cyan-300"
+            }`}
+          >
             {movie.title}
           </h4>
           <div className="flex items-center gap-2">
             {flagSrc ? (
               <img
                 src={flagSrc}
-                className="w-5 h-3.5 object-cover rounded-[2px] shadow-sm border border-slate-200"
+                className={`h-3.5 w-5 rounded-[2px] border object-cover shadow-sm ${
+                  isLight ? "border-cyan-100" : "border-slate-200"
+                }`}
                 alt={flagAlt}
                 onError={(event) => {
                   event.currentTarget.style.display = "none";
@@ -39,7 +52,7 @@ export default function GalleryMovieCard({
             ) : (
               <div className="w-5 h-3.5 bg-slate-100 rounded-[2px]" />
             )}
-            <p className="text-slate-400 text-[10px] font-black uppercase truncate tracking-[0.15em]">
+            <p className={`text-[10px] font-black uppercase truncate tracking-[0.15em] ${isLight ? "text-slate-500" : "text-slate-400"}`}>
               {movie.director || "Anonyme"}
             </p>
           </div>
@@ -53,7 +66,7 @@ export default function GalleryMovieCard({
               ? "bg-slate-200 text-slate-500 cursor-not-allowed"
               : isSelectedForPhase2
               ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-              : "bg-blue-100 text-blue-800 hover:bg-blue-200"
+              : "bg-cyan-100 text-cyan-800 hover:bg-cyan-200"
           } disabled:opacity-60`}
           onClick={onToggleSelection}
           disabled={isSelectionBusy || isSelectionDisabled}

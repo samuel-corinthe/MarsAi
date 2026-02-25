@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
+import { useTheme } from "../context/ThemeContext";
 
 const VARIANTS = {
   cgv: {
@@ -121,6 +122,7 @@ const formatDate = (value, locale) => {
 export default function LegalPage({ page, variant = "cgv" }) {
   const config = VARIANTS[variant] || VARIANTS.cgv;
   const { t, i18n } = useTranslation();
+  const { isLight } = useTheme();
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -147,6 +149,66 @@ export default function LegalPage({ page, variant = "cgv" }) {
     i18n.language === "en"
       ? localizedRouteMap[config.otherLink.path] || config.otherLink.path
       : config.otherLink.path;
+  const theme = isLight
+    ? {
+      page: "bg-gradient-to-b from-[#dbe9ff] via-[#d4e5ff] to-[#eaf4ff] text-slate-900",
+      heroBorder: "border-cyan-200/80",
+      heroBg: "from-[#dbe9ff] via-[#d4e5ff] to-[#eaf4ff]",
+      grid: "opacity-35 [background-image:linear-gradient(rgba(14,116,144,0.18)_1px,transparent_1px),linear-gradient(90deg,rgba(14,116,144,0.18)_1px,transparent_1px)] [background-size:42px_42px]",
+      titleGradient: "from-slate-950 via-slate-800 to-cyan-700",
+      subtitle: "text-slate-700",
+      sectionBorder: "border-cyan-200/75",
+      sectionTitle: "text-slate-950",
+      sectionText: "text-slate-700",
+      footerBorder: "border-cyan-200/75",
+      backLink: "text-slate-700 hover:text-cyan-700",
+      altButton:
+        "px-6 py-3 rounded-full bg-gradient-to-r from-cyan-400 to-sky-500 text-slate-950 font-black uppercase tracking-[0.08em] hover:brightness-105 transition-all duration-200 shadow-[0_10px_26px_rgba(14,165,233,0.3)]",
+      linkColor: "#0e7490",
+      strongColor: "#031128",
+      bulletColorFallback: "#06b6d4",
+    }
+    : {
+      page: "bg-[#020617] text-slate-100",
+      heroBorder: "border-slate-700/70",
+      heroBg: "from-[#020617] via-[#0b1732] to-[#111827]",
+      grid: "opacity-25 [background-image:linear-gradient(rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.12)_1px,transparent_1px)] [background-size:42px_42px]",
+      titleGradient: "from-white via-slate-200 to-slate-400",
+      subtitle: "text-slate-300",
+      sectionBorder: "border-slate-700/65",
+      sectionTitle: "text-white",
+      sectionText: "text-slate-300",
+      footerBorder: "border-slate-700/65",
+      backLink: `text-slate-300 ${config.linkHover}`,
+      altButton: config.buttonClass,
+      linkColor: "#67e8f9",
+      strongColor: "#f8fafc",
+      bulletColorFallback: "#67e8f9",
+    };
+
+  const badgeTheme = isLight
+    ? (variant === "cgu"
+      ? {
+        badge: "bg-indigo-100 border-indigo-300/80",
+        badgeDot: "bg-indigo-500",
+        badgeText: "text-indigo-900",
+      }
+      : variant === "mentions"
+        ? {
+          badge: "bg-amber-100 border-amber-300/85",
+          badgeDot: "bg-amber-500",
+          badgeText: "text-amber-900",
+        }
+        : {
+          badge: "bg-cyan-100 border-cyan-300/85",
+          badgeDot: "bg-cyan-500",
+          badgeText: "text-cyan-900",
+        })
+    : {
+      badge: config.badge,
+      badgeDot: config.badgeDot,
+      badgeText: config.badgeText,
+    };
 
   return (
     <>
@@ -155,27 +217,27 @@ export default function LegalPage({ page, variant = "cgv" }) {
         description={page?.excerpt?.rendered || page?.content?.rendered}
       />
 
-      <main className="min-h-screen bg-[#020617] text-slate-100">
-        <div className="relative overflow-hidden border-b border-slate-700/70 bg-gradient-to-br from-[#020617] via-[#0b1732] to-[#111827]">
-          <div className="absolute inset-0 opacity-25 [background-image:linear-gradient(rgba(148,163,184,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.12)_1px,transparent_1px)] [background-size:42px_42px]" />
+      <main className={`min-h-screen ${theme.page}`}>
+        <div className={`relative overflow-hidden border-b bg-gradient-to-br ${theme.heroBorder} ${theme.heroBg}`}>
+          <div className={`absolute inset-0 ${theme.grid}`} />
 
           <div className="relative mx-auto max-w-6xl px-6 py-20 md:py-24">
             <div className="space-y-5">
               <div className="inline-block">
-                <div className={`inline-flex items-center gap-3 rounded-full border px-4 py-2 backdrop-blur-sm ${config.badge}`}>
-                  <span className={`h-2 w-2 rounded-full animate-pulse ${config.badgeDot}`} />
-                  <span className={`text-xs font-black uppercase tracking-[0.18em] ${config.badgeText}`}>
+                <div className={`inline-flex items-center gap-3 rounded-full border px-4 py-2 backdrop-blur-sm ${badgeTheme.badge}`}>
+                  <span className={`h-2 w-2 rounded-full animate-pulse ${badgeTheme.badgeDot}`} />
+                  <span className={`text-xs font-black uppercase tracking-[0.18em] ${badgeTheme.badgeText}`}>
                     {t("legal.badge")}
                   </span>
                 </div>
               </div>
 
               <h1
-                className="text-5xl font-black uppercase leading-[0.95] tracking-tight text-transparent bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text md:text-7xl"
+                className={`text-5xl font-black uppercase leading-[0.95] tracking-tight text-transparent bg-gradient-to-r bg-clip-text md:text-7xl ${theme.titleGradient}`}
                 dangerouslySetInnerHTML={{ __html: page?.title?.rendered || t("legal.defaultTitle") }}
               />
 
-              <p className="max-w-2xl text-sm leading-relaxed text-slate-300 md:text-base">
+              <p className={`max-w-2xl text-sm leading-relaxed md:text-base ${theme.subtitle}`}>
                 {lastUpdated ? t("legal.lastUpdated", { date: lastUpdated }) : ""}
               </p>
             </div>
@@ -194,20 +256,20 @@ export default function LegalPage({ page, variant = "cgv" }) {
               return (
                 <section
                   key={`${section.title}-${index}`}
-                  className={`space-y-5 pb-10 ${isLast ? "" : "border-b border-slate-700/65"}`}
+                  className={`space-y-5 pb-10 ${isLast ? "" : `border-b ${theme.sectionBorder}`}`}
                   style={{ "--accent-color": accent }}
                 >
                   <div className="flex items-center gap-4">
                     <div className={`flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br ${gradient} shadow-[0_10px_22px_rgba(2,6,23,0.4)]`}>
                       <span className="text-lg font-black text-slate-950">{index + 1}</span>
                     </div>
-                    <h2 className="text-2xl font-black uppercase tracking-tight text-white md:text-3xl">
+                    <h2 className={`text-2xl font-black uppercase tracking-tight md:text-3xl ${theme.sectionTitle}`}>
                       {section.title}
                     </h2>
                   </div>
 
                   <div
-                    className="legal-content pl-0 text-sm leading-relaxed text-slate-300 md:pl-14 md:text-base"
+                    className={`legal-content pl-0 text-sm leading-relaxed md:pl-14 md:text-base ${theme.sectionText}`}
                     dangerouslySetInnerHTML={{ __html: section.content }}
                   />
                 </section>
@@ -215,11 +277,11 @@ export default function LegalPage({ page, variant = "cgv" }) {
             })}
           </div>
 
-          <div className="mt-12 border-t border-slate-700/65 pt-6">
+          <div className={`mt-12 border-t pt-6 ${theme.footerBorder}`}>
             <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
               <Link
                 to={homePath}
-                className={`inline-flex items-center gap-2 text-sm font-semibold text-slate-300 transition-colors ${config.linkHover}`}
+                className={`inline-flex items-center gap-2 text-sm font-semibold transition-colors ${theme.backLink}`}
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -227,7 +289,7 @@ export default function LegalPage({ page, variant = "cgv" }) {
                 <span>{t("legal.backHome")}</span>
               </Link>
 
-              <Link to={otherLinkPath} className={config.buttonClass}>
+              <Link to={otherLinkPath} className={theme.altButton}>
                 {t(config.otherLink.labelKey)}
               </Link>
             </div>
@@ -251,15 +313,15 @@ export default function LegalPage({ page, variant = "cgv" }) {
             content: "\\2022";
             position: absolute;
             left: 0;
-            color: var(--accent-color);
+            color: var(--accent-color, ${theme.bulletColorFallback});
           }
           .legal-content a {
-            color: #67e8f9;
+            color: ${theme.linkColor};
             text-decoration: underline;
             text-underline-offset: 3px;
           }
           .legal-content strong {
-            color: #f8fafc;
+            color: ${theme.strongColor};
           }
         `}</style>
       </main>

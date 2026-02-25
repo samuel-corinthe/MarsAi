@@ -131,6 +131,7 @@ function GavelIcon({ theme }) {
       >
         <path d="m14.5 12.5-8 8a2.119 2.119 0 1 1-3-3l8-8m9.5 3.5 6-6m-14 14 6-6m-5 5 8 8m12 4-8-8" />
       </svg>
+      
     </div>
   );
 }
@@ -262,7 +263,7 @@ export default function JuryWpage({ page }) {
                 <article
                   key={member.slug}
                   onClick={() => openArticle(member.slug)}
-                  className={`group flex cursor-pointer items-center gap-4 rounded-[24px] border p-4 shadow-[0_18px_40px_rgba(0,0,0,0.2)] transition duration-300 sm:gap-6 sm:rounded-[28px] sm:p-6 ${theme.card} ${isSelected ? theme.cardSelected : ""} ${isDimmed ? theme.cardDim : "opacity-100"}`}
+                  className={`group flex cursor-pointer flex-col items-center gap-4 rounded-[24px] border p-4 text-center shadow-[0_18px_40px_rgba(0,0,0,0.2)] transition duration-300 sm:flex-row sm:gap-6 sm:rounded-[28px] sm:p-6 sm:text-left ${theme.card} ${isSelected ? theme.cardSelected : ""} ${isDimmed ? theme.cardDim : "opacity-100"}`}
                 >
                   <img
                     src={member.imgSrc || "https://via.placeholder.com/150"}

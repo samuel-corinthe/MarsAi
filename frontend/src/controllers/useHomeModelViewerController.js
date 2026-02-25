@@ -6,6 +6,7 @@ import {
   MOBILE_VIEWPORT_QUERY,
   OBSERVER_ROOT_MARGIN,
   REDUCED_MOTION_QUERY,
+  shouldEnableHome3D,
   shouldAutoRotate,
   shouldRenderForViewport,
 } from "../models/homeModelViewerModel";
@@ -22,6 +23,7 @@ export default function useHomeModelViewerController({ src, only = "all" }) {
   });
 
   const shouldRender = shouldRenderForViewport(only, isSmallViewport);
+  const canRender3D = shouldEnableHome3D({ reduceMotion, isSmallViewport });
   const canAutoRotate = shouldAutoRotate({ reduceMotion, isSmallViewport });
   const interactionPrompt = getInteractionPrompt(isSmallViewport);
 
@@ -58,7 +60,7 @@ export default function useHomeModelViewerController({ src, only = "all" }) {
   }, []);
 
   useEffect(() => {
-    if (!src || !shouldRender || !wrapperRef.current) return;
+    if (!src || !shouldRender || !canRender3D || !wrapperRef.current) return;
 
     if (typeof IntersectionObserver === "undefined") {
       setIsVisible(true);
@@ -77,10 +79,10 @@ export default function useHomeModelViewerController({ src, only = "all" }) {
 
     observer.observe(wrapperRef.current);
     return () => observer.disconnect();
-  }, [src, shouldRender]);
+  }, [src, shouldRender, canRender3D]);
 
   useEffect(() => {
-    if (!src || !shouldRender || !isVisible) return;
+    if (!src || !shouldRender || !canRender3D || !isVisible) return;
 
     let cancelled = false;
 
@@ -108,12 +110,13 @@ export default function useHomeModelViewerController({ src, only = "all" }) {
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [src, shouldRender, isVisible]);
+  }, [src, shouldRender, canRender3D, isVisible]);
 
   return {
     wrapperRef,
     ready,
     shouldRender,
+    canRender3D,
     canAutoRotate,
     interactionPrompt,
   };

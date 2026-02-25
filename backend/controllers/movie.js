@@ -1,6 +1,14 @@
+import fs from "node:fs";
+import path from "node:path";
+import { Readable } from "node:stream";
+import { fileURLToPath } from "node:url";
 import { getMovieDetails, listMovies, toMovieId } from "../services/movieService.js";
 import { getPhase2SelectionStatus, getSitePhaseState } from "../services/sitePhaseService.js";
 import { getSessionFromRequest } from "../services/authService.js";
+import {
+  downloadObjectFromPublicUrl,
+  isPublicObjectStorageUrl,
+} from "../services/objectStorageService.js";
 
 const MOVIE_SORT_VALUES = new Set([
   "default",
@@ -10,6 +18,9 @@ const MOVIE_SORT_VALUES = new Set([
   "year_desc",
 ]);
 const MOVIES_PAGE_SIZE = 20;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const LOCAL_VIDEO_UPLOADS_DIR = path.resolve(__dirname, "../uploads/videos");
 
 function isAdminSession(session) {
   return ["admin", "superadmin"].includes(String(session?.role || "").toLowerCase());
@@ -62,6 +73,46 @@ function normalizeSortBy(value) {
   const normalized = String(value || "default").trim().toLowerCase();
   if (!MOVIE_SORT_VALUES.has(normalized)) return "default";
   return normalized;
+}
+
+function toDownloadFileName(title) {
+  const normalized = String(title || "film")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `${normalized || "film"}.mp4`;
+}
+
+function toLocalVideoPath(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+
+  const noHost = raw.replace(/^https?:\/\/[^/]+/i, "");
+  const noBase = noHost.replace(/^\/MarsAi/i, "");
+  const noQuery = noBase.split("?")[0].split("#")[0];
+  if (!noQuery.startsWith("/uploads/videos/")) return null;
+
+  const fileName = path.basename(noQuery);
+  if (!fileName) return null;
+
+  return path.join(LOCAL_VIDEO_UPLOADS_DIR, fileName);
+}
+
+function isRemoteMp4Url(value) {
+  return /^https?:\/\/[^?#]+\.mp4(?:[?#].*)?$/i.test(String(value || "").trim());
+}
+
+function setDownloadHeaders(res, fileName, contentType, contentLength) {
+  res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+  res.setHeader("Cache-Control", "no-store");
+
+  if (contentType) {
+    res.setHeader("Content-Type", contentType);
+  }
+  if (Number.isFinite(Number(contentLength)) && Number(contentLength) > 0) {
+    res.setHeader("Content-Length", String(Number(contentLength)));
+  }
 }
 
 function extractMovieYear(movie) {
@@ -188,6 +239,117 @@ export async function getMovieById(req, res) {
     console.error("[MOVIES] details error:", error.message);
     return res.status(500).json({
       error: "Impossible de charger les details du film.",
+      details: error.message,
+    });
+  }
+}
+
+export async function downloadMovieById(req, res) {
+  const movieId = toMovieId(req.params.id);
+  if (!movieId) {
+    return res.status(400).json({ error: "movieId invalide." });
+  }
+
+  const session = getSessionFromRequest(req);
+  if (!session) {
+    return res.status(401).json({ error: "Session requise pour telecharger." });
+  }
+
+  try {
+    await enforceMovieAccessForCurrentPhase(req);
+    const [movie, visibility] = await Promise.all([
+      getMovieDetails({ movieId }),
+      getVisibleMovieIdsForCurrentPhase(),
+    ]);
+
+    if (!movie) {
+      return res.status(404).json({ error: "Film introuvable." });
+    }
+    if (visibility.visibleIds && !visibility.visibleIds.has(movieId)) {
+      return res.status(404).json({ error: "Film introuvable." });
+    }
+
+    const sourceUrl = String(movie?.rawVideoUrl || movie?.videoUrl || "").trim();
+    if (!sourceUrl) {
+      return res.status(404).json({ error: "Aucune source video disponible pour ce film." });
+    }
+
+    const downloadFileName = toDownloadFileName(movie?.title);
+
+    if (isPublicObjectStorageUrl(sourceUrl)) {
+      const objectPayload = await downloadObjectFromPublicUrl(sourceUrl);
+      if (!objectPayload?.stream) {
+        return res.status(404).json({ error: "Impossible de recuperer le fichier video." });
+      }
+
+      setDownloadHeaders(
+        res,
+        downloadFileName,
+        objectPayload.contentType || "video/mp4",
+        objectPayload.contentLength,
+      );
+
+      objectPayload.stream.on("error", (streamError) => {
+        console.error("[MOVIES] download stream error:", streamError?.message || streamError);
+        if (!res.headersSent) {
+          res.status(502).json({ error: "Flux video indisponible." });
+          return;
+        }
+        res.destroy(streamError);
+      });
+
+      objectPayload.stream.pipe(res);
+      return;
+    }
+
+    const localVideoPath = toLocalVideoPath(sourceUrl);
+    if (localVideoPath && fs.existsSync(localVideoPath)) {
+      setDownloadHeaders(res, downloadFileName, "video/mp4");
+      return res.sendFile(localVideoPath);
+    }
+
+    if (isRemoteMp4Url(sourceUrl)) {
+      const upstream = await fetch(sourceUrl);
+      if (!upstream.ok) {
+        return res.status(502).json({ error: "Source video distante indisponible." });
+      }
+
+      setDownloadHeaders(
+        res,
+        downloadFileName,
+        upstream.headers.get("content-type") || "video/mp4",
+        Number(upstream.headers.get("content-length") || 0) || null,
+      );
+
+      if (!upstream.body) {
+        const buffer = Buffer.from(await upstream.arrayBuffer());
+        res.end(buffer);
+        return;
+      }
+
+      const nodeStream = Readable.fromWeb(upstream.body);
+      nodeStream.on("error", (streamError) => {
+        console.error("[MOVIES] upstream stream error:", streamError?.message || streamError);
+        if (!res.headersSent) {
+          res.status(502).json({ error: "Flux video indisponible." });
+          return;
+        }
+        res.destroy(streamError);
+      });
+      nodeStream.pipe(res);
+      return;
+    }
+
+    return res.status(400).json({
+      error: "Source video non compatible pour telechargement.",
+    });
+  } catch (error) {
+    if (error?.statusCode) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+    console.error("[MOVIES] download error:", error.message);
+    return res.status(500).json({
+      error: "Impossible de telecharger le film.",
       details: error.message,
     });
   }
