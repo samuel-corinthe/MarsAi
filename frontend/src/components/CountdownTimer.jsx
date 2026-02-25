@@ -29,8 +29,9 @@ const UserLocalTime = ({ utcDate, showLabel = true }) => {
 
   const localTime = useMemo(() => {
     try {
-      const toZonedTime = tz.utcToZonedTime ?? tz.toZonedTime;
-      return toZonedTime ? toZonedTime(utcDate, userTimezone) : new Date(utcDate);
+      return typeof tz.utcToZonedTime === "function"
+        ? tz.utcToZonedTime(utcDate, userTimezone)
+        : new Date(utcDate);
     } catch (error) {
       console.error("Erreur de conversion timezone:", error);
       return new Date(utcDate);
@@ -62,13 +63,6 @@ const SimpleCountdown = ({ initialSeconds = 0, onComplete }) => {
   const [isRunning, setIsRunning] = useState(false);
   const initialRef = useRef(initialSeconds);
   const onCompleteCalled = useRef(false);
-
-  useEffect(() => {
-    initialRef.current = initialSeconds;
-    setRemaining(initialSeconds);
-    setIsRunning(false);
-    onCompleteCalled.current = false;
-  }, [initialSeconds]);
 
   useEffect(() => {
     if (!isRunning) return undefined;
@@ -154,20 +148,24 @@ TimeUnit.displayName = "TimeUnit";
 // --- Mode multi-phase (site) ---
 const MultiPhaseTimer = ({ phases = DEFAULT_PHASES, timezone, onPhaseComplete }) => {
   const { timeLeft, currentPhase, isFinished } = useMultiPhaseCountdown(phases, timezone);
-  const [announcementMade, setAnnouncementMade] = useState(false);
+  const announcedPhaseRef = useRef(null);
 
   useEffect(() => {
-    if (currentPhase && !announcementMade) {
-      const announcement = `Nouvelle phase : ${currentPhase.label}`;
-      if ("speechSynthesis" in window) {
-        const utterance = new SpeechSynthesisUtterance(announcement);
-        utterance.volume = 0.1;
-        speechSynthesis.speak(utterance);
-      }
-      setAnnouncementMade(true);
-      onPhaseComplete?.(currentPhase);
+    if (!currentPhase) return;
+
+    const phaseKey = String(currentPhase.id ?? currentPhase.label ?? "");
+    if (!phaseKey || announcedPhaseRef.current === phaseKey) return;
+
+    const announcement = `Nouvelle phase : ${currentPhase.label}`;
+    if ("speechSynthesis" in window) {
+      const utterance = new SpeechSynthesisUtterance(announcement);
+      utterance.volume = 0.1;
+      speechSynthesis.speak(utterance);
     }
-  }, [currentPhase, announcementMade, onPhaseComplete]);
+
+    announcedPhaseRef.current = phaseKey;
+    onPhaseComplete?.(currentPhase);
+  }, [currentPhase, onPhaseComplete]);
 
   if (isFinished) {
     return (

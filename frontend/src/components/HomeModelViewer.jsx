@@ -1,4 +1,24 @@
+import { useState } from "react";
 import useHomeModelViewerController from "../controllers/useHomeModelViewerController";
+
+function SafeFallbackImage({ src, alt }) {
+  const [resolvedSrc, setResolvedSrc] = useState(src || "/images/robot.png");
+
+  return (
+    <img
+      src={resolvedSrc}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      onError={() => {
+        if (resolvedSrc !== "/images/robot.png") {
+          setResolvedSrc("/images/robot.png");
+        }
+      }}
+      className="h-full w-full rounded-2xl border border-cyan-300/30 object-cover shadow-[0_20px_80px_rgba(0,0,0,0.45)]"
+    />
+  );
+}
 
 export default function HomeModelViewer({
   src,
@@ -16,6 +36,7 @@ export default function HomeModelViewer({
     canAutoRotate,
     interactionPrompt,
   } = useHomeModelViewerController({ src, only });
+  const primaryFallbackSrc = fallbackSrc || "/images/robot.png";
 
   if (!src && !fallbackSrc) return null;
   if (!shouldRender) return null;
@@ -47,13 +68,11 @@ export default function HomeModelViewer({
           style={{ width: "100%", height: "100%" }}
         />
       ) : (
-        fallbackSrc ? (
-          <img
-            src={fallbackSrc}
+        primaryFallbackSrc ? (
+          <SafeFallbackImage
+            key={primaryFallbackSrc}
+            src={primaryFallbackSrc}
             alt={alt}
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full rounded-2xl border border-cyan-300/30 object-cover shadow-[0_20px_80px_rgba(0,0,0,0.45)]"
           />
         ) : (
           <div className="h-full w-full rounded-2xl border border-cyan-300/30 bg-gradient-to-br from-cyan-400/30 via-blue-500/10 to-transparent shadow-[0_20px_80px_rgba(0,0,0,0.45)]" />

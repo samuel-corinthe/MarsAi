@@ -13,6 +13,7 @@ vi.mock("../components/Seo.jsx", () => ({
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
+    t: (key, fallback) => fallback || key,
     i18n: { language: "fr" },
   }),
 }));
@@ -27,10 +28,106 @@ const FIXED_TIME = new Date("2026-02-04T12:00:00Z").getTime();
 async function renderDashboard(data = baseMockData) {
   vi.stubGlobal(
     "fetch",
-    vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => data,
-    })
+    vi.fn(async (url) => {
+      const route = String(url || "");
+
+      if (route.includes("/api/dashboard")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => data,
+          text: async () => JSON.stringify(data),
+          headers: new Headers({ "content-type": "application/json" }),
+        };
+      }
+
+      if (route.includes("/api/assignments/my")) {
+        const payload = {
+          policy: { minReviewers: 3, maxReviewers: 5 },
+          assignmentByMovie: {},
+          reviewerCountByMovie: {},
+          myPendingMinutes: 0,
+        };
+        return {
+          ok: true,
+          status: 200,
+          json: async () => payload,
+          text: async () => JSON.stringify(payload),
+          headers: new Headers({ "content-type": "application/json" }),
+        };
+      }
+
+      if (route.includes("/api/site-phase/phase2-selection")) {
+        const payload = {
+          selectedCount: 0,
+          minRequired: 50,
+          selectedMovies: [],
+          isReadyBySuperadmin: false,
+          readyByName: null,
+          readyAt: null,
+        };
+        return {
+          ok: true,
+          status: 200,
+          json: async () => payload,
+          text: async () => JSON.stringify(payload),
+          headers: new Headers({ "content-type": "application/json" }),
+        };
+      }
+
+      if (route.includes("/api/site-phase/phase3-selection")) {
+        const payload = {
+          selectedCount: 0,
+          minRequired: 5,
+          selectedMovies: [],
+          isReadyBySuperadmin: false,
+          readyByName: null,
+          readyAt: null,
+        };
+        return {
+          ok: true,
+          status: 200,
+          json: async () => payload,
+          text: async () => JSON.stringify(payload),
+          headers: new Headers({ "content-type": "application/json" }),
+        };
+      }
+
+      if (route.includes("/api/site-phase")) {
+        const payload = {
+          currentPhase: "phase_1",
+          phase1EndsAt: "2026-03-29T23:59:59Z",
+          phase2EndsAt: "2026-05-03T23:59:59Z",
+          phase3EndsAt: "2026-06-07T23:59:59Z",
+        };
+        return {
+          ok: true,
+          status: 200,
+          json: async () => payload,
+          text: async () => JSON.stringify(payload),
+          headers: new Headers({ "content-type": "application/json" }),
+        };
+      }
+
+      if (route.includes("/api/auth/me/profile")) {
+        const payload = { user: { name: "Sonia Test" } };
+        return {
+          ok: true,
+          status: 200,
+          json: async () => payload,
+          text: async () => JSON.stringify(payload),
+          headers: new Headers({ "content-type": "application/json" }),
+        };
+      }
+
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+        text: async () => "{}",
+        headers: new Headers({ "content-type": "application/json" }),
+      };
+    }),
   );
 
   render(
@@ -39,7 +136,7 @@ async function renderDashboard(data = baseMockData) {
     </MemoryRouter>
   );
 
-  await screen.findByText("Dashboard Admin & Super Admin");
+  await screen.findByRole("heading", { name: /Bienvenue, Idriss Benali/i });
 }
 
 describe("Dashboard (admin)", () => {
@@ -59,7 +156,7 @@ describe("Dashboard (admin)", () => {
       "/api/dashboard",
       expect.objectContaining({ cache: "no-store" })
     );
-    expect(screen.getByText("Dashboard Admin & Super Admin")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Bienvenue, Idriss Benali/i })).toBeInTheDocument();
     expect(screen.getByText("Idriss Benali")).toBeInTheDocument();
   });
 
@@ -71,7 +168,7 @@ describe("Dashboard (admin)", () => {
     await user.clear(input);
     await user.type(input, "Sonia Test");
 
-    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+    await user.click(screen.getByRole("button", { name: "Enregistrer et synchroniser" }));
 
     expect(
       screen.getByRole("heading", { name: "Sonia Test" })

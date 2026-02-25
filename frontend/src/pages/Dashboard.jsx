@@ -69,7 +69,12 @@ function extractMovieYear(movie) {
 }
 
 export default function Dashboard() {
-  const { i18n } = useTranslation();
+  const translation = useTranslation();
+  const i18n = translation?.i18n ?? { language: "fr" };
+  const t =
+    typeof translation?.t === "function"
+      ? translation.t
+      : (key, defaultValue) => defaultValue ?? key;
   const homePath = i18n.language === "en" ? "/home" : "/accueil";
   const filmsBasePath = i18n.language === "en" ? "/movies" : "/films";
   const [adminData, setAdminData] = useState(null);
@@ -255,7 +260,7 @@ export default function Dashboard() {
   }, [isFilmFilterModalOpen]);
 
   if (loading) {
-    return <PageLoader message="Chargement du dashboard admin..." />;
+    return <PageLoader message={t("ui.loading_admin_dashboard", "Loading admin dashboard...")} />;
   }
 
   if (loadError) {
@@ -267,7 +272,7 @@ export default function Dashboard() {
   }
 
   if (!adminData) {
-    return <PageLoader message="Aucune donnee admin disponible." fullscreen={false} compact />;
+    return <PageLoader message={t("ui.admin_no_data", "No admin data available.")} fullscreen={false} compact />;
   }
 
   const {
@@ -282,7 +287,7 @@ export default function Dashboard() {
   const filteredNavItems = filterDashboardNavItems(navItems);
 
   if (!phaseTimeline?.length) {
-    return <PageLoader message="Aucune phase configuree." fullscreen={false} compact />;
+    return <PageLoader message={t("ui.no_phase_config", "No phase configured.")} fullscreen={false} compact />;
   }
 
   const effectiveUser = currentUser ?? adminData.currentUser;
@@ -290,7 +295,7 @@ export default function Dashboard() {
   const profilePreview = profileForm ?? effectiveUser;
 
   if (!effectiveUser || !effectiveProfile) {
-    return <PageLoader message="Chargement du profil admin..." />;
+    return <PageLoader message={t("ui.loading_admin_profile", "Loading admin profile...")} />;
   }
 
   const now = new Date(nowTs);

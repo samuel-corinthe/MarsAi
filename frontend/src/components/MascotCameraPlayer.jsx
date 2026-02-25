@@ -1,4 +1,5 @@
 ﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const SPEED_OPTIONS = [0.75, 1, 1.25, 1.5, 2];
 
@@ -133,6 +134,7 @@ async function exitDocumentFullscreen() {
 }
 
 const MascotCameraPlayer = ({ src, title, onClose }) => {
+  const { t } = useTranslation();
   const videoRef = useRef(null);
   const containerRef = useRef(null);
   const hideControlsTimeoutRef = useRef(null);
@@ -544,7 +546,7 @@ const MascotCameraPlayer = ({ src, title, onClose }) => {
           {!isReady && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/70">
               <p className="rounded-full border border-cyan-300/30 bg-slate-900/80 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-cyan-100">
-                Loading Stream
+                {t("ui.loading_stream", "Loading stream...")}
               </p>
             </div>
           )}
@@ -650,4 +652,6 @@ const MascotCameraPlayer = ({ src, title, onClose }) => {
 };
 
 export default MascotCameraPlayer;
+
+
 

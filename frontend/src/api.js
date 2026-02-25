@@ -1,4 +1,6 @@
 const WP_V2 = "/wp-json/wp/v2";
+const WORDPRESS_BASE_URL = "https://samuel-corinthe.students-laplateforme.io/MarsAi";
+const WORDPRESS_V2_URL = `${WORDPRESS_BASE_URL}${WP_V2}`;
 
 function isLocalBrowserHost() {
   if (typeof window === "undefined") return false;
@@ -203,11 +205,65 @@ async function fetchSameOriginWithFallback(
 
 export const getPageBySlug = async (slug, lang = "fr") => {
   const response = await fetch(
-    `https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-json/wp/v2/pages?slug=${slug}&lang=${lang}`,
+    `${WORDPRESS_V2_URL}/pages?slug=${encodeURIComponent(slug)}&lang=${encodeURIComponent(lang)}`,
   );
   const data = await response.json();
   return data[0];
 };
+
+export async function getWpPostsBySlug({
+  slug,
+  lang = "fr",
+  fields = "id,title,content,excerpt,slug",
+  signal,
+} = {}) {
+  const safeSlug = String(slug || "").trim();
+  if (!safeSlug) return [];
+
+  const response = await fetch(
+    `${WORDPRESS_V2_URL}/posts?slug=${encodeURIComponent(safeSlug)}&_fields=${encodeURIComponent(fields)}&lang=${encodeURIComponent(lang)}`,
+    {
+      cache: "no-store",
+      signal,
+    },
+  );
+  if (!response.ok) {
+    throw new Error(`WP posts by slug error ${response.status}`);
+  }
+
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
+}
+
+export async function getWpPostsByCategory({
+  categoryId,
+  lang = "fr",
+  perPage = 100,
+  order = "asc",
+  orderBy = "date",
+  embed = true,
+} = {}) {
+  const safeCategoryId = Number(categoryId);
+  if (!Number.isFinite(safeCategoryId) || safeCategoryId <= 0) return [];
+
+  const params = new URLSearchParams();
+  params.set("categories", String(safeCategoryId));
+  params.set("per_page", String(Math.max(1, Math.min(100, Number(perPage) || 100))));
+  params.set("order", String(order || "asc"));
+  params.set("orderby", String(orderBy || "date"));
+  params.set("lang", String(lang || "fr"));
+  if (embed) params.set("_embed", "");
+
+  const response = await fetch(`${WORDPRESS_V2_URL}/posts?${params.toString()}`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`WP posts by category error ${response.status}`);
+  }
+
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
+}
 
 export async function getAgendaPosts() {
   const res = await fetch("/wp-json/wp/v2/posts?per_page=100");
@@ -239,20 +295,14 @@ export async function getRecentAgendaEvents({ lang = "fr", limit = 5 } = {}) {
   const agendaCategoryId = String(lang).toLowerCase() === "en" ? 51 : 14;
   const safeLimit = Math.max(1, Math.min(20, Number(limit) || 5));
 
-  const url =
-    "https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-json/wp/v2/posts"
-    + `?categories=${agendaCategoryId}`
-    + `&_embed`
-    + `&per_page=${safeLimit}`
-    + `&order=desc`
-    + `&orderby=date`
-    + `&lang=${encodeURIComponent(lang)}`;
-
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error(`Agenda events WP error ${res.status}`);
-
-  const posts = await res.json();
-  if (!Array.isArray(posts)) return [];
+  const posts = await getWpPostsByCategory({
+    categoryId: agendaCategoryId,
+    lang,
+    perPage: safeLimit,
+    order: "desc",
+    orderBy: "date",
+    embed: true,
+  });
 
   return posts.slice(0, safeLimit).map((post) => {
     const titleHtml = String(post?.title?.rendered || "").trim();

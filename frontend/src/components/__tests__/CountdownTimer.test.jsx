@@ -1,10 +1,15 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+﻿import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, act, fireEvent } from "@testing-library/react";
 import CountdownTimer from "../CountdownTimer";
 
 function getTimeEl() {
   return screen.getByTestId("time");
+}
+
+async function advance(ms) {
+  await act(async () => {
+    vi.advanceTimersByTime(ms);
+  });
 }
 
 describe("CountdownTimer", () => {
@@ -13,7 +18,7 @@ describe("CountdownTimer", () => {
   });
 
   afterEach(() => {
-    vi.runOnlyPendingTimers();
+    vi.clearAllTimers();
     vi.useRealTimers();
   });
 
@@ -22,70 +27,67 @@ describe("CountdownTimer", () => {
     expect(getTimeEl()).toHaveTextContent("01:30");
   });
 
-  it("décrémente chaque seconde quand on démarre", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-
+  it("decremente chaque seconde quand on demarre", async () => {
     render(<CountdownTimer initialSeconds={5} />);
-    await user.click(screen.getByRole("button", { name: /start/i }));
 
-    vi.advanceTimersByTime(1000);
+    fireEvent.click(screen.getByRole("button", { name: /start/i }));
+
+    await advance(1000);
     expect(getTimeEl()).toHaveTextContent("00:04");
 
-    vi.advanceTimersByTime(2000);
+    await advance(2000);
     expect(getTimeEl()).toHaveTextContent("00:02");
   });
 
-  it("pause stoppe la décrémentation", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-
+  it("pause stop la descente du temps", async () => {
     render(<CountdownTimer initialSeconds={5} />);
-    await user.click(screen.getByRole("button", { name: /start/i }));
 
-    vi.advanceTimersByTime(1000);
+    fireEvent.click(screen.getByRole("button", { name: /start/i }));
+
+    await advance(1000);
     expect(getTimeEl()).toHaveTextContent("00:04");
 
-    await user.click(screen.getByRole("button", { name: /pause/i }));
-    vi.advanceTimersByTime(2000);
+    fireEvent.click(screen.getByRole("button", { name: /pause/i }));
 
+    await advance(2000);
     expect(getTimeEl()).toHaveTextContent("00:04");
   });
 
   it("ne descend jamais sous 00:00", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-
     render(<CountdownTimer initialSeconds={1} />);
-    await user.click(screen.getByRole("button", { name: /start/i }));
 
-    vi.advanceTimersByTime(1000);
+    fireEvent.click(screen.getByRole("button", { name: /start/i }));
+
+    await advance(1000);
     expect(getTimeEl()).toHaveTextContent("00:00");
 
-    vi.advanceTimersByTime(5000);
+    await advance(5000);
     expect(getTimeEl()).toHaveTextContent("00:00");
   });
 
-  it("appelle onComplete exactement une fois à la fin", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  it("onComplete se lance 1 seule fois a la fin", async () => {
     const onComplete = vi.fn();
 
     render(<CountdownTimer initialSeconds={2} onComplete={onComplete} />);
-    await user.click(screen.getByRole("button", { name: /start/i }));
 
-    vi.advanceTimersByTime(2000);
+    fireEvent.click(screen.getByRole("button", { name: /start/i }));
+
+    await advance(2000);
     expect(getTimeEl()).toHaveTextContent("00:00");
-    vi.advanceTimersByTime(5000);
+
+    await advance(5000);
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
   it("reset remet le temps initial", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-
     render(<CountdownTimer initialSeconds={10} />);
-    await user.click(screen.getByRole("button", { name: /start/i }));
 
-    vi.advanceTimersByTime(3000);
+    fireEvent.click(screen.getByRole("button", { name: /start/i }));
+
+    await advance(3000);
     expect(getTimeEl()).toHaveTextContent("00:07");
 
-    await user.click(screen.getByRole("button", { name: /reset/i }));
+    fireEvent.click(screen.getByRole("button", { name: /reset/i }));
     expect(getTimeEl()).toHaveTextContent("00:10");
   });
 });

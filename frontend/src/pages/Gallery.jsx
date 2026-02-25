@@ -470,7 +470,7 @@ const Gallery = () => {
   };
 
   if (accessLoading) {
-    return <PageLoader message="Verification des acces galerie..." />;
+    return <PageLoader message={t("ui.loading_gallery_access", "Checking gallery access...")} />;
   }
 
   if (!isGalleryAllowed) {

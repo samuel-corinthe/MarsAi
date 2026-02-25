@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
 import { useTheme } from "../context/ThemeContext";
+import { getWpPostsBySlug } from "../api";
 
 const THEMES = {
   dark: {
@@ -188,12 +189,12 @@ export default function JuryWpage({ page }) {
       abortRef.current = new AbortController();
 
       try {
-        const response = await fetch(
-          `https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_fields=id,title,content,excerpt,slug&lang=${i18n.language}`,
-          { signal: abortRef.current.signal },
-        );
-
-        const data = await response.json();
+        const data = await getWpPostsBySlug({
+          slug,
+          lang: i18n.language,
+          fields: "id,title,content,excerpt,slug",
+          signal: abortRef.current.signal,
+        });
 
         if (data && data.length > 0) {
           articleCache.set(cacheKey, data[0]);

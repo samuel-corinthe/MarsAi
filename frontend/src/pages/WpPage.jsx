@@ -3,7 +3,13 @@ import { useParams, useNavigate, useLocation, Navigate } from "react-router-dom"
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
 import { BreadcrumbSchema, ArticleSchema } from "../components/Schema";
-import { getPageBySlug, getSitePhaseState, sendContactForm } from "../api";
+import PageLoader from "../components/ui/PageLoader";
+import {
+  getPageBySlug,
+  getSitePhaseState,
+  getWpPostsByCategory,
+  sendContactForm,
+} from "../api";
 import Home from "./Home";
 import JuryWpage from "./jury";
 import NotFound from "./NotFound";
@@ -377,10 +383,14 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
           const isAgendaSlug = slug === "agenda" || slug === "schedule";
           if (isAgendaSlug) {
             try {
-              const res = await fetch(
-                `https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-json/wp/v2/posts?categories=${agendaCategoryId}&_embed&per_page=100&order=asc&orderby=date&lang=${i18n.language}`,
-              );
-              const allPosts = await res.json();
+              const allPosts = await getWpPostsByCategory({
+                categoryId: agendaCategoryId,
+                lang: i18n.language,
+                perPage: 100,
+                order: "asc",
+                orderBy: "date",
+                embed: true,
+              });
               if (allPosts && Array.isArray(allPosts)) {
                 const timeLocale = i18n.language === "fr" ? "fr-FR" : "en-GB";
                 const formattedEvents = allPosts.map((post) => {
@@ -555,10 +565,10 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     return <Navigate to={i18n.language === "en" ? "/movies" : "/films"} replace />;
   }
   if (isCallForProjectRoute && canAccessCallForProject == null) {
-    return <div className="app-container page">Chargement</div>;
+    return <PageLoader message={t("ui.loading_page", "Loading...")} />;
   }
 
-  if (loading) return <div className="app-container page">Chargement</div>;
+  if (loading) return <PageLoader message={t("ui.loading_page", "Loading...")} />;
   if (error) {
     return (
       <div className="app-container page">

@@ -44,13 +44,6 @@ function loadScriptOnce(src) {
 async function loadModelViewerScript() {
   if (isModelViewerReady()) return true;
 
-  try {
-    await import("@google/model-viewer");
-    if (isModelViewerReady()) return true;
-  } catch {
-    // Keep fallback script sources below.
-  }
-
   const sources = getModelViewerSources();
   for (const src of sources) {
     const loaded = await loadScriptOnce(src);

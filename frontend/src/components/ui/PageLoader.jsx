@@ -1,8 +1,12 @@
+import { useTranslation } from "react-i18next";
+
 export default function PageLoader({
-  message = "Chargement...",
+  message,
   fullscreen = true,
   compact = false,
 }) {
+  const { t } = useTranslation();
+  const resolvedMessage = message || t("common.loading", "Loading...");
   const wrapperClassName = fullscreen
     ? "site-loader site-loader--fullscreen"
     : "site-loader";
@@ -11,7 +15,7 @@ export default function PageLoader({
     <div className={wrapperClassName} role="status" aria-live="polite" aria-busy="true">
       <div className={`site-loader__panel ${compact ? "site-loader__panel--compact" : ""}`}>
         <span className="site-loader__ring" aria-hidden="true" />
-        <p className="site-loader__text">{message}</p>
+        <p className="site-loader__text">{resolvedMessage}</p>
       </div>
     </div>
   );

@@ -310,7 +310,7 @@ export const validateForm = (formData) => {
   for (const key of ['socialWebsite', 'socialInstagram', 'socialFacebook', 'socialX']) {
     if (formData[key] && formData[key].trim()) {
       if (!urlPattern.test(formData[key].trim())) {
-        errors[key] = "L\'URL est invalide (elle doit commencer par https://)";
+        errors[key] = "L'URL est invalide (elle doit commencer par https://)";
       } else {
         cleanedData[key] = formData[key].trim();
       }

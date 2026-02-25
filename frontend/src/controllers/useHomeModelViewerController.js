@@ -14,7 +14,9 @@ import { ensureModelViewerScript } from "../services/modelViewerScriptService";
 
 export default function useHomeModelViewerController({ src, only = "all" }) {
   const wrapperRef = useRef(null);
-  const [isVisible, setIsVisible] = useState(false);
+  const supportsIntersectionObserver =
+    typeof window !== "undefined" && typeof window.IntersectionObserver !== "undefined";
+  const [hasIntersected, setHasIntersected] = useState(() => !supportsIntersectionObserver);
   const [ready, setReady] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [isSmallViewport, setIsSmallViewport] = useState(() => {
@@ -26,6 +28,7 @@ export default function useHomeModelViewerController({ src, only = "all" }) {
   const canRender3D = shouldEnableHome3D({ reduceMotion, isSmallViewport });
   const canAutoRotate = shouldAutoRotate({ reduceMotion, isSmallViewport });
   const interactionPrompt = getInteractionPrompt(isSmallViewport);
+  const isVisible = !supportsIntersectionObserver || hasIntersected;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -61,16 +64,12 @@ export default function useHomeModelViewerController({ src, only = "all" }) {
 
   useEffect(() => {
     if (!src || !shouldRender || !canRender3D || !wrapperRef.current) return;
-
-    if (typeof IntersectionObserver === "undefined") {
-      setIsVisible(true);
-      return;
-    }
+    if (!supportsIntersectionObserver) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
-          setIsVisible(true);
+          setHasIntersected(true);
           observer.disconnect();
         }
       },
@@ -79,7 +78,7 @@ export default function useHomeModelViewerController({ src, only = "all" }) {
 
     observer.observe(wrapperRef.current);
     return () => observer.disconnect();
-  }, [src, shouldRender, canRender3D]);
+  }, [src, shouldRender, canRender3D, supportsIntersectionObserver]);
 
   useEffect(() => {
     if (!src || !shouldRender || !canRender3D || !isVisible) return;

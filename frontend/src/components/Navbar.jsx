@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { getCurrentSessionUser, getSitePhaseState } from "../api";
 import { useTheme } from "../context/ThemeContext";
+import usePhaseAccessController from "../controllers/usePhaseAccessController";
 
 function normalizePath(path = "") {
   const value = String(path || "").trim();
@@ -24,21 +24,18 @@ export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [utilityMenuOpen, setUtilityMenuOpen] = useState(false);
-  const [hideGalleryForVisitors, setHideGalleryForVisitors] = useState(false);
-  const [hideSubmitForVisitors, setHideSubmitForVisitors] = useState(false);
-  const [hideCallForProjects, setHideCallForProjects] = useState(false);
-  const [hasSession, setHasSession] = useState(false);
+  const {
+    hasSession,
+    hideGalleryForVisitors,
+    hideSubmitForVisitors,
+    hideCallForProjects,
+  } = usePhaseAccessController({ refreshKey: location.pathname });
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 16);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  useEffect(() => {
-    setMobileMenuOpen(false);
-    setUtilityMenuOpen(false);
-  }, [location.pathname]);
 
   useEffect(() => {
     if (!mobileMenuOpen) return undefined;
@@ -50,41 +47,6 @@ export default function Navbar() {
       document.body.style.overflow = previousOverflow;
     };
   }, [mobileMenuOpen]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const [sitePhase, sessionPayload] = await Promise.all([
-          getSitePhaseState(),
-          getCurrentSessionUser().catch(() => null),
-        ]);
-        if (cancelled) return;
-
-        const phaseKey = String(sitePhase?.currentPhase || "phase_1").toLowerCase();
-        const role = String(sessionPayload?.user?.role || "").toLowerCase();
-        const hasAdminSession = role === "admin" || role === "superadmin";
-
-        setHasSession(Boolean(sessionPayload?.authenticated) || Boolean(sessionPayload?.user));
-        setHideCallForProjects(phaseKey === "phase_2" || phaseKey === "phase_3");
-        setHideGalleryForVisitors(phaseKey === "phase_1" && !hasAdminSession);
-        setHideSubmitForVisitors(
-          (phaseKey === "phase_2" || phaseKey === "phase_3") && !hasAdminSession,
-        );
-      } catch {
-        if (cancelled) return;
-        setHideCallForProjects(false);
-        setHideGalleryForVisitors(false);
-        setHideSubmitForVisitors(false);
-        setHasSession(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [location.pathname]);
 
   const routeAliases = {
     "/accueil": "/home",
@@ -162,6 +124,13 @@ export default function Navbar() {
     if (nextPath !== currentPath) {
       navigate(nextPath, { replace: true });
     }
+    setMobileMenuOpen(false);
+    setUtilityMenuOpen(false);
+  };
+
+  const closeMenus = () => {
+    setMobileMenuOpen(false);
+    setUtilityMenuOpen(false);
   };
 
   const homePath = i18n.language === "en" ? "/home" : "/accueil";
@@ -272,6 +241,7 @@ export default function Navbar() {
               <Link
                 key={item.id}
                 to={item.path}
+                onClick={closeMenus}
                 className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-black uppercase ${
                   item.id === "call" ? "tracking-[0.08em]" : "tracking-[0.12em]"
                 } transition-colors ${
@@ -318,6 +288,7 @@ export default function Navbar() {
                     <Link
                       key={item.id}
                       to={item.path}
+                      onClick={closeMenus}
                       className={`block rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
                         isLight
                           ? "text-slate-700 hover:bg-cyan-50/80 hover:text-cyan-800"
@@ -410,6 +381,7 @@ export default function Navbar() {
             {!hideSubmitForVisitors && (
               <Link
                 to={submitFilmPath}
+                onClick={closeMenus}
                 className="site-btn-primary inline-flex min-h-[44px] items-center justify-center text-center leading-none"
               >
                 {t("nav.submitFilm")}
@@ -453,6 +425,7 @@ export default function Navbar() {
                 <Link
                   key={item.id}
                   to={item.path}
+                  onClick={closeMenus}
                   className={`block rounded-xl px-3 py-3 text-sm font-bold uppercase tracking-[0.12em] ${
                     isActive(item.path)
                       ? (isLight ? "bg-cyan-100/80 text-cyan-800" : "bg-cyan-400/16 text-cyan-200")
@@ -467,6 +440,7 @@ export default function Navbar() {
             {!hideSubmitForVisitors && (
               <Link
                 to={submitFilmPath}
+                onClick={closeMenus}
                 className="site-btn-primary mt-4 inline-flex min-h-[44px] w-full items-center justify-center px-4 py-3 text-center text-[11px] leading-none"
               >
                 {t("nav.submitFilm")}

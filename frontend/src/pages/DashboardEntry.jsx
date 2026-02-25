@@ -4,12 +4,14 @@ import Dashboard from "./Dashboard";
 import { getCurrentSessionUser, loginWithWordPress } from "../api";
 import PageLoader from "../components/ui/PageLoader";
 import { useTheme } from "../context/ThemeContext";
+import { useTranslation } from "react-i18next";
 
 const WP_LOGIN_URL =
   import.meta.env.VITE_WP_LOGIN_URL ||
   "https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-login.php";
 
 export default function DashboardEntry() {
+  const { t } = useTranslation();
   const { isLight } = useTheme();
   const [loadingSession, setLoadingSession] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
@@ -64,7 +66,7 @@ export default function DashboardEntry() {
   };
 
   if (loadingSession) {
-    return <PageLoader message="Verification de la session admin..." />;
+    return <PageLoader message={t("ui.loading_admin_session", "Checking admin session...")} />;
   }
 
   if (authenticated) {

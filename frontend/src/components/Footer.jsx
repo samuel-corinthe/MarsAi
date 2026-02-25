@@ -1,16 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { getCurrentSessionUser, getSitePhaseState } from "../api";
 import SocialIcon from "./ui/SocialIcon";
 import { useTheme } from "../context/ThemeContext";
+import usePhaseAccessController from "../controllers/usePhaseAccessController";
 
 export default function Footer() {
   const { t, i18n } = useTranslation();
   const { isLight } = useTheme();
-  const [hideGalleryForVisitors, setHideGalleryForVisitors] = useState(false);
-  const [hideSubmitForVisitors, setHideSubmitForVisitors] = useState(false);
-  const [hideCallForProjects, setHideCallForProjects] = useState(false);
+  const {
+    hideGalleryForVisitors,
+    hideSubmitForVisitors,
+    hideCallForProjects,
+  } = usePhaseAccessController();
 
   const currentYear = new Date().getFullYear();
   const homePath = i18n.language === "en" ? "/home" : "/accueil";
@@ -23,39 +25,6 @@ export default function Footer() {
   const cgvPath = i18n.language === "en" ? "/tos" : "/cgv";
   const cguPath = i18n.language === "en" ? "/gcu" : "/cgu";
   const legalPath = i18n.language === "en" ? "/legal-notice" : "/mentions-legales";
-
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const [sitePhase, sessionPayload] = await Promise.all([
-          getSitePhaseState(),
-          getCurrentSessionUser().catch(() => null),
-        ]);
-        if (cancelled) return;
-
-        const phaseKey = String(sitePhase?.currentPhase || "phase_1").toLowerCase();
-        const role = String(sessionPayload?.user?.role || "").toLowerCase();
-        const hasAdminSession = role === "admin" || role === "superadmin";
-
-        setHideCallForProjects(phaseKey === "phase_2" || phaseKey === "phase_3");
-        setHideGalleryForVisitors(phaseKey === "phase_1" && !hasAdminSession);
-        setHideSubmitForVisitors(
-          (phaseKey === "phase_2" || phaseKey === "phase_3") && !hasAdminSession,
-        );
-      } catch {
-        if (cancelled) return;
-        setHideCallForProjects(false);
-        setHideGalleryForVisitors(false);
-        setHideSubmitForVisitors(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const sections = useMemo(
     () => [

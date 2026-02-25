@@ -29,6 +29,7 @@ i18n.use(initReactI18next).init({
         },
 
         gallery: {
+          loading: "Chargement des films...",
           title_accent: "nos Merveilles",
           top_movies_subtitle: "Découvrez les 5 meilleurs films",
           search_placeholder: "Rechercher un film...",
@@ -43,6 +44,7 @@ i18n.use(initReactI18next).init({
           drama: "Drame",
         },
         movie_details: {
+          loading: "Chargement...",
           not_found: "Film non trouvé",
           back_to_gallery: "Retour à la galerie",
           watch_movie: "Regarder le Film",
@@ -287,6 +289,17 @@ i18n.use(initReactI18next).init({
         common: {
           loading: "Chargement...",
         },
+        ui: {
+          loading_page: "Chargement...",
+          loading_stream: "Chargement du flux...",
+          loading_gallery_access: "Verification des acces galerie...",
+          loading_admin_session: "Verification de la session admin...",
+          loading_admin_dashboard: "Chargement du dashboard admin...",
+          loading_admin_profile: "Chargement du profil admin...",
+          loading_upload_access: "Verification des droits d upload...",
+          admin_no_data: "Aucune donnee admin disponible.",
+          no_phase_config: "Aucune phase configuree.",
+        },
         agenda: {
           subtitle: "Agenda",
           back_to_agenda: "Retour a l'agenda",
@@ -420,6 +433,7 @@ i18n.use(initReactI18next).init({
         },
 
         gallery: {
+          loading: "Loading movies...",
           title_accent: "our Wonders",
           top_movies_subtitle: "Discover the top 5 movies",
           search_placeholder: "Search for a movie...",
@@ -434,6 +448,7 @@ i18n.use(initReactI18next).init({
           drama: "Drama",
         },
         movie_details: {
+          loading: "Loading...",
           not_found: "Movie not found",
           back_to_gallery: "Back to gallery",
           watch_movie: "Watch Movie",
@@ -674,6 +689,17 @@ i18n.use(initReactI18next).init({
         },
         common: {
           loading: "Loading...",
+        },
+        ui: {
+          loading_page: "Loading...",
+          loading_stream: "Loading stream...",
+          loading_gallery_access: "Checking gallery access...",
+          loading_admin_session: "Checking admin session...",
+          loading_admin_dashboard: "Loading admin dashboard...",
+          loading_admin_profile: "Loading admin profile...",
+          loading_upload_access: "Checking upload access...",
+          admin_no_data: "No admin data available.",
+          no_phase_config: "No phase configured.",
         },
         agenda: {
           subtitle: "Schedule",

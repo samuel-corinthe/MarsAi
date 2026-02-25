@@ -1,11 +1,16 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+﻿import { useState, useRef, useEffect, useCallback } from 'react';
 import { Navigate } from 'react-router-dom';
-import axios from 'axios';
 import { getVideoMetadata, validateVideoFrontend, VIDEO_CONSTRAINTS } from '../utils/videoValidation';
 import { validateForm, FORM_CONSTRAINTS, exceedsMaxLength } from '../utils/formvalidation';
 import { useTranslation } from 'react-i18next';
-import { getCurrentSessionUser, getSitePhaseState } from '../api';
 import { useTheme } from '../context/ThemeContext';
+import usePhaseAccessController from "../controllers/usePhaseAccessController";
+import {
+    fetchAltchaChallenge,
+    fetchUploadCountries,
+    fetchYoutubeUploadStatus,
+    postYoutubeUpload,
+} from '../services/uploadApiService';
 import 'altcha';
 
 function normalizeBasePath(value = '') {
@@ -36,8 +41,6 @@ function buildApiPath(path) {
 const YOUTUBE_STATUS_POLL_INTERVAL_MS = 15000;
 const YOUTUBE_STATUS_MAX_POLLS = 20;
 const ALTCHA_CHALLENGE_URL = buildApiPath('/api/altcha/challenge');
-const YOUTUBE_UPLOAD_URL = buildApiPath('/api/upload/youtube');
-const UPLOAD_COUNTRIES_URL = buildApiPath('/api/upload/countries');
 const POSTER_MAX_SIZE_BYTES = 5 * 1024 * 1024;
 const POSTER_TARGET_ASPECT_RATIO = 2 / 3;
 const POSTER_MAX_WIDTH = 1200;
@@ -219,10 +222,6 @@ function buildFlagAssetPath(path) {
     return normalizedPath;
 }
 
-function buildYoutubeStatusUrl(videoId) {
-    return buildApiPath(`/api/upload/youtube/status/${videoId}`);
-}
-
 function isTerminalYoutubeStatus(status) {
     const processingStatus = status?.processingStatus;
     const uploadStatus = status?.uploadStatus;
@@ -272,8 +271,7 @@ export default function YoutubeUpload() {
     const [youtubeStatus, setYoutubeStatus] = useState(null);
     const [youtubeStatusError, setYoutubeStatusError] = useState('');
     const [isCheckingYoutubeStatus, setIsCheckingYoutubeStatus] = useState(false);
-    const [uploadAccessLoading, setUploadAccessLoading] = useState(true);
-    const [isUploadAllowed, setIsUploadAllowed] = useState(true);
+    const { loading: uploadAccessLoading, isUploadAllowed } = usePhaseAccessController();
 
 
     const fileInputRef = useRef(null);
@@ -282,58 +280,12 @@ export default function YoutubeUpload() {
     const youtubeStatusPollCountRef = useRef(0);
 
     useEffect(() => {
-        let cancelled = false;
-
-        (async () => {
-            setUploadAccessLoading(true);
-
-            try {
-                const siteState = await getSitePhaseState();
-                if (cancelled) return;
-
-                const phaseKey = String(siteState?.currentPhase || 'phase_1').toLowerCase();
-                if (phaseKey !== 'phase_2' && phaseKey !== 'phase_3') {
-                    setIsUploadAllowed(true);
-                    return;
-                }
-
-                let hasAdminSession = false;
-                try {
-                    const sessionPayload = await getCurrentSessionUser();
-                    if (cancelled) return;
-                    const role = String(sessionPayload?.user?.role || '').toLowerCase();
-                    hasAdminSession = role === 'admin' || role === 'superadmin';
-                } catch {
-                    hasAdminSession = false;
-                }
-
-                if (!cancelled) {
-                    setIsUploadAllowed(hasAdminSession);
-                }
-            } catch {
-                if (!cancelled) {
-                    setIsUploadAllowed(true);
-                }
-            } finally {
-                if (!cancelled) {
-                    setUploadAccessLoading(false);
-                }
-            }
-        })();
-
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-
-    
-    useEffect(() => {
         const loadChallenge = async () => {
             try {
-                const response = await axios.get(ALTCHA_CHALLENGE_URL);
-                if (response.data.honeypot) {
-                    setHoneypotFieldName(response.data.honeypot.fieldName);
-                    setHoneypotToken(response.data.honeypot.token);
+                const payload = await fetchAltchaChallenge();
+                if (payload?.honeypot) {
+                    setHoneypotFieldName(payload.honeypot.fieldName);
+                    setHoneypotToken(payload.honeypot.token);
                 }
             } catch (error) {
                 console.error('[HONEYPOT] Erreur chargement challenge:', error);
@@ -349,10 +301,10 @@ export default function YoutubeUpload() {
         const loadCountries = async () => {
             setCountriesLoading(true);
             try {
-                const response = await axios.get(UPLOAD_COUNTRIES_URL);
+                const payload = await fetchUploadCountries();
                 if (cancelled) return;
-                const rows = Array.isArray(response?.data?.countries)
-                    ? response.data.countries
+                const rows = Array.isArray(payload?.countries)
+                    ? payload.countries
                     : [];
 
                 const normalized = rows
@@ -419,8 +371,7 @@ export default function YoutubeUpload() {
         setYoutubeStatusError('');
 
         try {
-            const response = await axios.get(buildYoutubeStatusUrl(videoId));
-            const payload = response?.data || {};
+            const payload = await fetchYoutubeUploadStatus(videoId);
             const statusData = payload.status || null;
             setYoutubeStatus(statusData);
             return statusData;
@@ -587,6 +538,22 @@ export default function YoutubeUpload() {
 
     const handlePreviousStep = () => {
         setCurrentStep((prev) => Math.max(1, prev - 1));
+    };
+
+    const handleStepSelect = (targetStep) => {
+        if (uploading || isValidating || isPosterProcessing) return;
+        if (targetStep === currentStep) return;
+
+        if (targetStep < currentStep) {
+            setCurrentStep(targetStep);
+            return;
+        }
+
+        for (let step = currentStep; step < targetStep; step += 1) {
+            if (!validateStep(step)) return;
+        }
+
+        setCurrentStep(targetStep);
     };
 
     const handleFileChange = async (e) => {
@@ -759,14 +726,13 @@ export default function YoutubeUpload() {
             setUploading(true);
             setStatus({ type: '', message: '' });
 
-            const res = await axios.post(YOUTUBE_UPLOAD_URL, formData, {
-                onUploadProgress: (progressEvent) => {
+            const responsePayload = await postYoutubeUpload(
+                formData,
+                (progressEvent) => {
                     const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                     setProgress(percent);
-                }
-            });
-
-            const responsePayload = res?.data || {};
+                },
+            );
             const confirmationEmailSent = responsePayload?.confirmationEmailSent !== false;
             const confirmationEmailError = String(responsePayload?.confirmationEmailError || '').trim();
             const uploadedVideoId = String(responsePayload.videoId || '').trim();
@@ -912,22 +878,24 @@ export default function YoutubeUpload() {
         ? 'border-slate-200/90 text-slate-900'
         : 'border-slate-500/35 text-white';
     const headerSubtitleClass = isLight ? 'text-slate-600' : 'text-slate-300';
-    const progressPanelClass = isLight
+    const stepPanelClass = isLight
         ? 'border-slate-200/90 bg-slate-50/90'
         : 'border-slate-500/45 bg-slate-900/60';
-    const progressTrackClass = isLight ? 'bg-slate-200' : 'bg-slate-700/70';
-    const stepDefaultClass = isLight
-        ? 'border-slate-300/90 bg-white'
-        : 'border-slate-600/70 bg-slate-900/35';
-    const stepDefaultBadgeClass = isLight ? 'bg-slate-200 text-slate-700' : 'bg-slate-700 text-slate-200';
-    const stepMetaClass = isLight ? 'text-slate-500' : 'text-slate-300';
-    const stepTitleClass = isLight ? 'text-slate-700' : 'text-slate-100';
+    const stepButtonBaseClass = isLight
+        ? 'border-slate-300/90 bg-white text-slate-700 hover:border-cyan-400 hover:text-cyan-700'
+        : 'border-slate-600/80 bg-slate-900/45 text-slate-200 hover:border-cyan-300 hover:text-cyan-100';
+    const stepButtonCurrentClass = isLight
+        ? 'border-cyan-500 bg-cyan-100 text-cyan-800 shadow-[0_0_0_2px_rgba(34,211,238,0.25)]'
+        : 'border-cyan-300 bg-cyan-400/20 text-cyan-100 shadow-[0_0_0_2px_rgba(103,232,249,0.25)]';
+    const stepButtonDoneClass = isLight
+        ? 'border-emerald-400/80 bg-emerald-100 text-emerald-800'
+        : 'border-emerald-300/70 bg-emerald-400/20 text-emerald-100';
 
     if (uploadAccessLoading) {
         return (
             <div className="section app-container upload-modern-page py-12">
                 <div className={`upload-modern-shell max-w-2xl mx-auto rounded-2xl border p-8 text-center ${shellClass}`}>
-                    Verification des droits d upload...
+                    {t("ui.loading_upload_access", "Checking upload access...")}
                 </div>
             </div>
         );
@@ -955,66 +923,41 @@ export default function YoutubeUpload() {
                 </div>
 
                 <form onSubmit={handleUpload} className="upload-modern-form p-8 space-y-6" noValidate>
-                    <div className={`rounded-xl border p-4 md:p-5 ${progressPanelClass}`}>
-                        <div className="mb-3 flex items-center justify-between gap-2">
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
-                                {t('upload.form.progress_label', 'Avancement du formulaire')}
-                            </p>
-                            <p className={`text-xs font-semibold ${stepMetaClass}`}>
-                                {currentStep}/{uploadSteps.length}
-                            </p>
+                    <div className={`rounded-xl border p-4 md:p-5 ${stepPanelClass}`}>
+                        <div className="mb-4">
+                            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200/70">
+                                <div
+                                    className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-sky-400 transition-all duration-300 ease-out"
+                                    style={{ width: `${stepProgressPercent}%` }}
+                                />
+                            </div>
                         </div>
-
-                        <div className={`h-2 w-full overflow-hidden rounded-full ${progressTrackClass}`}>
-                            <div
-                                className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-sky-400 transition-all duration-300 ease-out"
-                                style={{ width: `${stepProgressPercent}%` }}
-                            />
-                        </div>
-
-                        <ol className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+                        <div className="flex items-center justify-center gap-2 sm:gap-3">
                             {uploadSteps.map((step) => {
                                 const isCurrent = step.id === currentStep;
                                 const isDone = step.id < currentStep;
                                 return (
-                                    <li
+                                    <button
                                         key={step.id}
+                                        type="button"
+                                        onClick={() => handleStepSelect(step.id)}
+                                        aria-label={`${t('upload.form.step_label', 'Partie')} ${step.id}`}
                                         aria-current={isCurrent ? 'step' : undefined}
-                                        className={`rounded-lg border px-3 py-2 transition-all ${
+                                        disabled={uploading || isValidating || isPosterProcessing}
+                                        className={`inline-flex h-10 w-10 items-center justify-center rounded-full border text-sm font-black transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
                                             isCurrent
-                                                ? 'border-cyan-300/65 bg-cyan-400/12'
+                                                ? stepButtonCurrentClass
                                                 : isDone
-                                                    ? 'border-emerald-300/50 bg-emerald-400/12'
-                                                    : stepDefaultClass
+                                                    ? stepButtonDoneClass
+                                                    : stepButtonBaseClass
                                         }`}
                                     >
-                                        <div className="flex items-start gap-2">
-                                            <span
-                                                className={`mt-[2px] inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${
-                                                    isCurrent
-                                                        ? 'bg-cyan-300 text-slate-900'
-                                                        : isDone
-                                                            ? 'bg-emerald-300 text-slate-900'
-                                                            : stepDefaultBadgeClass
-                                                }`}
-                                            >
-                                                {isDone ? '✓' : step.id}
-                                            </span>
-                                            <div className="min-w-0">
-                                                <p className={`text-[10px] font-black uppercase tracking-[0.14em] ${stepMetaClass}`}>
-                                                    {step.badge}
-                                                </p>
-                                                <p className={`mt-0.5 text-xs font-semibold leading-snug ${stepTitleClass}`}>
-                                                    {step.title}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </li>
+                                        {step.id}
+                                    </button>
                                 );
                             })}
-                        </ol>
+                        </div>
                     </div>
-
                     <div className="space-y-6">
                     <section className={`rounded-xl border border-slate-200 p-4 md:p-5 space-y-6 ${currentStep === 1 ? '' : 'hidden'}`}>
                         <div className="space-y-1">
@@ -1069,7 +1012,7 @@ export default function YoutubeUpload() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Prénom */}
+                        {/* PrÃ©nom */}
                         <div className="space-y-2">
                             <div className="flex justify-between items-center">
                                 <label
@@ -1150,7 +1093,7 @@ export default function YoutubeUpload() {
                         </div>
                     </div>
 
-                    {/* Âge */}
+                    {/* Ã‚ge */}
                     <div className="space-y-2">
                         <div className="flex justify-between items-center">
                             <label
@@ -1674,7 +1617,7 @@ export default function YoutubeUpload() {
                         )}
                     </div>
 
-                    {/* HONEYPOT - Champ piège dynamique invisible */}
+                    {/* HONEYPOT - Champ piÃ¨ge dynamique invisible */}
                     {honeypotFieldName && (
                         <div
                             style={{
@@ -1703,7 +1646,7 @@ export default function YoutubeUpload() {
 
                     
 
-                    {/* Fichier vidéo */}
+                    {/* Fichier vidÃ©o */}
                     <div className="space-y-2">
                         <label className="block text-sm font-semibold text-slate-700">
                             {t('upload.form.video_label')} <abbr title={requiredLabel} className="text-red-600 no-underline">*</abbr>
@@ -1735,7 +1678,7 @@ export default function YoutubeUpload() {
                                 />
                                 {file && (
                                     <p className="text-slate-700 font-medium" aria-live="polite">
-                                        📁 {file.name}
+                                        ðŸ“ {file.name}
                                     </p>
                                 )}
                                 <p id="video-requirements" className="text-xs text-slate-500 text-center">
@@ -2037,16 +1980,12 @@ export default function YoutubeUpload() {
                     .upload-modern-form .text-blue-900 {
                         color: #a5f3fc !important;
                     }
-
-                    .upload-modern-form .text-red-600,
-                    .upload-modern-form .text-red-700 {
-                        color: #fca5a5 !important;
-                    }
                 `}</style>
             </div>
         </div>
     );
 }
+
 
 
 
