@@ -1,54 +1,99 @@
 import axios from "axios";
+import { buildApiPath } from "../utils/deploymentPath";
 
-function normalizeBasePath(value = "") {
-  const raw = String(value || "").trim();
-  if (!raw) return "";
-  const withLeadingSlash = raw.startsWith("/") ? raw : `/${raw}`;
-  return withLeadingSlash.replace(/\/+$/, "");
+function uniqueCandidates(values = []) {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
 }
 
-function buildApiPath(path) {
-  const safePath = path.startsWith("/") ? path : `/${path}`;
-  const configuredBasePath = normalizeBasePath(import.meta.env.VITE_API_BASE_PATH || "");
+function buildApiCandidates(path) {
+  const safePath = String(path || "").startsWith("/") ? String(path) : `/${path || ""}`;
+  const apiOrigin = String(import.meta.env.VITE_API_ORIGIN || "").trim().replace(/\/+$/, "");
+  const locationPrefix = (() => {
+    if (typeof window === "undefined") return "";
+    const first = String(window.location?.pathname || "/").split("/").filter(Boolean)[0] || "";
+    return first ? `/${first}` : "";
+  })();
 
-  if (configuredBasePath) {
-    return `${configuredBasePath}${safePath}`;
-  }
+  return uniqueCandidates([
+    buildApiPath(safePath),
+    apiOrigin ? `${apiOrigin}${safePath}` : "",
+    safePath,
+    `/MarsAi${safePath}`,
+    `/MarsAiFestival${safePath}`,
+    locationPrefix ? `${locationPrefix}${safePath}` : "",
+  ]);
+}
 
-  if (typeof window !== "undefined") {
-    const pathname = String(window.location?.pathname || "").toLowerCase();
-    if (pathname === "/marsai" || pathname.startsWith("/marsai/")) {
-      return `/MarsAi${safePath}`;
+async function requestApiWithFallback({
+  method = "get",
+  path,
+  data,
+  config = {},
+} = {}) {
+  const candidates = buildApiCandidates(path);
+  let lastError = null;
+
+  for (const url of candidates) {
+    try {
+      const response = await axios({
+        method,
+        url,
+        data,
+        ...config,
+      });
+      const contentType = String(response?.headers?.["content-type"] || "").toLowerCase();
+      if (contentType.includes("text/html")) {
+        continue;
+      }
+      return response?.data || {};
+    } catch (error) {
+      const status = Number(error?.response?.status);
+      const contentType = String(error?.response?.headers?.["content-type"] || "").toLowerCase();
+
+      if (status === 404 || contentType.includes("text/html")) {
+        lastError = error;
+        continue;
+      }
+
+      throw error;
     }
   }
 
-  return safePath;
+  if (lastError) throw lastError;
+  throw new Error("Impossible de joindre l'API backend.");
 }
 
 export async function fetchAltchaChallenge() {
-  const response = await axios.get(buildApiPath("/api/altcha/challenge"));
-  return response?.data || {};
+  return requestApiWithFallback({
+    method: "get",
+    path: "/api/altcha/challenge",
+  });
 }
 
 export async function fetchUploadCountries() {
-  const response = await axios.get(buildApiPath("/api/upload/countries"));
-  return response?.data || {};
+  return requestApiWithFallback({
+    method: "get",
+    path: "/api/upload/countries",
+  });
 }
 
 export async function fetchYoutubeUploadStatus(videoId) {
   const safeVideoId = String(videoId || "").trim();
   if (!safeVideoId) return {};
 
-  const response = await axios.get(
-    buildApiPath(`/api/upload/youtube/status/${encodeURIComponent(safeVideoId)}`),
-  );
-  return response?.data || {};
+  return requestApiWithFallback({
+    method: "get",
+    path: `/api/upload/youtube/status/${encodeURIComponent(safeVideoId)}`,
+  });
 }
 
 export async function postYoutubeUpload(formData, onUploadProgress) {
-  const response = await axios.post(buildApiPath("/api/upload/youtube"), formData, {
-    onUploadProgress,
+  return requestApiWithFallback({
+    method: "post",
+    path: "/api/upload/youtube",
+    data: formData,
+    config: {
+      onUploadProgress,
+    },
   });
-  return response?.data || {};
 }
-

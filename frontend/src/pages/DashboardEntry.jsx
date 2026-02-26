@@ -6,9 +6,12 @@ import PageLoader from "../components/ui/PageLoader";
 import { useTheme } from "../context/ThemeContext";
 import { useTranslation } from "react-i18next";
 
+const WORDPRESS_BASE_URL =
+  (import.meta.env.VITE_WORDPRESS_URL ||
+    "https://samuel-corinthe.students-laplateforme.io/MarsAi").replace(/\/+$/, "");
 const WP_LOGIN_URL =
   import.meta.env.VITE_WP_LOGIN_URL ||
-  "https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-login.php";
+  `${WORDPRESS_BASE_URL}/wp-login.php`;
 
 export default function DashboardEntry() {
   const { t } = useTranslation();

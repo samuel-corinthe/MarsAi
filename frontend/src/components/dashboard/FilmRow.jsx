@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { withDeploymentBase } from "../../utils/deploymentPath";
 
 const COUNTRY_NAME_TO_CODE = {
   france: "fr",
@@ -122,7 +123,7 @@ export default function FilmRow({
             <div className="mt-1 flex items-center gap-2">
               {countryCode ? (
                 <img
-                  src={`/images/flags/${countryCode}.png`}
+                  src={withDeploymentBase(`/images/flags/${countryCode}.png`)}
                   className="h-3.5 w-5 rounded-[2px] border border-slate-200 object-cover shadow-sm"
                   alt={countryCode.toUpperCase()}
                   onError={(event) => {

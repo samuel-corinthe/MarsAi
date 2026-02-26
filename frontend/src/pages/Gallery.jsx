@@ -10,6 +10,7 @@ import GalleryPagination from "../components/gallery/GalleryPagination";
 import GallerySearchToolbar from "../components/gallery/GallerySearchToolbar";
 import PageLoader from "../components/ui/PageLoader";
 import { useTheme } from "../context/ThemeContext";
+import { withDeploymentBase } from "../utils/deploymentPath";
 import {
   getCurrentSessionUser,
   getMovies,
@@ -28,17 +29,7 @@ function toFlagAssetPath(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
   if (/^https?:\/\//i.test(raw)) return raw;
-  if (/^\/MarsAi\//i.test(raw)) return raw;
-
-  const withLeadingSlash = raw.startsWith("/") ? raw : `/${raw}`;
-  if (typeof window !== "undefined") {
-    const pathname = String(window.location?.pathname || "").toLowerCase();
-    if (pathname === "/marsai" || pathname.startsWith("/marsai/")) {
-      return `/MarsAi${withLeadingSlash}`;
-    }
-  }
-
-  return withLeadingSlash;
+  return withDeploymentBase(raw);
 }
 
 function toDirectPreviewVideoUrl(...values) {
@@ -47,7 +38,7 @@ function toDirectPreviewVideoUrl(...values) {
     if (!raw) continue;
     if (/^https?:\/\/s3\.[^/]+\.scw\.cloud\/.+/i.test(raw)) return raw;
     if (/^https?:\/\/[^?#]+\.(mp4)(?:[?#].*)?$/i.test(raw)) return raw;
-    if (/^\/(?:MarsAi\/)?uploads\/videos\/[^?#]+\.(mp4)(?:[?#].*)?$/i.test(raw)) return raw;
+    if (/^\/(?:(?:MarsAi|MarsAiFestival)\/)?uploads\/videos\/[^?#]+\.(mp4)(?:[?#].*)?$/i.test(raw)) return raw;
   }
   return "";
 }

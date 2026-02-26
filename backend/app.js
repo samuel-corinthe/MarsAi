@@ -16,6 +16,7 @@ import { requireAuth, requireRole } from "./middlewares/authMiddleware.js";
 
 const app = express();
 app.set("trust proxy", 1);
+const deploymentBaseAliases = ["/MarsAi", "/MarsAiFestival"];
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:5173")
   .split(",")
@@ -61,29 +62,60 @@ const verifyOrigin = (req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static("uploads"));
-app.use("/MarsAi/uploads", express.static("uploads"));
+deploymentBaseAliases.forEach((basePath) => {
+  app.use(`${basePath}/uploads`, express.static("uploads"));
+});
+
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ ok: true, service: "marsai-api" });
+});
+deploymentBaseAliases.forEach((basePath) => {
+  app.get(`${basePath}/api/health`, (req, res) => {
+    res.status(200).json({ ok: true, service: "marsai-api" });
+  });
+});
 
 app.use(publicRoutes);
 app.use("/api", publicRoutes);
 app.use("/api/mail", publicRoutes);
-app.use("/MarsAi", publicRoutes);
-app.use("/MarsAi/api", publicRoutes);
-app.use("/MarsAi/api/mail", publicRoutes);
 app.use("/api/movies", movieRoutes);
 app.use("/api/movie", movieRoutes);
 app.use("/api/altcha", altchaRoutes);
 app.use("/api/upload", verifyOrigin, uploadRoutes);
 app.use("/api/auth", authRoutes);
-app.use("/MarsAi/api/movies", movieRoutes);
-app.use("/MarsAi/api/movie", movieRoutes);
-app.use("/MarsAi/api/altcha", altchaRoutes);
-app.use("/MarsAi/api/upload", verifyOrigin, uploadRoutes);
-app.use("/MarsAi/api/auth", authRoutes);
 app.use("/api/dashboard", requireAuth, requireRole(["admin", "superadmin"]), dashboardRoutes);
 app.use("/api/assignments", requireAuth, requireRole(["admin", "superadmin"]), assignmentRoutes);
 app.use("/api/ratings", requireAuth, requireRole(["admin", "superadmin"]), ratingRoutes);
 app.use("/api/site-phase", sitePhaseRoutes);
-app.use("/MarsAi/api/site-phase", sitePhaseRoutes);
+deploymentBaseAliases.forEach((basePath) => {
+  app.use(basePath, publicRoutes);
+  app.use(`${basePath}/api`, publicRoutes);
+  app.use(`${basePath}/api/mail`, publicRoutes);
+  app.use(`${basePath}/api/movies`, movieRoutes);
+  app.use(`${basePath}/api/movie`, movieRoutes);
+  app.use(`${basePath}/api/altcha`, altchaRoutes);
+  app.use(`${basePath}/api/upload`, verifyOrigin, uploadRoutes);
+  app.use(`${basePath}/api/auth`, authRoutes);
+  app.use(
+    `${basePath}/api/dashboard`,
+    requireAuth,
+    requireRole(["admin", "superadmin"]),
+    dashboardRoutes,
+  );
+  app.use(
+    `${basePath}/api/assignments`,
+    requireAuth,
+    requireRole(["admin", "superadmin"]),
+    assignmentRoutes,
+  );
+  app.use(
+    `${basePath}/api/ratings`,
+    requireAuth,
+    requireRole(["admin", "superadmin"]),
+    ratingRoutes,
+  );
+  app.use(`${basePath}/api/site-phase`, sitePhaseRoutes);
+});
 
 app.get("/", (req, res) => {
   res.send("Serveur MarsAI operationnel");

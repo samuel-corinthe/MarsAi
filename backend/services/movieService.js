@@ -132,11 +132,11 @@ function isDirectPlayableVideoUrl(value) {
     return true;
   }
 
-  if (/^\/(?:MarsAi\/)?uploads\/videos\/.+\.mp4$/i.test(raw)) {
+  if (/^\/(?:(?:MarsAi|MarsAiFestival)\/)?uploads\/videos\/.+\.mp4$/i.test(raw)) {
     return true;
   }
 
-  return /^https?:\/\/[^/]+\/(?:MarsAi\/)?uploads\/videos\/.+\.mp4$/i.test(raw);
+  return /^https?:\/\/[^/]+\/(?:(?:MarsAi|MarsAiFestival)\/)?uploads\/videos\/.+\.mp4$/i.test(raw);
 }
 
 function isS3MediaUrl(value) {

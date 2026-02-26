@@ -89,7 +89,7 @@ function toLocalVideoPath(value) {
   if (!raw) return null;
 
   const noHost = raw.replace(/^https?:\/\/[^/]+/i, "");
-  const noBase = noHost.replace(/^\/MarsAi/i, "");
+  const noBase = noHost.replace(/^\/(?:MarsAi|MarsAiFestival)/i, "");
   const noQuery = noBase.split("?")[0].split("#")[0];
   if (!noQuery.startsWith("/uploads/videos/")) return null;
 

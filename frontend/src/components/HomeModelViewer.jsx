@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useHomeModelViewerController from "../controllers/useHomeModelViewerController";
+import { withDeploymentBase } from "../utils/deploymentPath";
+
+const DEFAULT_FALLBACK_IMAGE = withDeploymentBase("/images/robot.png");
 
 function SafeFallbackImage({ src, alt }) {
-  const [resolvedSrc, setResolvedSrc] = useState(src || "/images/robot.png");
+  const [resolvedSrc, setResolvedSrc] = useState(src || DEFAULT_FALLBACK_IMAGE);
 
   return (
     <img
@@ -11,8 +14,8 @@ function SafeFallbackImage({ src, alt }) {
       loading="lazy"
       decoding="async"
       onError={() => {
-        if (resolvedSrc !== "/images/robot.png") {
-          setResolvedSrc("/images/robot.png");
+        if (resolvedSrc !== DEFAULT_FALLBACK_IMAGE) {
+          setResolvedSrc(DEFAULT_FALLBACK_IMAGE);
         }
       }}
       className="h-full w-full rounded-2xl border border-cyan-300/30 object-cover shadow-[0_20px_80px_rgba(0,0,0,0.45)]"
@@ -23,11 +26,13 @@ function SafeFallbackImage({ src, alt }) {
 export default function HomeModelViewer({
   src,
   poster,
-  fallbackSrc = "/images/robot.png",
+  fallbackSrc = DEFAULT_FALLBACK_IMAGE,
   className = "",
   alt = "Objet 3D",
   only = "all",
 }) {
+  const modelViewerRef = useRef(null);
+  const [forceImageFallback, setForceImageFallback] = useState(false);
   const {
     wrapperRef,
     ready,
@@ -36,13 +41,46 @@ export default function HomeModelViewer({
     canAutoRotate,
     interactionPrompt,
   } = useHomeModelViewerController({ src, only });
-  const primaryFallbackSrc = fallbackSrc || "/images/robot.png";
+  const primaryFallbackSrc = fallbackSrc || DEFAULT_FALLBACK_IMAGE;
+
+  useEffect(() => {
+    setForceImageFallback(false);
+  }, [src, only]);
+
+  useEffect(() => {
+    if (!src || !ready || !canRender3D || forceImageFallback) return;
+    const viewer = modelViewerRef.current;
+    if (!viewer) return;
+
+    let loaded = false;
+    const timeoutId = window.setTimeout(() => {
+      if (!loaded) setForceImageFallback(true);
+    }, 5000);
+
+    const handleLoad = () => {
+      loaded = true;
+      window.clearTimeout(timeoutId);
+    };
+    const handleError = () => {
+      window.clearTimeout(timeoutId);
+      setForceImageFallback(true);
+    };
+
+    viewer.addEventListener("load", handleLoad);
+    viewer.addEventListener("error", handleError);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      viewer.removeEventListener("load", handleLoad);
+      viewer.removeEventListener("error", handleError);
+    };
+  }, [src, ready, canRender3D, forceImageFallback]);
 
   if (!src && !fallbackSrc) return null;
   if (!shouldRender) return null;
 
   const autoRotateProps = canAutoRotate ? { "auto-rotate": "" } : {};
-  const show3D = Boolean(src && canRender3D && ready);
+  const show3D = Boolean(src && canRender3D && ready && !forceImageFallback);
 
   return (
     <div
@@ -53,6 +91,7 @@ export default function HomeModelViewer({
     >
       {show3D ? (
         <model-viewer
+          ref={modelViewerRef}
           {...autoRotateProps}
           src={src}
           poster={poster}

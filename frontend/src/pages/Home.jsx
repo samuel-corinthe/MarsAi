@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { getRecentAgendaEvents, getSitePhaseState } from "../api";
 import PhaseCountdownBanner from "../components/phases/PhaseCountdownBanner";
 import { useTheme } from "../context/ThemeContext";
+import { stripDeploymentPrefix, withDeploymentBase } from "../utils/deploymentPath";
 
 export default function Home({ page }) {
   const { i18n, t } = useTranslation();
@@ -19,8 +20,8 @@ export default function Home({ page }) {
     `${import.meta.env.BASE_URL}models/walking_robot_mr.glb`;
   const modelPoster = import.meta.env.VITE_HOME_MODEL_POSTER_URL || "";
   const modelFallbackSrc = isLight
-    ? "/images/robot_light.png"
-    : "/images/robot_night.png";
+    ? withDeploymentBase("/images/robot_light.png")
+    : withDeploymentBase("/images/robot_night.png");
   const submitFilmPath =
     i18n.language === "en" ? "/submit-film" : "/deposer-un-film";
   const participateVideoUrl =
@@ -145,10 +146,8 @@ export default function Home({ page }) {
 
       let path = pathname.replace(/\/+$/, "");
       if (!path) path = "/";
-      path = path
-        .replace(/^\/MarsAi\/en\//i, "/")
-        .replace(/^\/MarsAi\/fr\//i, "/")
-        .replace(/^\/MarsAi\//i, "/");
+      path = stripDeploymentPrefix(path)
+        .replace(/^\/(?:en|fr)\//i, "/");
 
       const mappedPaths = {
         "/submit-film": submitFilmPath,

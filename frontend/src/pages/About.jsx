@@ -6,6 +6,7 @@ import { OrganizationSchema, WebSiteSchema } from "../components/Schema";
 import { getPageBySlug } from "../api";
 import PageLoader from "../components/ui/PageLoader";
 import { useTheme } from "../context/ThemeContext";
+import { withDeploymentBase } from "../utils/deploymentPath";
 
 export default function About() {
   const { t, i18n } = useTranslation();
@@ -129,7 +130,7 @@ export default function About() {
 
             <aside className="space-y-4">
               <img
-                src="/images/marsai-illustration.png"
+                src={withDeploymentBase("/images/marsai-illustration.png")}
                 alt="MarsAI"
                 className={`w-full rounded-[28px] border object-cover ${theme.imageBorder}`}
                 onError={(event) => {
