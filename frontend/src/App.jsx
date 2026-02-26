@@ -38,7 +38,7 @@ export default function App() {
           {/* --- ACCUEIL --- */}
           <Route path="/" element={<WpPage isHome={true} />} />
           <Route path="/accueil" element={<WpPage isHome={true} />} />
-          <Route path="/home" element={<WpPage isHome={true} />} />
+
           <Route path="/en/home" element={<WpPage isHome={true} />} />
           <Route path="/ar/home" element={<WpPage isHome={true} />} />
 
