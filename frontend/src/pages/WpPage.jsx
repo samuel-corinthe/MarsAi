@@ -227,9 +227,13 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     if (fixedSlug) return;
     const targetPath = isHome
       ? i18n.language === "en"
-        ? "/home"
-        : "/accueil"
-      : `/${slug}`;
+        ? "/en/home"
+        : i18n.language === "ar"
+          ? "/ar/home"
+          : "/accueil"
+      : i18n.language === "fr"
+        ? `/${slug}`
+        : `/${i18n.language}/${slug}`;
     if (location.pathname !== targetPath && (routeSlug || isHome)) {
       navigate(targetPath, { replace: true });
     }
