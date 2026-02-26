@@ -44,7 +44,6 @@ export default function App() {
 
           {/* --- A PROPOS --- */}
           <Route path="/a-propos" element={<About />} />
-          <Route path="/about" element={<About />} />
           <Route path="/en/about" element={<About />} />
           <Route path="/ar/about" element={<About />} />
 
