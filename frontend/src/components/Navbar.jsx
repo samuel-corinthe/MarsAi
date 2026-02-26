@@ -16,7 +16,6 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Correction : Bloquer le scroll du corps de la page quand le menu mobile est ouvert
   useEffect(() => {
     if (mobileMenuOpen) {
       document.body.style.overflow = "hidden";
@@ -57,17 +56,9 @@ const Navbar = () => {
         en: "/en/legal-notice",
         ar: "/ar/legal-notice",
       },
-      contact: { fr: "/contact", en: "/en/contact", ar: "/ar/contact" }, // Ajout Contact
+      contact: { fr: "/contact", en: "/en/contact", ar: "/ar/contact" },
     };
     return paths[pageKey]?.[lang] || paths[pageKey]?.["en"] || "/";
-  };
-
-  const handleLanguageChange = (nextLang) => {
-    if (nextLang === i18n.language) return;
-    i18n.changeLanguage(nextLang).then(() => {
-      // On redirige vers la home pour simplifier ou tu peux garder ta logique de reversePaths
-      navigate(getLocalizedPath("home"), { replace: true });
-    });
   };
 
   const mainNav = [
@@ -94,9 +85,21 @@ const Navbar = () => {
   ];
 
   const moreNav = [
-    { name: t("nav.legal"), path: getLocalizedPath("legal"), id: "legal" },
-    { name: t("nav.terms_gv"), path: getLocalizedPath("tos"), id: "tos" },
-    { name: t("nav.terms_gu"), path: getLocalizedPath("gcu"), id: "gcu" },
+    {
+      name: t("nav.legal") || "Mentions Légales",
+      path: getLocalizedPath("legal"),
+      id: "legal",
+    },
+    {
+      name: t("nav.terms_gv") || "CGV",
+      path: getLocalizedPath("tos"),
+      id: "tos",
+    },
+    {
+      name: t("nav.terms_gu") || "CGU",
+      path: getLocalizedPath("gcu"),
+      id: "gcu",
+    },
   ];
 
   return (
@@ -106,10 +109,10 @@ const Navbar = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
-            {/* Logo */}
+            {/* Logo Section */}
             <Link
               to={getLocalizedPath("home")}
-              className="flex items-center space-x-3 group rtl:space-x-reverse z-[80]"
+              className="z-[80] flex items-center space-x-3 group rtl:space-x-reverse"
             >
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-400 to-pink-500 flex items-center justify-center transform group-hover:rotate-12 transition-transform">
                 <svg
@@ -121,10 +124,7 @@ const Navbar = () => {
                 </svg>
               </div>
               <div className="flex flex-col">
-                <span
-                  className="text-2xl font-black text-white leading-none"
-                  style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-                >
+                <span className="text-2xl font-black text-white leading-none uppercase tracking-tighter">
                   marsAI
                 </span>
                 <span className="text-[10px] text-cyan-400 font-mono tracking-widest uppercase">
@@ -133,7 +133,7 @@ const Navbar = () => {
               </div>
             </Link>
 
-            {/* Desktop Nav */}
+            {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center space-x-1 rtl:space-x-reverse">
               {mainNav.map((item) => (
                 <Link
@@ -144,68 +144,92 @@ const Navbar = () => {
                   {item.name}
                 </Link>
               ))}
-              {/* Dropdown More Desktop ... (inchangé) */}
+
+              {/* Dropdown "Plus" (Éléments légaux) */}
+              <div className="relative ml-2">
+                <button
+                  onClick={() =>
+                    setActiveDropdown(activeDropdown === "more" ? null : "more")
+                  }
+                  className="px-3 py-2 text-sm font-medium text-gray-300 flex items-center gap-1 hover:text-white transition-colors"
+                >
+                  <span>{t("nav.more") || "Plus"}</span>
+                  <svg
+                    className={`w-4 h-4 transition-transform ${activeDropdown === "more" ? "rotate-180" : ""}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {activeDropdown === "more" && (
+                  <div
+                    className={`absolute ${i18n.language === "ar" ? "left-0" : "right-0"} mt-2 w-56 bg-gray-900 border border-gray-800 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2`}
+                  >
+                    {moreNav.map((item) => (
+                      <Link
+                        key={item.id}
+                        to={item.path}
+                        onClick={() => setActiveDropdown(null)}
+                        className="block px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 hover:text-cyan-400 transition-colors"
+                      >
+                        {item.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Desktop Lang & CTA */}
-            <div className="hidden lg:flex items-center space-x-4 rtl:space-x-reverse">
-              <div className="flex items-center border-x border-gray-800 px-4 space-x-3 rtl:space-x-reverse text-[11px] font-bold">
-                {["fr", "en", "ar"].map((l) => (
-                  <button
-                    key={l}
-                    onClick={() => handleLanguageChange(l)}
-                    className={`hover:text-cyan-400 transition-colors uppercase ${i18n.language === l ? "text-cyan-400" : "text-gray-500"}`}
-                  >
-                    {l}
-                  </button>
-                ))}
-              </div>
+            {/* Langue & Burger */}
+            <div className="flex items-center space-x-4 z-[80]">
               <Link
                 to={getLocalizedPath("submit")}
-                className="px-5 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-bold rounded-full hover:shadow-[0_0_15px_rgba(16,185,129,0.5)] transition-all"
+                className="hidden md:block px-5 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-bold rounded-full hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all"
               >
                 {t("nav.submitFilm")}
               </Link>
-            </div>
 
-            {/* Mobile Burger Button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden z-[80] p-2 text-gray-400 hover:text-white transition-colors"
-            >
-              <svg
-                className="w-8 h-8"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="lg:hidden p-2 text-gray-400 hover:text-white transition-colors"
               >
-                {mobileMenuOpen ? (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                ) : (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                )}
-              </svg>
-            </button>
+                <svg
+                  className="w-8 h-8"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  {mobileMenuOpen ? (
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  ) : (
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
+                  )}
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </nav>
 
-      {/* Fullscreen Mobile Menu */}
+      {/* Mobile Menu Fullscreen Overlay */}
       <div
         className={`fixed inset-0 z-[60] bg-black transform transition-transform duration-500 ease-in-out ${mobileMenuOpen ? "translate-y-0" : "-translate-y-full"} lg:hidden`}
       >
         <div className="flex flex-col h-full pt-28 pb-10 px-8 overflow-y-auto">
-          <div className="flex flex-col space-y-6">
+          <div className="flex flex-col space-y-5">
             {mainNav.map((item) => (
               <Link
                 key={item.id}
@@ -216,14 +240,20 @@ const Navbar = () => {
                 {item.name}
               </Link>
             ))}
-            <hr className="border-gray-800" />
+
+            <div className="h-px bg-gray-800 my-4" />
+
+            {/* Éléments légaux en mobile */}
             <div className="grid grid-cols-1 gap-4">
+              <span className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-1">
+                Informations Légales
+              </span>
               {moreNav.map((item) => (
                 <Link
                   key={item.id}
                   to={item.path}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="text-gray-400 text-lg"
+                  className="text-gray-400 text-lg hover:text-white"
                 >
                   {item.name}
                 </Link>
@@ -231,20 +261,23 @@ const Navbar = () => {
             </div>
           </div>
 
-          <div className="mt-auto pt-10 flex flex-col gap-8">
+          <div className="mt-auto pt-10 flex flex-col gap-6">
             <Link
               to={getLocalizedPath("submit")}
               onClick={() => setMobileMenuOpen(false)}
-              className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-center font-bold rounded-xl"
+              className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-center font-bold rounded-xl shadow-lg"
             >
               {t("nav.submitFilm")}
             </Link>
 
-            <div className="flex justify-center items-center gap-8">
+            <div className="flex justify-center gap-10">
               {["fr", "en", "ar"].map((l) => (
                 <button
                   key={l}
-                  onClick={() => handleLanguageChange(l)}
+                  onClick={() => {
+                    i18n.changeLanguage(l);
+                    setMobileMenuOpen(false);
+                  }}
                   className={`uppercase text-xl font-black ${i18n.language === l ? "text-cyan-400" : "text-gray-600"}`}
                 >
                   {l}
