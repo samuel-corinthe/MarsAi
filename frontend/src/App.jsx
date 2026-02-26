@@ -55,7 +55,6 @@ export default function App() {
 
           {/* --- FILMS (GALLERY) --- */}
           <Route path="/films" element={<Gallery />} />
-          <Route path="/movies" element={<Gallery />} />
           <Route path="/en/movies" element={<Gallery />} />
           <Route path="/ar/films" element={<Gallery />} />
           <Route path="/movie/:id" element={<MovieDetails />} />
