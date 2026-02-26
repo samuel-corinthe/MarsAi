@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CookieModal from "./components/CookieModal";
@@ -19,11 +19,15 @@ export default function App() {
   const hideChrome = location.pathname.startsWith("/dashboard");
 
   useEffect(() => {
+    // 1. Google Analytics tracking
     if (window.gtag) {
       window.gtag("config", "G-5ZGJKEP00R", {
         page_path: location.pathname + location.search,
       });
     }
+
+    // 2. Correction : Scroll en haut de page à chaque changement de route
+    window.scrollTo(0, 0);
   }, [location]);
 
   return (
@@ -43,6 +47,11 @@ export default function App() {
           <Route path="/about" element={<About />} />
           <Route path="/en/about" element={<About />} />
           <Route path="/ar/about" element={<About />} />
+
+          {/* --- CONTACT --- */}
+          <Route path="/contact" element={<WpPage fixedSlug="contact" />} />
+          <Route path="/en/contact" element={<WpPage fixedSlug="contact" />} />
+          <Route path="/ar/contact" element={<WpPage fixedSlug="contact" />} />
 
           {/* --- FILMS (GALLERY) --- */}
           <Route path="/films" element={<Gallery />} />
@@ -119,6 +128,7 @@ export default function App() {
           <Route path="/dashboard" element={<DashboardEntry />} />
           <Route path="/testcountdown" element={<TestCountdown />} />
 
+          {/* --- DYNAMIQUE & 404 --- */}
           <Route path="/:slug" element={<WpPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
