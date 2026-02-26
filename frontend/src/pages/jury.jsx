@@ -8,111 +8,127 @@ import React, {
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
 
-// --- Helpers ---
-const createSlug = (text, lang = "fr") => {
-  const baseSlug =
-    text
-      ?.toString()
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim()
-      .replace(/\s+/g, "-")
-      .replace(/[^\w\-]+/g, "")
-      .replace(/\-\-+/g, "-") || "";
+// --- Dictionnaire de secours pour les slugs Arabes ---
+// Cela permet de faire le lien entre le nom affiché et l'URL WP
+const AR_SLUG_MAP = {
+  سوبرانو: "soprano",
+  soprano: "soprano",
+  // Ajoute ici les autres membres si nécessaire :
+  // "nom_arabe": "nom_latin"
+};
 
-  // Si la langue est l'anglais, on ajoute le suffixe utilisé dans tes slugs WP
-  if (lang === "en" && baseSlug) {
-    return `${baseSlug}-eng`;
+const createSlug = (text, lang = "fr") => {
+  if (!text) return "";
+
+  // Si on est en arabe, on regarde d'abord notre dictionnaire
+  let baseText = text.toString().toLowerCase().trim();
+  if (lang === "ar" && AR_SLUG_MAP[baseText]) {
+    baseText = AR_SLUG_MAP[baseText];
   }
-  // Si la langue est l'arabe, on ajoute le suffixe utilisé dans tes slugs WP
-  if (lang === "ar" && baseSlug) {
-    return `${baseSlug}-ar`;
-  }
+
+  const baseSlug = baseText
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/[^\w\-]+/g, "")
+    .replace(/\-\-+/g, "-");
+
+  if (lang === "en") return `${baseSlug}-eng`;
+  if (lang === "ar") return `${baseSlug}-ar`;
   return baseSlug;
 };
 
 const parseJuryData = (html, lang) => {
-  if (typeof window === "undefined") return [];
-  return Array.from(
-    new DOMParser().parseFromString(html, "text/html").querySelectorAll("li"),
-  )
+  if (typeof window === "undefined" || !html) return [];
+  const doc = new DOMParser().parseFromString(html, "text/html");
+
+  return Array.from(doc.querySelectorAll("li"))
     .map((li) => {
       const img = li.querySelector("img");
       const strong = li.querySelector("strong") || li.querySelector("b");
-      const name = strong ? strong.textContent : "";
+
+      let name = "";
+      if (strong) name = strong.textContent.trim();
+      else if (img?.alt) name = img.alt.trim();
+      else name = li.textContent.trim().split(/\s+/)[0];
+
+      const role = li.textContent.replace(name, "").trim();
+      const manualSlug = li.getAttribute("data-slug");
+
       return {
-        // Priorité au data-slug si présent, sinon génération auto avec suffixe langue
-        slug:
-          li.getAttribute("data-slug") || createSlug(name || img?.alt, lang),
+        slug: manualSlug || createSlug(name, lang),
         name,
-        role: (li.textContent || "").replace(name, "").trim(),
+        role,
         imgSrc: img?.src,
       };
     })
-    .filter((i) => i.slug);
+    .filter((m) => m.name);
 };
 
 const articleCache = new Map();
 
-// --- Components ---
+// --- Style Components ---
 const Background = () => (
   <div className="fixed inset-0 pointer-events-none z-0">
     <div className="absolute inset-0 bg-gradient-to-br from-[#020617] via-[#1e3a8a] to-[#172554]" />
-    <div className="absolute top-[-10%] left-[-10%] w-[800px] h-[800px] bg-blue-600/20 rounded-full blur-[120px] mix-blend-screen opacity-40" />
-    <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-indigo-500/10 rounded-full blur-[100px] opacity-30" />
+    <div className="absolute top-[-10%] left-[-10%] w-[800px] h-[800px] bg-blue-600/20 rounded-full blur-[120px] opacity-40" />
     <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay" />
   </div>
 );
 
-const GavelIcon = () => (
-  <div className="mb-8 p-5 bg-[#1e293b]/50 backdrop-blur-md rounded-full shadow-[0_0_30px_rgba(37,99,235,0.2)] border border-white/10 ring-1 ring-blue-500/30">
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="w-10 h-10 text-blue-400"
-    >
-      <path d="m14.5 12.5-8 8a2.119 2.119 0 1 1-3-3l8-8m9.5 3.5 6-6m-14 14 6-6m-5 5 8 8m12 4-8-8" />
-    </svg>
-  </div>
-);
-
-export default function JuryWpage({ page }) {
+export default function JuryWpage({ page: initialPage }) {
   const { t, i18n } = useTranslation();
+  const [page, setPage] = useState(initialPage);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
-  const abortRef = useRef(null);
+  const isRTL = i18n.language === "ar";
+
+  useEffect(() => {
+    const fetchPage = async () => {
+      let slug =
+        i18n.language === "ar"
+          ? "jury-ar"
+          : i18n.language === "en"
+            ? "jury-eng"
+            : "jury";
+      try {
+        const res = await fetch(
+          `https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-json/wp/v2/pages?slug=${slug}`,
+        );
+        const data = await res.json();
+        if (data?.[0]) setPage(data[0]);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchPage();
+  }, [i18n.language]);
+
+  const members = useMemo(
+    () => parseJuryData(page?.content?.rendered, i18n.language),
+    [page, i18n.language],
+  );
 
   const openArticle = useCallback(
-    async (slug) => {
-      if (!slug) return;
+    async (member) => {
+      if (!member?.slug) return;
+      const cacheKey = `${member.slug}_${i18n.language}`;
 
-      const cacheKey = `${slug}_${i18n.language}`;
       if (articleCache.has(cacheKey))
         return setSelected(articleCache.get(cacheKey));
 
       setLoading(true);
-      // État temporaire pour déclencher l'affichage du bloc
       setSelected({
-        slug,
-        title: { rendered: t("jury.loading") },
+        title: { rendered: member.name },
         content: { rendered: "" },
         isLoading: true,
+        slug: member.slug,
       });
-
-      if (abortRef.current) abortRef.current.abort();
-      abortRef.current = new AbortController();
 
       try {
         const res = await fetch(
-          `https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_fields=id,title,content,excerpt,slug&lang=${i18n.language}`,
-          { signal: abortRef.current.signal },
+          `https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-json/wp/v2/posts?slug=${member.slug}`,
         );
         const data = await res.json();
 
@@ -120,24 +136,28 @@ export default function JuryWpage({ page }) {
           articleCache.set(cacheKey, data[0]);
           setSelected(data[0]);
         } else {
-          // Si rien n'est trouvé, on ferme pour éviter le blocage sur "loading"
-          console.warn(`Aucun post trouvé pour le slug: ${slug}`);
-          setSelected(null);
+          // Si le slug exact échoue, on tente une recherche par titre
+          const resSearch = await fetch(
+            `https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-json/wp/v2/posts?search=${encodeURIComponent(member.name)}`,
+          );
+          const dataSearch = await resSearch.json();
+          if (dataSearch?.[0]) {
+            setSelected(dataSearch[0]);
+          } else {
+            setSelected(null);
+          }
         }
       } catch (e) {
-        if (e.name !== "AbortError") {
-          console.error(e);
-          setSelected(null);
-        }
+        setSelected(null);
       } finally {
         setLoading(false);
       }
     },
-    [i18n.language, t],
+    [i18n.language],
   );
 
   useEffect(() => {
-    if (selected && scrollRef.current)
+    if (selected && scrollRef.current) {
       setTimeout(
         () =>
           scrollRef.current.scrollIntoView({
@@ -146,147 +166,104 @@ export default function JuryWpage({ page }) {
           }),
         100,
       );
+    }
   }, [selected]);
-
-  // On régénère les membres quand la langue change pour mettre à jour les slugs
-  const members = useMemo(
-    () => parseJuryData(page?.content?.rendered || "", i18n.language),
-    [page, i18n.language],
-  );
-
-  const title = page?.title?.rendered || t("jury.jury_title");
-
-  const seoTitle = page?.title?.rendered || t("jury.jury_title");
-  const seoDescription = t(
-    "jury.jury_subtitle",
-    "Rencontrez les experts visionnaires de notre selection officielle.",
-  );
 
   return (
     <>
-      <Seo title={seoTitle} description={seoDescription} />
-      <main className="min-h-screen w-full bg-[#0f172a] text-white font-['Montserrat'] flex flex-col items-center py-20 px-4 relative overflow-x-hidden selection:bg-[#38bdf8] selection:text-[#0f172a]">
+      <Seo title={page?.title?.rendered || "Jury"} />
+      <main
+        className={`min-h-screen w-full bg-[#0f172a] text-white py-20 px-4 relative ${isRTL ? "text-right" : "text-left"}`}
+        dir={isRTL ? "rtl" : "ltr"}
+      >
         <Background />
 
-        <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 mix-blend-overlay pointer-events-none z-[60]"></div>
-
-        {/* Header */}
-        <div className="relative z-10 text-center mb-16 max-w-4xl flex flex-col items-center pt-10">
-          <GavelIcon />
+        <div className="relative z-10 text-center mb-16 max-w-4xl mx-auto flex flex-col items-center">
           <h1
-            className="text-5xl md:text-7xl font-black text-white mb-6 tracking-tighter drop-shadow-2xl uppercase"
-            dangerouslySetInnerHTML={{ __html: title }}
-          />
-          <p className="text-[#cbd5e1] text-lg md:text-xl max-w-2xl font-medium leading-relaxed">
-            {t(
-              "jury.jury_subtitle",
-              "Rencontrez les experts visionnaires de notre sélection officielle.",
+            className="text-5xl md:text-7xl font-black mb-6 tracking-tighter uppercase"
+            dir={isRTL ? "ltr" : "ltr"}
+          >
+            {" "}
+            {/* On force l'ordre des blocs en LTR */}
+            {isRTL ? (
+              <>
+                {/* 1. Le chiffre s'affiche à GAUCHE (après le texte en lecture arabe) */}
+                <span className="mr-4">2026</span>
+
+                {/* 2. Le texte s'affiche à DROITE */}
+                <span dir="rtl">
+                  {page?.title?.rendered.replace("2026", "").trim()}
+                </span>
+              </>
+            ) : (
+              <span
+                dangerouslySetInnerHTML={{ __html: page?.title?.rendered }}
+              />
             )}
+          </h1>
+          <p className="text-[#cbd5e1] text-lg max-w-2xl">
+            {t("jury.jury_subtitle")}
           </p>
         </div>
 
-        {/* Article Detail */}
         {selected && (
           <div
             ref={scrollRef}
-            className="relative z-20 w-full max-w-4xl mb-24 animate-in fade-in slide-in-from-bottom-8 duration-500"
+            className="relative z-20 w-full max-w-4xl mx-auto mb-24 animate-in fade-in slide-in-from-bottom-8 duration-500"
           >
-            <div className="bg-[#1e293b] rounded-[2.5rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.6)] border border-[#334155]">
-              <div className="bg-[#1e293b] p-8 md:p-10 border-b border-white/5 flex justify-between items-start">
-                <div>
-                  <span className="text-[#38bdf8] font-black uppercase text-[10px] tracking-[0.2em] mb-3 block">
-                    {selected.isLoading
-                      ? t("jury.jury.loading")
-                      : t("jury.jury_profile_label", "Profil Jury")}
-                  </span>
-                  <h2
-                    className="text-3xl md:text-4xl font-black text-white leading-none uppercase tracking-tight"
-                    dangerouslySetInnerHTML={{
-                      __html: selected.title.rendered,
-                    }}
-                  />
-                </div>
+            <div className="bg-[#1e293b] rounded-[2.5rem] overflow-hidden shadow-2xl border border-[#334155]">
+              <div className="p-8 border-b border-white/5 flex justify-between items-center">
+                <h2
+                  className="text-3xl font-black uppercase"
+                  dangerouslySetInnerHTML={{ __html: selected.title.rendered }}
+                />
                 <button
                   onClick={() => setSelected(null)}
-                  className="flex items-center justify-center w-12 h-12 rounded-full bg-white/5 hover:bg-[#38bdf8] border border-white/10 transition-all text-white hover:text-[#0f172a]"
+                  className="text-4xl hover:text-blue-400 transition-colors"
                 >
-                  <span className="text-2xl leading-none">×</span>
+                  ×
                 </button>
               </div>
-
-              <div className="p-8 md:p-14 bg-[#1e293b]">
+              <div className="p-8 md:p-14">
                 {loading ? (
-                  <div className="flex flex-col items-center justify-center py-20">
-                    <div className="w-12 h-12 border-4 border-white/10 border-t-[#38bdf8] rounded-full animate-spin mb-6" />
+                  <div className="flex justify-center">
+                    <div className="w-10 h-10 border-4 border-t-blue-500 rounded-full animate-spin" />
                   </div>
                 ) : (
                   <div
-                    className="prose prose-lg prose-invert max-w-none 
-                                prose-p:text-[#cbd5e1] prose-p:leading-relaxed 
-                                prose-headings:text-white prose-headings:font-black 
-                                prose-a:text-[#38bdf8] prose-strong:text-white
-                                prose-img:rounded-3xl"
+                    className="prose prose-lg prose-invert max-w-none"
                     dangerouslySetInnerHTML={{
                       __html: selected.content.rendered,
                     }}
                   />
                 )}
               </div>
-
-              <div className="bg-[#0f172a]/30 p-6 text-center border-t border-white/5">
-                <button
-                  onClick={() => setSelected(null)}
-                  className="text-[10px] uppercase tracking-[0.2em] font-black text-[#94a3b8] hover:text-[#38bdf8] transition-colors"
-                >
-                  {t("jury.close_profile", "Fermer le profil")}
-                </button>
-              </div>
             </div>
           </div>
         )}
 
-        {/* Grid */}
-        <div className="relative z-10 w-full max-w-5xl px-4 md:px-10">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 justify-items-center">
-            {members.map((m) => {
-              const isSelected =
-                selected && !selected.isLoading && selected.slug === m.slug;
-              const isDimmed = selected && !isSelected;
-
-              return (
-                <div
-                  key={m.slug}
-                  onClick={() => openArticle(m.slug)}
-                  className={`group relative flex items-center gap-8 p-8 w-full max-w-md rounded-[2rem] border cursor-pointer transition-all duration-500 ease-out bg-[#1e293b] shadow-xl
-                  ${!isDimmed ? "hover:bg-[#24334d] hover:border-[#38bdf8]/40 hover:-translate-y-2" : ""}
-                  ${isDimmed ? "opacity-30 grayscale blur-[2px]" : "opacity-100 border-white/5"}
-                  ${isSelected ? "border-[#38bdf8] ring-2 ring-[#38bdf8]/20" : ""}`}
-                >
-                  <div className="relative flex-shrink-0">
-                    <img
-                      src={m.imgSrc || "https://via.placeholder.com/150"}
-                      alt={m.name}
-                      className={`w-24 h-24 md:w-28 md:h-28 object-cover rounded-full bg-[#0f172a] ring-4 ring-white/5 transition-all duration-500 ${!isDimmed && "group-hover:ring-[#38bdf8] group-hover:scale-105"}`}
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <h3 className="text-xl md:text-2xl font-black text-white mb-2 group-hover:text-[#38bdf8] transition-colors uppercase tracking-tight">
-                      {m.name}
-                    </h3>
-                    <p className="text-xs font-black text-[#38bdf8] uppercase tracking-[0.2em]">
-                      {m.role}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {members.length === 0 && (
-            <div className="text-center py-20 text-[#94a3b8] font-bold uppercase tracking-widest text-sm">
-              {t("jury.no_members", "Aucun membre détecté.")}
+        <div className="relative z-10 w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+          {members.map((m) => (
+            <div
+              key={m.slug}
+              onClick={() => openArticle(m)}
+              className={`group flex items-center gap-8 p-8 rounded-[2rem] border cursor-pointer transition-all duration-500 bg-[#1e293b] hover:bg-[#24334d] shadow-xl border-white/5 hover:border-blue-500/40 ${selected?.slug === m.slug ? "border-blue-500 ring-2 ring-blue-500/20" : ""}`}
+            >
+              <img
+                src={m.imgSrc}
+                alt={m.name}
+                className="w-24 h-24 md:w-28 md:h-28 object-cover rounded-full ring-4 ring-white/5 group-hover:ring-blue-500 transition-all"
+              />
+              <div>
+                <h3 className="text-xl md:text-2xl font-black mb-2 uppercase">
+                  {m.name}
+                </h3>
+                <p className="text-xs font-black text-blue-400 uppercase tracking-widest">
+                  {m.role}
+                </p>
+              </div>
             </div>
-          )}
+          ))}
         </div>
       </main>
     </>
