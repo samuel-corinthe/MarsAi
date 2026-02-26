@@ -106,31 +106,6 @@ const About = () => {
                       </span>{" "}
                       {t("about.description")}
                     </p>
-
-                    <div className="flex flex-wrap gap-3">
-                      {["Innovation", "Deep Learning", "Creative Tools"].map(
-                        (tag) => (
-                          <span
-                            key={tag}
-                            className="px-3 py-1 rounded-full text-[10px] font-black bg-blue-500/10 text-blue-300 border border-blue-500/20 uppercase tracking-widest"
-                          >
-                            #{tag}
-                          </span>
-                        ),
-                      )}
-                    </div>
-
-                    <p className="text-gray-300 text-lg leading-relaxed">
-                      {t("about.community")}
-                    </p>
-
-                    <h2 className="text-3xl md:text-5xl font-black text-white pt-4 uppercase italic leading-none">
-                      {isAr ? "أظهر إبداعك مع " : "Show Your cr"}
-                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500">
-                        AI
-                      </span>
-                      {isAr ? "" : "tivity"}
-                    </h2>
                   </>
                 )}
 
