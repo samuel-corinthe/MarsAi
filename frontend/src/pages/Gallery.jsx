@@ -884,7 +884,9 @@ const Gallery = () => {
       </div>
 
       {isFilterModalOpen && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+        <div
+          className={`fixed inset-0 z-[1000] flex items-center justify-center p-4 ${i18n.language === "ar" ? "rtl" : "ltr"}`}
+        >
           <div
             className="absolute inset-0 bg-blue-950/80 backdrop-blur-md"
             onClick={() => setIsFilterModalOpen(false)}
@@ -893,7 +895,7 @@ const Gallery = () => {
           <div className="relative w-full max-w-md rounded-[36px] bg-white p-8 shadow-2xl">
             <div className="mb-8 flex items-center justify-between">
               <h2 className="text-2xl font-black uppercase tracking-tight text-blue-950">
-                Filtres Avances
+                {t("gallery.filterTitle")}
               </h2>
               <button
                 onClick={() => setIsFilterModalOpen(false)}
@@ -918,7 +920,7 @@ const Gallery = () => {
             <div className="space-y-8">
               <div>
                 <p className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                  Trier par
+                  {t("gallery.sortBy")}
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   {sortOptions.map((option) => (
@@ -931,7 +933,8 @@ const Gallery = () => {
                           : "bg-slate-100 text-slate-500 hover:bg-slate-200"
                       }`}
                     >
-                      {option.label}
+                      {/* On traduit dynamiquement l'option de tri */}
+                      {t(`gallery.sortOptions.${option.value}`)}
                     </button>
                   ))}
                 </div>
@@ -940,7 +943,7 @@ const Gallery = () => {
               <div>
                 <div className="mb-3 flex items-center justify-between">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                    Note (min - max)
+                    {t("gallery.ratingRange")}
                   </p>
                   <span className="text-sm font-black text-blue-700">
                     {minRating} - {maxRating}
@@ -949,7 +952,7 @@ const Gallery = () => {
                 <div className="space-y-3">
                   <div>
                     <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                      Min
+                      {t("gallery.min")}
                     </p>
                     <input
                       type="range"
@@ -969,7 +972,7 @@ const Gallery = () => {
                   </div>
                   <div>
                     <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                      Max
+                      {t("gallery.max")}
                     </p>
                     <input
                       type="range"
@@ -994,7 +997,7 @@ const Gallery = () => {
                 onClick={resetAdvancedFilters}
                 className="w-full rounded-2xl border border-red-200 bg-red-50 py-3 text-xs font-black uppercase tracking-widest text-red-600 hover:bg-red-100"
               >
-                Reinitialiser
+                {t("gallery.reset")}
               </button>
             </div>
           </div>

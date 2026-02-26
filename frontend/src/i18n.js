@@ -33,6 +33,19 @@ i18n.use(initReactI18next).init({
           top_movies_subtitle: "Découvrez les 5 meilleurs films",
           search_placeholder: "Rechercher un film...",
           no_results: "Aucun résultat trouvé",
+          sortOptions: {
+            default: "Par défaut",
+            title_asc: "Titre (A-Z)",
+            title_desc: "Titre (Z-A)",
+            year_asc: "Plus anciens",
+            year_desc: "Plus récents",
+          },
+          filterTitle: "Filtres Avancés",
+          sortBy: "Trier par",
+          ratingRange: "Note (min - max)",
+          min: "Min",
+          max: "Max",
+          reset: "Réinitialiser",
         },
         genres: {
           all: "Tous",
@@ -423,6 +436,17 @@ i18n.use(initReactI18next).init({
           top_movies_subtitle: "Discover the top 5 movies",
           search_placeholder: "Search for a movie...",
           no_results: "No results found",
+          sortOptions: {
+            default: "Default",
+            title_asc: "Title (A-Z)",
+            title_desc: "Title (Z-A)",
+            year_asc: "Oldest first",
+            year_desc: "Newest first",
+          },
+          filterTitle: "Advanced Filters",
+          sortBy: "Sort by",
+          ratingRange: "Rating (min - max)",
+          reset: "Reset",
         },
         genres: {
           all: "All",
@@ -809,6 +833,19 @@ i18n.use(initReactI18next).init({
           top_movies_subtitle: "اكتشف أفضل 5 أفلام",
           search_placeholder: "ابحث عن فيلم...",
           no_results: "لا توجد نتائج",
+
+          sortOptions: {
+            default: "افتراضي",
+            title_asc: "العنوان (أ-ي)",
+            title_desc: "العنوان (ي-أ)",
+            year_asc: "الأقدم أولاً",
+            year_desc: "الأحدث أولاً",
+          },
+
+          filterTitle: "مرشحات متقدمة",
+          sortBy: "ترتيب حسب",
+          ratingRange: "التقييم (أدنى - أقصى)",
+          reset: "إعادة تعيين",
         },
         genres: {
           all: "الكل",
