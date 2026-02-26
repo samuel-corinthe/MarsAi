@@ -42,12 +42,20 @@ const Gallery = () => {
   const [isGalleryAllowed, setIsGalleryAllowed] = useState(true);
   const [sessionUser, setSessionUser] = useState(null);
   const [activeSitePhase, setActiveSitePhase] = useState("phase_1");
-  const [phase2SelectedMovieIds, setPhase2SelectedMovieIds] = useState(() => new Set());
-  const [phase3EligibleMovieIds, setPhase3EligibleMovieIds] = useState(() => new Set());
+  const [phase2SelectedMovieIds, setPhase2SelectedMovieIds] = useState(
+    () => new Set(),
+  );
+  const [phase3EligibleMovieIds, setPhase3EligibleMovieIds] = useState(
+    () => new Set(),
+  );
   const [phase3EligibilityLoaded, setPhase3EligibilityLoaded] = useState(false);
-  const [phase3WinnerMovieIds, setPhase3WinnerMovieIds] = useState(() => new Set());
-  const [phase2SelectionMinRequired, setPhase2SelectionMinRequired] = useState(50);
-  const [phase2SelectionBusyMovieId, setPhase2SelectionBusyMovieId] = useState(null);
+  const [phase3WinnerMovieIds, setPhase3WinnerMovieIds] = useState(
+    () => new Set(),
+  );
+  const [phase2SelectionMinRequired, setPhase2SelectionMinRequired] =
+    useState(50);
+  const [phase2SelectionBusyMovieId, setPhase2SelectionBusyMovieId] =
+    useState(null);
   const [phase2SelectionError, setPhase2SelectionError] = useState("");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,32 +82,52 @@ const Gallery = () => {
     activeSitePhase === "phase_1" && hasAdminSession;
   const canManagePhase3Selection =
     activeSitePhase === "phase_2" && hasAdminSession;
-  const canManagePhaseSelection = canManagePhase2Selection || canManagePhase3Selection;
-  const phase3EligibilityEnforced = phase3EligibilityLoaded && phase3EligibleMovieIds.size >= 50;
+  const canManagePhaseSelection =
+    canManagePhase2Selection || canManagePhase3Selection;
+  const phase3EligibilityEnforced =
+    phase3EligibilityLoaded && phase3EligibleMovieIds.size >= 50;
 
-  const toMovieIdSet = useCallback((list) =>
-    new Set(
-      (Array.isArray(list) ? list : [])
-        .map((movie) => Number(movie?.id))
-        .filter((movieId) => Number.isFinite(movieId) && movieId > 0),
-    ), []);
+  const toMovieIdSet = useCallback(
+    (list) =>
+      new Set(
+        (Array.isArray(list) ? list : [])
+          .map((movie) => Number(movie?.id))
+          .filter((movieId) => Number.isFinite(movieId) && movieId > 0),
+      ),
+    [],
+  );
 
-  const applyPhase2SelectionSnapshot = useCallback((payload, fallbackMinRequired = 50) => {
-    const selectedMovies = Array.isArray(payload?.selectedMovies) ? payload.selectedMovies : [];
-    setPhase2SelectedMovieIds(toMovieIdSet(selectedMovies));
-    setPhase2SelectionMinRequired(Number(payload?.minRequired ?? fallbackMinRequired));
-  }, [toMovieIdSet]);
+  const applyPhase2SelectionSnapshot = useCallback(
+    (payload, fallbackMinRequired = 50) => {
+      const selectedMovies = Array.isArray(payload?.selectedMovies)
+        ? payload.selectedMovies
+        : [];
+      setPhase2SelectedMovieIds(toMovieIdSet(selectedMovies));
+      setPhase2SelectionMinRequired(
+        Number(payload?.minRequired ?? fallbackMinRequired),
+      );
+    },
+    [toMovieIdSet],
+  );
 
-  const applyPhase3EligibilitySnapshot = useCallback((payload) => {
-    setPhase3EligibleMovieIds(toMovieIdSet(payload?.selectedMovies));
-  }, [toMovieIdSet]);
+  const applyPhase3EligibilitySnapshot = useCallback(
+    (payload) => {
+      setPhase3EligibleMovieIds(toMovieIdSet(payload?.selectedMovies));
+    },
+    [toMovieIdSet],
+  );
 
-  const applyPhase3WinnersSnapshot = useCallback((payload) => {
-    setPhase3WinnerMovieIds(toMovieIdSet(payload?.selectedMovies));
-  }, [toMovieIdSet]);
+  const applyPhase3WinnersSnapshot = useCallback(
+    (payload) => {
+      setPhase3WinnerMovieIds(toMovieIdSet(payload?.selectedMovies));
+    },
+    [toMovieIdSet],
+  );
 
   const phase2SelectedCount = phase2SelectedMovieIds.size;
-  const phaseSelectionMinRequired = canManagePhase3Selection ? 5 : phase2SelectionMinRequired;
+  const phaseSelectionMinRequired = canManagePhase3Selection
+    ? 5
+    : phase2SelectionMinRequired;
   const showTopCarousel = activeSitePhase === "phase_3";
   const phase3WinnerMovies = movies.filter((movie) =>
     phase3WinnerMovieIds.has(Number(movie?.id)),
@@ -133,26 +161,41 @@ const Gallery = () => {
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
       const movieRating = Number(movie?.rating || 0);
-      const matchesRating = movieRating >= minRating && movieRating <= maxRating;
+      const matchesRating =
+        movieRating >= minRating && movieRating <= maxRating;
 
       return matchesSearch && matchesRating;
     })
     .sort((a, b) => {
       if (sortBy === "title_asc") {
-        return String(a?.title || "").localeCompare(String(b?.title || ""), "fr");
+        return String(a?.title || "").localeCompare(
+          String(b?.title || ""),
+          "fr",
+        );
       }
       if (sortBy === "title_desc") {
-        return String(b?.title || "").localeCompare(String(a?.title || ""), "fr");
+        return String(b?.title || "").localeCompare(
+          String(a?.title || ""),
+          "fr",
+        );
       }
 
       if (sortBy === "year_desc") {
-        const yearA = Number(String(a?.releaseDate || "").match(/\d{4}/)?.[0] || 0);
-        const yearB = Number(String(b?.releaseDate || "").match(/\d{4}/)?.[0] || 0);
+        const yearA = Number(
+          String(a?.releaseDate || "").match(/\d{4}/)?.[0] || 0,
+        );
+        const yearB = Number(
+          String(b?.releaseDate || "").match(/\d{4}/)?.[0] || 0,
+        );
         return yearB - yearA;
       }
       if (sortBy === "year_asc") {
-        const yearA = Number(String(a?.releaseDate || "").match(/\d{4}/)?.[0] || 0);
-        const yearB = Number(String(b?.releaseDate || "").match(/\d{4}/)?.[0] || 0);
+        const yearA = Number(
+          String(a?.releaseDate || "").match(/\d{4}/)?.[0] || 0,
+        );
+        const yearB = Number(
+          String(b?.releaseDate || "").match(/\d{4}/)?.[0] || 0,
+        );
         return yearA - yearB;
       }
 
@@ -160,9 +203,13 @@ const Gallery = () => {
     });
 
   const suggestions = filteredMovies
-    .filter((movie) => searchQuery.length > 0 && String(movie.title || "")
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase()))
+    .filter(
+      (movie) =>
+        searchQuery.length > 0 &&
+        String(movie.title || "")
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()),
+    )
     .slice(0, 5);
 
   const totalPages = Math.max(1, Math.ceil(filteredMovies.length / pageSize));
@@ -182,7 +229,9 @@ const Gallery = () => {
         const sitePhase = await getSitePhaseState();
         if (cancelled) return;
 
-        const phaseKey = String(sitePhase?.currentPhase || "phase_1").toLowerCase();
+        const phaseKey = String(
+          sitePhase?.currentPhase || "phase_1",
+        ).toLowerCase();
         setActiveSitePhase(phaseKey);
 
         let mePayload = null;
@@ -224,10 +273,11 @@ const Gallery = () => {
           }
         } else if (phaseKey === "phase_2" && hasAdminSession) {
           setPhase2SelectionMinRequired(5);
-          const [phase2PoolResult, phase3SelectionResult] = await Promise.allSettled([
-            getPhase2SelectionStatus(),
-            getPhase3SelectionStatus(),
-          ]);
+          const [phase2PoolResult, phase3SelectionResult] =
+            await Promise.allSettled([
+              getPhase2SelectionStatus(),
+              getPhase3SelectionStatus(),
+            ]);
 
           if (!cancelled && phase2PoolResult.status === "fulfilled") {
             applyPhase3EligibilitySnapshot(phase2PoolResult.value);
@@ -246,9 +296,9 @@ const Gallery = () => {
           }
 
           if (
-            !cancelled
-            && phase2PoolResult.status !== "fulfilled"
-            && phase3SelectionResult.status !== "fulfilled"
+            !cancelled &&
+            phase2PoolResult.status !== "fulfilled" &&
+            phase3SelectionResult.status !== "fulfilled"
           ) {
             setPhase2SelectionError("");
           }
@@ -278,7 +328,9 @@ const Gallery = () => {
       } catch (error) {
         if (cancelled) return;
         setIsGalleryAllowed(true);
-        setMoviesError(error?.message || "Impossible de verifier l'acces galerie.");
+        setMoviesError(
+          error?.message || "Impossible de verifier l'acces galerie.",
+        );
       } finally {
         if (!cancelled) {
           setAccessLoading(false);
@@ -289,7 +341,11 @@ const Gallery = () => {
     return () => {
       cancelled = true;
     };
-  }, [applyPhase2SelectionSnapshot, applyPhase3EligibilitySnapshot, applyPhase3WinnersSnapshot]);
+  }, [
+    applyPhase2SelectionSnapshot,
+    applyPhase3EligibilitySnapshot,
+    applyPhase3WinnersSnapshot,
+  ]);
 
   useEffect(() => {
     if (accessLoading || !isGalleryAllowed) return;
@@ -372,9 +428,10 @@ const Gallery = () => {
 
     const handleTimeUpdate = () => {
       const duration = Number.isFinite(video.duration) ? video.duration : 0;
-      const previewLimit = duration > 0
-        ? Math.min(TOP_CAROUSEL_PREVIEW_SECONDS, duration)
-        : TOP_CAROUSEL_PREVIEW_SECONDS;
+      const previewLimit =
+        duration > 0
+          ? Math.min(TOP_CAROUSEL_PREVIEW_SECONDS, duration)
+          : TOP_CAROUSEL_PREVIEW_SECONDS;
       if (video.currentTime >= Math.max(0.2, previewLimit - 0.05)) {
         video.currentTime = 0;
       }
@@ -418,10 +475,10 @@ const Gallery = () => {
     const safeMovieId = Number(movieId);
     if (!Number.isFinite(safeMovieId) || safeMovieId <= 0) return;
     if (
-      canManagePhase3Selection
-      && phase3EligibilityEnforced
-      && !currentSelected
-      && !phase3EligibleMovieIds.has(safeMovieId)
+      canManagePhase3Selection &&
+      phase3EligibilityEnforced &&
+      !currentSelected &&
+      !phase3EligibleMovieIds.has(safeMovieId)
     ) {
       setPhase2SelectionError(
         "Ce film n'est pas dans la selection phase 2 et ne peut pas etre promu en phase 3.",
@@ -458,7 +515,8 @@ const Gallery = () => {
   }
 
   if (!isGalleryAllowed) {
-    const callForProjectPath = i18n.language === "en" ? "/call-for-project" : "/appel-a-projet";
+    const callForProjectPath =
+      i18n.language === "en" ? "/call-for-project" : "/appel-a-projet";
     return <Navigate to={callForProjectPath} replace />;
   }
 
@@ -568,12 +626,72 @@ const Gallery = () => {
           <div className="bg-white min-h-[500px] w-full relative z-20 pb-20">
             <div className="container mx-auto px-6 md:px-20 pt-8">
               <div className="flex flex-col items-center gap-8 mb-16">
-              <div className="w-full max-w-2xl">
-                <div className="flex items-center gap-3">
-                  <div className="relative flex-grow" ref={searchRef}>
-                    <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+                <div className="w-full max-w-2xl">
+                  <div className="flex items-center gap-3">
+                    <div className="relative flex-grow" ref={searchRef}>
+                      <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+                        <svg
+                          className="w-5 h-5 text-slate-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="3"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                          />
+                        </svg>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder={t(
+                          "gallery.search_placeholder",
+                          "Rechercher un film...",
+                        )}
+                        value={searchQuery}
+                        onFocus={() => setShowSuggestions(true)}
+                        onChange={(e) => {
+                          setSearchQuery(e.target.value);
+                          setShowSuggestions(true);
+                        }}
+                        className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-slate-100 rounded-3xl text-lg font-bold text-blue-950 focus:bg-white focus:border-blue-600 outline-none transition-all shadow-sm"
+                      />
+
+                      {showSuggestions && suggestions.length > 0 && (
+                        <div className="absolute z-[100] w-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
+                          {suggestions.map((movie) => (
+                            <Link
+                              key={movie.id}
+                              to={`/movie/${movie.id}`}
+                              onClick={() => setShowSuggestions(false)}
+                              className="w-full flex items-center gap-4 px-6 py-4 hover:bg-blue-50 transition-colors border-b last:border-none border-slate-50"
+                            >
+                              <img
+                                src={movie.img}
+                                alt=""
+                                className="w-16 h-9 object-cover rounded-lg shadow-md"
+                              />
+                              <div>
+                                <p className="font-black text-blue-950 text-sm uppercase tracking-tighter">
+                                  {movie.title}
+                                </p>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => setIsFilterModalOpen(true)}
+                      className="h-[68px] min-w-[68px] rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-300/40 hover:bg-blue-700 transition-colors"
+                      aria-label="Ouvrir les filtres avances"
+                      title="Filtres avances"
+                    >
                       <svg
-                        className="w-5 h-5 text-slate-400"
+                        className="mx-auto h-6 w-6"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -581,108 +699,50 @@ const Gallery = () => {
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
-                          strokeWidth="3"
-                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                          strokeWidth="2.5"
+                          d="M4 6h16M7 12h10M10 18h4"
                         />
                       </svg>
-                    </div>
-                    <input
-                      type="text"
-                      placeholder={t(
-                        "gallery.search_placeholder",
-                        "Rechercher un film...",
+                    </button>
+                  </div>
+
+                  {(sortBy !== "default" || minRating > 0 || maxRating < 5) && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {sortBy !== "default" && (
+                        <button
+                          onClick={() => setSortBy("default")}
+                          className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-blue-700 hover:bg-blue-100"
+                        >
+                          Tri: {activeSortLabel} x
+                        </button>
                       )}
-                      value={searchQuery}
-                      onFocus={() => setShowSuggestions(true)}
-                      onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        setShowSuggestions(true);
-                      }}
-                      className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-slate-100 rounded-3xl text-lg font-bold text-blue-950 focus:bg-white focus:border-blue-600 outline-none transition-all shadow-sm"
-                    />
-
-                    {showSuggestions && suggestions.length > 0 && (
-                      <div className="absolute z-[100] w-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
-                        {suggestions.map((movie) => (
-                          <Link
-                            key={movie.id}
-                            to={`/movie/${movie.id}`}
-                            onClick={() => setShowSuggestions(false)}
-                            className="w-full flex items-center gap-4 px-6 py-4 hover:bg-blue-50 transition-colors border-b last:border-none border-slate-50"
-                          >
-                            <img
-                              src={movie.img}
-                              alt=""
-                              className="w-16 h-9 object-cover rounded-lg shadow-md"
-                            />
-                            <div>
-                              <p className="font-black text-blue-950 text-sm uppercase tracking-tighter">
-                                {movie.title}
-                              </p>
-                            </div>
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={() => setIsFilterModalOpen(true)}
-                    className="h-[68px] min-w-[68px] rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-300/40 hover:bg-blue-700 transition-colors"
-                    aria-label="Ouvrir les filtres avances"
-                    title="Filtres avances"
-                  >
-                    <svg
-                      className="mx-auto h-6 w-6"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2.5"
-                        d="M4 6h16M7 12h10M10 18h4"
-                      />
-                    </svg>
-                  </button>
+                      {(minRating > 0 || maxRating < 5) && (
+                        <button
+                          onClick={() => {
+                            setMinRating(0);
+                            setMaxRating(5);
+                          }}
+                          className="rounded-full bg-amber-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-amber-700 hover:bg-amber-100"
+                        >
+                          Note {minRating}-{maxRating} x
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {canManagePhaseSelection && (
+                    <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-black uppercase tracking-wider text-blue-900">
+                      {canManagePhase2Selection
+                        ? "Selection phase 2"
+                        : "Selection jury phase 3"}
+                      : {phase2SelectedCount}/{phaseSelectionMinRequired}
+                    </div>
+                  )}
+                  {phase2SelectionError && (
+                    <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
+                      {phase2SelectionError}
+                    </div>
+                  )}
                 </div>
-
-                {(sortBy !== "default" || minRating > 0 || maxRating < 5) && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {sortBy !== "default" && (
-                      <button
-                        onClick={() => setSortBy("default")}
-                        className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-blue-700 hover:bg-blue-100"
-                      >
-                        Tri: {activeSortLabel} x
-                      </button>
-                    )}
-                    {(minRating > 0 || maxRating < 5) && (
-                      <button
-                        onClick={() => {
-                          setMinRating(0);
-                          setMaxRating(5);
-                        }}
-                        className="rounded-full bg-amber-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-amber-700 hover:bg-amber-100"
-                      >
-                        Note {minRating}-{maxRating} x
-                      </button>
-                    )}
-                  </div>
-                )}
-                {canManagePhaseSelection && (
-                  <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs font-black uppercase tracking-wider text-blue-900">
-                    {canManagePhase2Selection ? "Selection phase 2" : "Selection jury phase 3"}: {phase2SelectedCount}/{phaseSelectionMinRequired}
-                  </div>
-                )}
-                {phase2SelectionError && (
-                  <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
-                    {phase2SelectionError}
-                  </div>
-                )}
-              </div>
-
               </div>
 
               {moviesLoading ? (
@@ -698,23 +758,31 @@ const Gallery = () => {
                   {paginatedMovies.map((movie) => {
                     const countryCode = String(
                       movie.countryCode || movie.countryAlpha2 || "",
-                    ).trim().toLowerCase();
+                    )
+                      .trim()
+                      .toLowerCase();
                     const fallbackFlagPath = countryCode
                       ? `/images/flags/${countryCode}.png`
                       : "";
                     const flagSrc = toFlagAssetPath(
                       movie.countryFlagPath || fallbackFlagPath,
                     );
-                    const flagAlt = countryCode ? countryCode.toUpperCase() : (movie.country || "pays");
+                    const flagAlt = countryCode
+                      ? countryCode.toUpperCase()
+                      : movie.country || "pays";
                     const movieId = Number(movie.id);
-                    const isSelectedForPhase2 = phase2SelectedMovieIds.has(movieId);
-                    const isSelectionBusy = Number(phase2SelectionBusyMovieId) === movieId;
+                    const isSelectedForPhase2 =
+                      phase2SelectedMovieIds.has(movieId);
+                    const isSelectionBusy =
+                      Number(phase2SelectionBusyMovieId) === movieId;
                     const isEligibleForPhase3 =
-                      !canManagePhase3Selection
-                      || !phase3EligibilityEnforced
-                      || phase3EligibleMovieIds.has(movieId);
+                      !canManagePhase3Selection ||
+                      !phase3EligibilityEnforced ||
+                      phase3EligibleMovieIds.has(movieId);
                     const isSelectionDisabled =
-                      canManagePhase3Selection && !isSelectedForPhase2 && !isEligibleForPhase3;
+                      canManagePhase3Selection &&
+                      !isSelectedForPhase2 &&
+                      !isEligibleForPhase3;
 
                     return (
                       <div key={movie.id} className="group space-y-3">
@@ -756,19 +824,28 @@ const Gallery = () => {
                               isSelectionDisabled
                                 ? "bg-slate-200 text-slate-500 cursor-not-allowed"
                                 : isSelectedForPhase2
-                                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                                : "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                  ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                  : "bg-blue-100 text-blue-800 hover:bg-blue-200"
                             } disabled:opacity-60`}
-                            onClick={() => handleTogglePhase2Selection(movieId, isSelectedForPhase2)}
+                            onClick={() =>
+                              handleTogglePhase2Selection(
+                                movieId,
+                                isSelectedForPhase2,
+                              )
+                            }
                             disabled={isSelectionBusy || isSelectionDisabled}
                           >
                             {isSelectionBusy
                               ? "..."
                               : isSelectionDisabled
                                 ? "Non retenu phase 2"
-                              : isSelectedForPhase2
-                                ? (canManagePhase2Selection ? "Retirer de la phase 2" : "Retirer de la phase 3")
-                                : (canManagePhase2Selection ? "Selectionner pour phase 2" : "Selectionner pour phase 3")}
+                                : isSelectedForPhase2
+                                  ? canManagePhase2Selection
+                                    ? "Retirer de la phase 2"
+                                    : "Retirer de la phase 3"
+                                  : canManagePhase2Selection
+                                    ? "Selectionner pour phase 2"
+                                    : "Selectionner pour phase 3"}
                           </button>
                         )}
                       </div>

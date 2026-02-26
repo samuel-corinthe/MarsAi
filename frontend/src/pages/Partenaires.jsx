@@ -121,12 +121,18 @@ export default function Partenaires() {
                 {t("partners.cta_text")}
               </p>
               <a
-                href="/contact"
+                href={
+                  i18n.language === "ar"
+                    ? "/ar/contact"
+                    : i18n.language === "en"
+                      ? "/en/contact"
+                      : "/contact"
+                }
                 className="inline-block bg-white text-blue-600 font-bold px-8 py-4 rounded-full 
-                         hover:bg-blue-50 transition-all duration-300 hover:scale-105 
-                         shadow-lg hover:shadow-xl"
+             hover:bg-blue-50 transition-all duration-300 hover:scale-105 
+             shadow-lg hover:shadow-xl"
               >
-                {t("partners.cta_button")} →
+                {t("nav.contact", "Contact")} →
               </a>
             </div>
           </div>
