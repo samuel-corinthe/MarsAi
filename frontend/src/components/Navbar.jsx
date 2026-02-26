@@ -192,15 +192,24 @@ const Navbar = () => {
             {/* Right Side: Lang Switcher & CTA Desktop */}
             <div className="flex items-center space-x-4 rtl:space-x-reverse z-[80]">
               {/* Language Switcher DESKTOP */}
-              <div className="hidden lg:flex items-center border-x border-gray-800 px-4 space-x-3 rtl:space-x-reverse">
-                {["fr", "en", "ar"].map((lang) => (
-                  <button
-                    key={lang}
-                    onClick={() => handleLanguageChange(lang)}
-                    className={`text-[11px] font-bold uppercase transition-colors hover:text-cyan-400 ${i18n.language === lang ? "text-cyan-400" : "text-gray-500"}`}
-                  >
-                    {lang}
-                  </button>
+              <div className="hidden lg:flex items-center font-mono text-[12px] tracking-tighter">
+                {["ar", "fr", "en"].map((lang, index) => (
+                  <div key={lang} className="flex items-center">
+                    <button
+                      onClick={() => handleLanguageChange(lang)}
+                      className={`uppercase transition-colors hover:text-cyan-400 px-1 ${
+                        i18n.language === lang
+                          ? "text-cyan-400 font-bold"
+                          : "text-gray-500"
+                      }`}
+                    >
+                      {lang}
+                    </button>
+                    {/* Petit séparateur sauf pour le dernier */}
+                    {index < 2 && (
+                      <span className="text-gray-800 mx-0.5">|</span>
+                    )}
+                  </div>
                 ))}
               </div>
 
