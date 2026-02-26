@@ -25,6 +25,10 @@ const createSlug = (text, lang = "fr") => {
   if (lang === "en" && baseSlug) {
     return `${baseSlug}-eng`;
   }
+  // Si la langue est l'arabe, on ajoute le suffixe utilisé dans tes slugs WP
+  if (lang === "ar" && baseSlug) {
+    return `${baseSlug}-ar`;
+  }
   return baseSlug;
 };
 
