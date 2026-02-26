@@ -61,6 +61,13 @@ const Navbar = () => {
     return paths[pageKey]?.[lang] || paths[pageKey]?.["en"] || "/";
   };
 
+  const handleLanguageChange = (lang) => {
+    i18n.changeLanguage(lang);
+    setMobileMenuOpen(false);
+    // Optionnel : rediriger vers la home de la langue choisie
+    // navigate(getLocalizedPath("home"));
+  };
+
   const mainNav = [
     { name: t("nav.home"), path: getLocalizedPath("home"), id: "home" },
     { name: t("nav.about"), path: getLocalizedPath("about"), id: "about" },
@@ -133,7 +140,7 @@ const Navbar = () => {
               </div>
             </Link>
 
-            {/* Desktop Navigation */}
+            {/* Desktop Navigation Links */}
             <div className="hidden lg:flex items-center space-x-1 rtl:space-x-reverse">
               {mainNav.map((item) => (
                 <Link
@@ -145,7 +152,7 @@ const Navbar = () => {
                 </Link>
               ))}
 
-              {/* Dropdown "Plus" (Éléments légaux) */}
+              {/* Dropdown "Plus" Desktop */}
               <div className="relative ml-2">
                 <button
                   onClick={() =>
@@ -163,10 +170,9 @@ const Navbar = () => {
                     <path d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-
                 {activeDropdown === "more" && (
                   <div
-                    className={`absolute ${i18n.language === "ar" ? "left-0" : "right-0"} mt-2 w-56 bg-gray-900 border border-gray-800 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2`}
+                    className={`absolute ${i18n.language === "ar" ? "left-0" : "right-0"} mt-2 w-56 bg-gray-900 border border-gray-800 rounded-xl shadow-2xl overflow-hidden`}
                   >
                     {moreNav.map((item) => (
                       <Link
@@ -183,8 +189,21 @@ const Navbar = () => {
               </div>
             </div>
 
-            {/* Langue & Burger */}
-            <div className="flex items-center space-x-4 z-[80]">
+            {/* Right Side: Lang Switcher & CTA Desktop */}
+            <div className="flex items-center space-x-4 rtl:space-x-reverse z-[80]">
+              {/* Language Switcher DESKTOP */}
+              <div className="hidden lg:flex items-center border-x border-gray-800 px-4 space-x-3 rtl:space-x-reverse">
+                {["fr", "en", "ar"].map((lang) => (
+                  <button
+                    key={lang}
+                    onClick={() => handleLanguageChange(lang)}
+                    className={`text-[11px] font-bold uppercase transition-colors hover:text-cyan-400 ${i18n.language === lang ? "text-cyan-400" : "text-gray-500"}`}
+                  >
+                    {lang}
+                  </button>
+                ))}
+              </div>
+
               <Link
                 to={getLocalizedPath("submit")}
                 className="hidden md:block px-5 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-bold rounded-full hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all"
@@ -192,6 +211,7 @@ const Navbar = () => {
                 {t("nav.submitFilm")}
               </Link>
 
+              {/* Burger Button Mobile */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="lg:hidden p-2 text-gray-400 hover:text-white transition-colors"
@@ -224,7 +244,7 @@ const Navbar = () => {
         </div>
       </nav>
 
-      {/* Mobile Menu Fullscreen Overlay */}
+      {/* Mobile Menu (Overlay) - Inchangé mais vérifie bien le bouton de langue dedans */}
       <div
         className={`fixed inset-0 z-[60] bg-black transform transition-transform duration-500 ease-in-out ${mobileMenuOpen ? "translate-y-0" : "-translate-y-full"} lg:hidden`}
       >
@@ -240,14 +260,8 @@ const Navbar = () => {
                 {item.name}
               </Link>
             ))}
-
             <div className="h-px bg-gray-800 my-4" />
-
-            {/* Éléments légaux en mobile */}
             <div className="grid grid-cols-1 gap-4">
-              <span className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-1">
-                Informations Légales
-              </span>
               {moreNav.map((item) => (
                 <Link
                   key={item.id}
@@ -260,7 +274,6 @@ const Navbar = () => {
               ))}
             </div>
           </div>
-
           <div className="mt-auto pt-10 flex flex-col gap-6">
             <Link
               to={getLocalizedPath("submit")}
@@ -269,15 +282,11 @@ const Navbar = () => {
             >
               {t("nav.submitFilm")}
             </Link>
-
             <div className="flex justify-center gap-10">
               {["fr", "en", "ar"].map((l) => (
                 <button
                   key={l}
-                  onClick={() => {
-                    i18n.changeLanguage(l);
-                    setMobileMenuOpen(false);
-                  }}
+                  onClick={() => handleLanguageChange(l)}
                   className={`uppercase text-xl font-black ${i18n.language === l ? "text-cyan-400" : "text-gray-600"}`}
                 >
                   {l}

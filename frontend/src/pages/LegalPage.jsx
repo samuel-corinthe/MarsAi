@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+﻿import { useEffect, useMemo } from "react";
 import Seo from "../components/Seo";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -166,134 +166,139 @@ export default function LegalPage({ page, variant = "cgv" }) {
   };
   const otherLinkPath =
     i18n.language === "en"
-      ? (localizedRouteMap[config.otherLink.path] || config.otherLink.path)
+      ? localizedRouteMap[config.otherLink.path] || config.otherLink.path
       : config.otherLink.path;
 
   return (
     <>
-      <Seo title={page?.title?.rendered || "Mentions legales"} description={page?.excerpt?.rendered || page?.content?.rendered} />
+      <Seo
+        title={page?.title?.rendered || "Mentions legales"}
+        description={page?.excerpt?.rendered || page?.content?.rendered}
+      />
       <div className="min-h-screen bg-black text-white">
-      <div className="relative overflow-hidden bg-gradient-to-br from-black via-gray-900 to-black border-b border-gray-800">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30"></div>
+        <div className="relative overflow-hidden bg-gradient-to-br from-black via-gray-900 to-black border-b border-gray-800">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30"></div>
 
-        <div className="relative max-w-6xl mx-auto px-6 py-24">
-          <div className="space-y-6">
-            <div className="inline-block">
-              <div
-                className={`flex items-center space-x-3 px-5 py-2 border rounded-full backdrop-blur-sm ${config.badge}`}
-              >
+          <div className="relative max-w-6xl mx-auto px-6 py-24">
+            <div className="space-y-6">
+              <div className="inline-block">
                 <div
-                  className={`w-2 h-2 rounded-full animate-pulse ${config.badgeDot}`}
-                ></div>
-                <span
-                  className={`text-sm font-medium tracking-wider ${config.badgeText}`}
-                  style={{ fontFamily: "'Space Mono', monospace" }}
+                  className={`flex items-center space-x-3 px-5 py-2 border rounded-full backdrop-blur-sm ${config.badge}`}
                 >
-                  {t("legal.badge")}
-                </span>
+                  <div
+                    className={`w-2 h-2 rounded-full animate-pulse ${config.badgeDot}`}
+                  ></div>
+                  <span
+                    className={`text-sm font-medium tracking-wider ${config.badgeText}`}
+                    style={{ fontFamily: "'Space Mono', monospace" }}
+                  >
+                    {t("legal.badge")}
+                  </span>
+                </div>
               </div>
+
+              <h1
+                className="text-6xl md:text-8xl font-black text-transparent bg-gradient-to-r from-white via-gray-300 to-gray-500 bg-clip-text leading-tight"
+                style={{ fontFamily: "'Bebas Neue', sans-serif" }}
+                dangerouslySetInnerHTML={{
+                  __html: page?.title?.rendered || t("legal.defaultTitle"),
+                }}
+              />
+
+              <p
+                className="text-xl text-gray-400 max-w-2xl leading-relaxed"
+                style={{ fontFamily: "'Inter', sans-serif" }}
+              >
+                {lastUpdated
+                  ? t("legal.lastUpdated", { date: lastUpdated })
+                  : ""}
+              </p>
             </div>
-
-            <h1
-              className="text-6xl md:text-8xl font-black text-transparent bg-gradient-to-r from-white via-gray-300 to-gray-500 bg-clip-text leading-tight"
-              style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-              dangerouslySetInnerHTML={{
-                __html: page?.title?.rendered || t("legal.defaultTitle"),
-              }}
-            />
-
-            <p
-              className="text-xl text-gray-400 max-w-2xl leading-relaxed"
-              style={{ fontFamily: "'Inter', sans-serif" }}
-            >
-              {lastUpdated ? t("legal.lastUpdated", { date: lastUpdated }) : ""}
-            </p>
           </div>
+
+          <div
+            className={`absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br ${config.orb} rounded-full blur-3xl`}
+          ></div>
         </div>
 
-        <div
-          className={`absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br ${config.orb} rounded-full blur-3xl`}
-        ></div>
-      </div>
+        <div className="max-w-4xl mx-auto px-6 py-16">
+          <div className="space-y-12">
+            {sections.map((section, index) => {
+              const gradient =
+                config.sectionGradients[index % config.sectionGradients.length];
+              const accent =
+                config.accentColors[index % config.accentColors.length];
+              const isLast = index === sections.length - 1;
 
-      <div className="max-w-4xl mx-auto px-6 py-16">
-        <div className="space-y-12">
-          {sections.map((section, index) => {
-            const gradient =
-              config.sectionGradients[index % config.sectionGradients.length];
-            const accent =
-              config.accentColors[index % config.accentColors.length];
-            const isLast = index === sections.length - 1;
-
-            return (
-              <section
-                key={`${section.title}-${index}`}
-                className={`space-y-6 pb-12 ${isLast ? "" : "border-b border-gray-800"}`}
-                style={{ "--accent-color": accent }}
-              >
-                <div className="flex items-center space-x-4">
-                  <div
-                    className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center`}
-                  >
-                    <span
-                      className="text-xl font-bold"
+              return (
+                <section
+                  key={`${section.title}-${index}`}
+                  className={`space-y-6 pb-12 ${isLast ? "" : "border-b border-gray-800"}`}
+                  style={{ "--accent-color": accent }}
+                >
+                  <div className="flex items-center space-x-4">
+                    <div
+                      className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center`}
+                    >
+                      <span
+                        className="text-xl font-bold"
+                        style={{ fontFamily: "'Bebas Neue', sans-serif" }}
+                      >
+                        {index + 1}
+                      </span>
+                    </div>
+                    <h2
+                      className="text-3xl font-bold text-white"
                       style={{ fontFamily: "'Bebas Neue', sans-serif" }}
                     >
-                      {index + 1}
-                    </span>
+                      {section.title}
+                    </h2>
                   </div>
-                  <h2
-                    className="text-3xl font-bold text-white"
-                    style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-                  >
-                    {section.title}
-                  </h2>
-                </div>
-                <div
-                  className="pl-16 text-gray-300 leading-relaxed legal-content"
-                  style={{ fontFamily: "'Inter', sans-serif" }}
-                  dangerouslySetInnerHTML={{ __html: section.content }}
-                />
-              </section>
-            );
-          })}
-        </div>
+                  <div
+                    className="pl-16 text-gray-300 leading-relaxed legal-content"
+                    style={{ fontFamily: "'Inter', sans-serif" }}
+                    dangerouslySetInnerHTML={{ __html: section.content }}
+                  />
+                </section>
+              );
+            })}
+          </div>
 
-        <div className="mt-16 pt-8 border-t border-gray-800">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <Link
-              to={homePath}
-              className={`flex items-center space-x-2 text-gray-400 transition-colors duration-300 ${config.linkHover}`}
-              style={{ fontFamily: "'Inter', sans-serif" }}
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+          <div className="mt-16 pt-8 border-t border-gray-800">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <Link
+                to={homePath}
+                className={`flex items-center space-x-2 text-gray-400 transition-colors duration-300 ${config.linkHover}`}
+                style={{ fontFamily: "'Inter', sans-serif" }}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-              <span>{t("legal.backHome")}</span>
-            </Link>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                  />
+                </svg>
+                <span>{t("legal.backHome")}</span>
+              </Link>
 
-            <Link
-              to={otherLinkPath}
-              className={config.buttonClass}
-              style={{ fontFamily: "'Inter', sans-serif" }}
-            >
-              {t(config.otherLink.labelKey)}
-            </Link>
+              <Link
+                to={otherLinkPath}
+                className={config.buttonClass}
+                style={{ fontFamily: "'Inter', sans-serif" }}
+              >
+                {t(config.otherLink.labelKey)}
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
 
-      <style>{`
+        <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 
         .legal-content > * + * {
@@ -319,5 +324,3 @@ export default function LegalPage({ page, variant = "cgv" }) {
     </>
   );
 }
-
-
