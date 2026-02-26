@@ -180,7 +180,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
       en: "call-for-project",
       ar: "call-for-project",
     },
-    jury: { fr: "jury", en: "jury-eng", ar: "jury-eng" },
+    jury: { fr: "jury", en: "jury-eng", ar: "jury" },
     legal: { fr: "mentions-legales", en: "legal-notice", ar: "legal-notice" },
     cgu: { fr: "cgu", en: "gcu", ar: "gcu" },
     cgv: { fr: "cgv", en: "tos", ar: "tos" },
@@ -567,11 +567,11 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     return <CallForProject page={page} />;
   }
 
-  if (slug === "accueil" || slug === "home") {
+  if (slug === "accueil" || slug === "home" || slug === "home-ar") {
     return <Home page={page} />;
   }
 
-  if (slug === "jury" || slug === "jury-eng") {
+  if (slug === "jury") {
     return <JuryWpage page={page} />;
   }
 

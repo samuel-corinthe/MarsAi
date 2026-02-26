@@ -36,10 +36,7 @@ export default function App() {
           <Route path="/accueil" element={<WpPage isHome={true} />} />
           <Route path="/home" element={<WpPage isHome={true} />} />
           <Route path="/en/home" element={<WpPage isHome={true} />} />
-          <Route
-            path="/ar/home"
-            element={<WpPage fixedSlug="home-ar" isHome={true} />}
-          />
+          <Route path="/ar/home" element={<WpPage isHome={true} />} />
 
           {/* --- A PROPOS --- */}
           <Route path="/a-propos" element={<About />} />
@@ -51,7 +48,7 @@ export default function App() {
           <Route path="/films" element={<Gallery />} />
           <Route path="/movies" element={<Gallery />} />
           <Route path="/en/movies" element={<Gallery />} />
-          <Route path="/ar/movies" element={<Gallery />} />
+          <Route path="/ar/films" element={<Gallery />} />
           <Route path="/movie/:id" element={<MovieDetails />} />
 
           {/* --- AGENDA (SCHEDULE) --- */}
@@ -61,8 +58,8 @@ export default function App() {
 
           {/* --- JURY --- */}
           <Route path="/jury" element={<WpPage fixedSlug="jury" />} />
-          <Route path="/en/jury-eng" element={<WpPage fixedSlug="jury" />} />
-          <Route path="/ar/jury-eng" element={<WpPage fixedSlug="jury" />} />
+          <Route path="/en/jury" element={<WpPage fixedSlug="jury" />} />
+          <Route path="/ar/jury" element={<WpPage fixedSlug="jury" />} />
 
           {/* --- PARTENAIRES --- */}
           <Route path="/partenaires" element={<Partenaires />} />

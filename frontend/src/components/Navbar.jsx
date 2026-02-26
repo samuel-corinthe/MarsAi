@@ -32,7 +32,7 @@ const Navbar = () => {
     const paths = {
       home: { fr: "/accueil", en: "/en/home", ar: "/ar/home" },
       about: { fr: "/a-propos", en: "/en/about", ar: "/ar/about" },
-      movies: { fr: "/films", en: "/en/movies", ar: "/ar/movies" },
+      movies: { fr: "/films", en: "/en/movies", ar: "/ar/films" },
       schedule: { fr: "/agenda", en: "/en/schedule", ar: "/ar/schedule" },
       call: {
         fr: "/appel-a-projet",
@@ -73,7 +73,7 @@ const Navbar = () => {
       "/films": "movies",
       "/movies": "movies",
       "/en/movies": "movies",
-      "/ar/movies": "movies",
+      "/ar/films": "films",
       "/agenda": "schedule",
       "/schedule": "schedule",
       "/en/schedule": "schedule",
