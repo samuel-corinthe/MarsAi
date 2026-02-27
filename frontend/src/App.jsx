@@ -123,6 +123,8 @@ export default function App() {
 
           {/* --- TECHNIQUE --- */}
           <Route path="/newsletter" element={<Newsletter />} />
+          <Route path="/en/newsletter" element={<Newsletter />} />
+          <Route path="/ar/newsletter" element={<Newsletter />} />
           <Route path="/dashboard" element={<DashboardEntry />} />
           <Route path="/testcountdown" element={<TestCountdown />} />
 
