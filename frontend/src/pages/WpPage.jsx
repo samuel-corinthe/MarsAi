@@ -173,7 +173,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   const location = useLocation();
 
   const slugMapping = {
-    agenda: { fr: "agenda", en: "schedule", ar: "agenda" },
+    agenda: { fr: "agenda", en: "schedule", ar: "schedule-ar" },
     home: { fr: "accueil", en: "home", ar: "home-ar" },
     call: {
       fr: "appel-a-projet",
@@ -330,7 +330,12 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
 
   const formatDateParts = (dateStr) => {
     const d = parseDate(dateStr);
-    const locale = i18n.language === "fr" ? "fr-FR" : "en-GB";
+    const locale =
+      i18n.language === "fr"
+        ? "fr-FR"
+        : i18n.language === "ar"
+          ? "ar"
+          : "en-GB";
     const monthShort = d
       .toLocaleDateString(locale, { month: "short" })
       .replace(".", "");
@@ -370,8 +375,14 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
           setPage(null);
         } else {
           setPage(pageData);
-          const agendaCategoryId = i18n.language === "fr" ? 14 : 51;
-          const isAgendaSlug = slug === "agenda" || slug === "schedule";
+          const categoryMap = {
+            fr: 14,
+            en: 51,
+            ar: 103,
+          };
+          const agendaCategoryId = categoryMap[i18n.language];
+          const isAgendaSlug =
+            slug === "agenda" || slug === "schedule" || slug === "schedule-ar";
           if (isAgendaSlug) {
             try {
               const res = await fetch(
@@ -379,7 +390,12 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               );
               const allPosts = await res.json();
               if (allPosts && Array.isArray(allPosts)) {
-                const timeLocale = i18n.language === "fr" ? "fr-FR" : "en-GB";
+                const timeLocale =
+                  i18n.language === "fr"
+                    ? "fr-FR"
+                    : i18n.language === "ar"
+                      ? "ar"
+                      : "en-GB";
                 const formattedEvents = allPosts.map((post) => {
                   const rawTermsData = extractAgendaTerms(
                     post._embedded?.["wp:term"],

@@ -1064,8 +1064,12 @@ i18n.use(initReactI18next).init({
           hour_label: "الوقت",
           place_label: "الموقع",
           place_default: "مرسيليا",
+          event_count_zero: "لا توجد فعاليات",
           event_count_one: "فعالية واحدة",
-          event_count_other: "{{count}} فعاليات",
+          event_count_two: "فعاليتان",
+          event_count_few: "{{count}} فعاليات",
+          event_count_many: "{{count}} فعالية",
+          event_count_other: "{{count}} فعالية",
           tags: {
             event: "فعالية",
             screening: "عرض",
