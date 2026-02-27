@@ -52,26 +52,13 @@ export default function HomeModelViewer({
     const viewer = modelViewerRef.current;
     if (!viewer) return;
 
-    let loaded = false;
-    const timeoutId = window.setTimeout(() => {
-      if (!loaded) setForceImageFallback(true);
-    }, 5000);
-
-    const handleLoad = () => {
-      loaded = true;
-      window.clearTimeout(timeoutId);
-    };
     const handleError = () => {
-      window.clearTimeout(timeoutId);
       setForceImageFallback(true);
     };
 
-    viewer.addEventListener("load", handleLoad);
     viewer.addEventListener("error", handleError);
 
     return () => {
-      window.clearTimeout(timeoutId);
-      viewer.removeEventListener("load", handleLoad);
       viewer.removeEventListener("error", handleError);
     };
   }, [src, ready, canRender3D, forceImageFallback]);

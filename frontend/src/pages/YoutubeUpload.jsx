@@ -11,17 +11,12 @@ import {
     fetchYoutubeUploadStatus,
     postYoutubeUpload,
 } from '../services/uploadApiService';
-import { withDeploymentBase } from "../utils/deploymentPath";
+import { buildApiPath, withDeploymentBase } from "../utils/deploymentPath";
 import 'altcha';
 
 const YOUTUBE_STATUS_POLL_INTERVAL_MS = 15000;
 const YOUTUBE_STATUS_MAX_POLLS = 20;
-const ALTCHA_CHALLENGE_URL = (() => {
-    const apiOrigin = String(import.meta.env.VITE_API_ORIGIN || '').trim().replace(/\/+$/, '');
-    return apiOrigin
-        ? `${apiOrigin}/api/altcha/challenge`
-        : '/api/altcha/challenge';
-})();
+const ALTCHA_CHALLENGE_URL = buildApiPath('/api/altcha/challenge');
 const POSTER_MAX_SIZE_BYTES = 5 * 1024 * 1024;
 const POSTER_TARGET_ASPECT_RATIO = 2 / 3;
 const POSTER_MAX_WIDTH = 1200;

@@ -16,7 +16,7 @@ import { requireAuth, requireRole } from "./middlewares/authMiddleware.js";
 
 const app = express();
 app.set("trust proxy", 1);
-const deploymentBaseAliases = ["/MarsAi", "/MarsAiFestival"];
+const deploymentBaseAliases = ["/MarsAi", "/MarsAiFestival", "/backend"];
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:5173")
   .split(",")

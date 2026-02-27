@@ -51,7 +51,7 @@ function appendDeploymentPathCandidates(urls) {
 
   const path = String(window.location?.pathname || "/");
   const segments = path.split("/").filter(Boolean);
-  const prefixes = new Set(["", "/MarsAi", "/MarsAiFestival"]);
+  const prefixes = new Set(["", "/MarsAi", "/MarsAiFestival", "/backend"]);
 
   if (segments.length > 0) {
     prefixes.add(`/${segments[0]}`);

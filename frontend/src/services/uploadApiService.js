@@ -20,6 +20,7 @@ function buildApiCandidates(path) {
     safePath,
     `/MarsAi${safePath}`,
     `/MarsAiFestival${safePath}`,
+    `/backend${safePath}`,
     locationPrefix ? `${locationPrefix}${safePath}` : "",
   ]);
 }
