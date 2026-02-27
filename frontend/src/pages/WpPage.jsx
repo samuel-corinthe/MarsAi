@@ -558,7 +558,10 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     const dataToSend = Object.fromEntries(formData);
 
     try {
-      const result = await sendContactForm(dataToSend);
+      const result = await sendContactForm({
+        ...dataToSend,
+        lang: i18n.language,
+      });
       alert(result?.message || "Message envoye avec succes !");
       e.target.reset();
     } catch (error) {
