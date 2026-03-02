@@ -1016,8 +1016,13 @@ const MovieDetails = () => {
               className={`absolute inset-0 backdrop-blur-md ${theme.modalOverlay}`}
               onClick={() => setIsModalOpen(false)}
             ></div>
-            <div className="relative bg-white rounded-[50px] p-12 w-full max-w-sm shadow-2xl text-center">
-              <h3 className="text-3xl font-black text-blue-950 mb-8 uppercase tracking-tighter italic">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="rating-modal-title"
+              className="relative bg-white rounded-[50px] p-12 w-full max-w-sm shadow-2xl text-center"
+            >
+              <h3 id="rating-modal-title" className="text-3xl font-black text-blue-950 mb-8 uppercase tracking-tighter italic">
                 {t("movie_details.modal_title")}
               </h3>
               <div className="flex justify-center gap-3 mb-12">
@@ -1025,6 +1030,8 @@ const MovieDetails = () => {
                   <button
                     key={num}
                     onClick={() => setTempRating(num)}
+                    aria-label={`Note ${num} sur 5`}
+                    aria-pressed={tempRating === num}
                     className={`w-12 h-14 rounded-2xl font-black text-2xl transition-all ${tempRating === num ? "bg-blue-600 text-white scale-110 shadow-xl" : "bg-slate-100 text-slate-300"}`}
                   >
                     {num}
@@ -1032,10 +1039,11 @@ const MovieDetails = () => {
                 ))}
               </div>
               <div className="mb-6 text-left">
-                <label className="mb-2 block text-xs font-black uppercase tracking-widest text-slate-500">
+                <label htmlFor="rating-comment" className="mb-2 block text-xs font-black uppercase tracking-widest text-slate-500">
                   {t("movie_details.modal_comment_label")}
                 </label>
                 <textarea
+                  id="rating-comment"
                   value={tempComment}
                   onChange={(event) => setTempComment(event.target.value)}
                   maxLength={2000}

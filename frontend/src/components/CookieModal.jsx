@@ -40,9 +40,13 @@ export default function CookieModal() {
 
   return (
     <div className="fixed bottom-5 left-4 right-4 z-[120] md:left-auto md:right-6 md:max-w-sm">
-      <div className={`${panelClassName} p-5`}>
+      <div
+        role="dialog"
+        aria-labelledby="cookie-modal-title"
+        className={`${panelClassName} p-5`}
+      >
         <p className="site-kicker">Cookies</p>
-        <h3 className={`mt-3 text-lg font-black uppercase tracking-tight ${titleClassName}`}>Gestion des cookies</h3>
+        <h3 id="cookie-modal-title" className={`mt-3 text-lg font-black uppercase tracking-tight ${titleClassName}`}>Gestion des cookies</h3>
         <p className={`mt-2 text-sm leading-relaxed ${textClassName}`}>
           Nous utilisons des cookies pour mesurer l'audience et ameliorer l'experience utilisateur.
         </p>
