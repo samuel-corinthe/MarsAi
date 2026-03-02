@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../context/ThemeContext";
@@ -30,6 +30,8 @@ export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [utilityMenuOpen, setUtilityMenuOpen] = useState(false);
+  const utilityButtonRef = useRef(null);
+  const utilityMenuRef = useRef(null);
   const currentLanguage = normalizeLanguage(i18n.language);
   const isRtl = currentLanguage === "ar";
   const {
@@ -202,8 +204,21 @@ export default function Navbar() {
 
             <div className="relative">
               <button
+                ref={utilityButtonRef}
                 type="button"
+                aria-haspopup="true"
+                aria-expanded={utilityMenuOpen}
                 onClick={() => setUtilityMenuOpen((prev) => !prev)}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setUtilityMenuOpen(true);
+                    setTimeout(() => {
+                      utilityMenuRef.current?.querySelector("a")?.focus();
+                    }, 0);
+                  }
+                  if (e.key === "Escape") setUtilityMenuOpen(false);
+                }}
                 className={`inline-flex items-center gap-1 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-black uppercase tracking-[0.12em] ${
                   isLight
                     ? "text-slate-700 hover:bg-cyan-50/80 hover:text-cyan-800"
@@ -223,16 +238,37 @@ export default function Navbar() {
               </button>
 
               {utilityMenuOpen && (
-                <div className={`absolute ${isRtl ? "left-0" : "right-0"} mt-2 w-64 overflow-hidden rounded-2xl p-2 ${
-                  isLight
-                    ? "border border-cyan-200/80 bg-[linear-gradient(145deg,rgba(248,252,255,0.96),rgba(226,240,255,0.92))] shadow-[0_18px_44px_rgba(2,132,199,0.16)]"
-                    : "border border-slate-600/70 bg-slate-900/95 shadow-[0_18px_44px_rgba(2,6,23,0.7)]"
-                }`}>
-                  {utilityNav.map((item) => (
+                <div
+                  ref={utilityMenuRef}
+                  role="menu"
+                  className={`absolute ${isRtl ? "left-0" : "right-0"} mt-2 w-64 overflow-hidden rounded-2xl p-2 ${
+                    isLight
+                      ? "border border-cyan-200/80 bg-[linear-gradient(145deg,rgba(248,252,255,0.96),rgba(226,240,255,0.92))] shadow-[0_18px_44px_rgba(2,132,199,0.16)]"
+                      : "border border-slate-600/70 bg-slate-900/95 shadow-[0_18px_44px_rgba(2,6,23,0.7)]"
+                  }`}
+                >
+                  {utilityNav.map((item, index) => (
                     <Link
                       key={item.id}
                       to={item.path}
+                      role="menuitem"
                       onClick={closeMenus}
+                      onKeyDown={(e) => {
+                        const items = Array.from(utilityMenuRef.current?.querySelectorAll("a") ?? []);
+                        if (e.key === "ArrowDown") {
+                          e.preventDefault();
+                          items[index + 1]?.focus();
+                        }
+                        if (e.key === "ArrowUp") {
+                          e.preventDefault();
+                          if (index === 0) utilityButtonRef.current?.focus();
+                          else items[index - 1]?.focus();
+                        }
+                        if (e.key === "Escape") {
+                          setUtilityMenuOpen(false);
+                          utilityButtonRef.current?.focus();
+                        }
+                      }}
                       className={`block rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
                         isLight
                           ? "text-slate-700 hover:bg-cyan-50/80 hover:text-cyan-800"

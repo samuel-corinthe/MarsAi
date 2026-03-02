@@ -26,7 +26,7 @@ export default function GallerySearchToolbar({
   t,
 }) {
   return (
-    <div className="w-full max-w-2xl">
+    <div role="search" className="w-full max-w-2xl">
       <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-grow" ref={searchRef}>
           <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
@@ -46,6 +46,7 @@ export default function GallerySearchToolbar({
           </div>
           <input
             type="text"
+            aria-label={t("gallery.search_placeholder", "Rechercher un film...")}
             placeholder={t(
               "gallery.search_placeholder",
               "Rechercher un film...",
