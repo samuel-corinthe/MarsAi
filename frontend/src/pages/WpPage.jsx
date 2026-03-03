@@ -362,7 +362,12 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
 
   const formatDateParts = (dateStr) => {
     const d = parseDate(dateStr);
-    const locale = i18n.language === "fr" ? "fr-FR" : "en-GB";
+    const locale =
+      i18n.language === "fr"
+        ? "fr-FR"
+        : i18n.language === "ar"
+          ? "ar"
+          : "en-GB";
     const monthShort = d
       .toLocaleDateString(locale, { month: "short" })
       .replace(".", "");
@@ -381,8 +386,11 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
       setError(false);
       try {
         const isCallForProjectPage = pageKey === "call";
+        const isAgendaPage = pageKey === "agenda";
         const slugCandidates = isCallForProjectPage
           ? [...new Set([slug, "call-for-project", "call-for-projects", "appel-a-projet"])]
+          : isAgendaPage
+            ? [...new Set([slug, "برنامج", "schedule-ar", "agenda", "schedule"])]
           : [slug];
         const languageCandidates = isCallForProjectPage
           ? [...new Set([i18n.language, "en", "fr"])]
@@ -402,7 +410,12 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
           setPage(null);
         } else {
           setPage(pageData);
-          const agendaCategoryId = i18n.language === "fr" ? 14 : 51;
+          const categoryMap = {
+            fr: 14,
+            en: 51,
+            ar: 103,
+          };
+          const agendaCategoryId = categoryMap[i18n.language] || categoryMap.fr;
           if (pageKey === "agenda") {
             try {
               const res = await fetch(
@@ -410,7 +423,12 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               );
               const allPosts = await res.json();
               if (allPosts && Array.isArray(allPosts)) {
-                const timeLocale = i18n.language === "fr" ? "fr-FR" : "en-GB";
+                const timeLocale =
+                  i18n.language === "fr"
+                    ? "fr-FR"
+                    : i18n.language === "ar"
+                      ? "ar"
+                      : "en-GB";
                 const formattedEvents = allPosts.map((post) => {
                   const rawTermsData = extractAgendaTerms(
                     post._embedded?.["wp:term"],
@@ -573,7 +591,10 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     const dataToSend = Object.fromEntries(formData);
 
     try {
-      const result = await sendContactForm(dataToSend);
+      const result = await sendContactForm({
+        ...dataToSend,
+        lang: i18n.language,
+      });
       alert(result?.message || "Message envoye avec succes !");
       e.target.reset();
     } catch (error) {

@@ -23,10 +23,7 @@ function isLocalBrowserHost() {
 function appendLocalCandidates(urls) {
   if (!isLocalBrowserHost()) return urls;
 
-  const extras = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-  ];
+  const extras = ["http://localhost:3000", "http://127.0.0.1:3000"];
 
   const extended = [...urls];
   urls.forEach((url) => {
@@ -115,7 +112,9 @@ async function fetchWith404Fallback(
   for (const url of candidates) {
     try {
       const res = await fetch(url, options);
-      const contentType = String(res.headers.get("content-type") || "").toLowerCase();
+      const contentType = String(
+        res.headers.get("content-type") || "",
+      ).toLowerCase();
       const rawBody = await res.text();
       let payload = {};
       let isJson = contentType.includes("application/json");
@@ -134,7 +133,10 @@ async function fetchWith404Fallback(
         if (!isJson) {
           continue;
         }
-        if (typeof validatePayload === "function" && !validatePayload(payload)) {
+        if (
+          typeof validatePayload === "function" &&
+          !validatePayload(payload)
+        ) {
           continue;
         }
         return { payload, status: res.status };
@@ -154,12 +156,16 @@ async function fetchWith404Fallback(
   }
 
   if (lastError && lastStatus == null) {
-    throw new Error(lastError.message || "Impossible de joindre l'API backend.");
+    throw new Error(
+      lastError.message || "Impossible de joindre l'API backend.",
+    );
   }
 
   const fallbackStatus = lastStatus == null ? "unreachable" : lastStatus;
   throw new Error(
-    lastPayload?.details || lastPayload?.error || `${errorContext} error ${fallbackStatus}`,
+    lastPayload?.details ||
+      lastPayload?.error ||
+      `${errorContext} error ${fallbackStatus}`,
   );
 }
 
@@ -168,7 +174,11 @@ async function fetchSameOriginWithFallback(
   options = {},
   errorContext = "API",
 ) {
-  const candidates = [...new Set(urls.filter((url) => typeof url === "string" && url.startsWith("/")))];
+  const candidates = [
+    ...new Set(
+      urls.filter((url) => typeof url === "string" && url.startsWith("/")),
+    ),
+  ];
 
   let lastStatus = null;
   let lastPayload = {};
@@ -206,12 +216,16 @@ async function fetchSameOriginWithFallback(
   }
 
   if (lastError && lastStatus == null) {
-    throw new Error(lastError.message || "Impossible de joindre l'API backend.");
+    throw new Error(
+      lastError.message || "Impossible de joindre l'API backend.",
+    );
   }
 
   const fallbackStatus = lastStatus == null ? "unreachable" : lastStatus;
   throw new Error(
-    lastPayload?.details || lastPayload?.error || `${errorContext} error ${fallbackStatus}`,
+    lastPayload?.details ||
+      lastPayload?.error ||
+      `${errorContext} error ${fallbackStatus}`,
   );
 }
 
@@ -250,17 +264,28 @@ export async function getMovieById(movieId) {
   );
 
   if (payload?.movie && typeof payload.movie === "object") return payload.movie;
-  if (payload && typeof payload === "object" && Number.isFinite(Number(payload.id))) return payload;
+  if (
+    payload &&
+    typeof payload === "object" &&
+    Number.isFinite(Number(payload.id))
+  )
+    return payload;
   return null;
 }
 
-export async function sendContactForm({ name, email, subject, message }) {
+export async function sendContactForm({
+  name,
+  email,
+  subject,
+  message,
+  lang = "fr",
+}) {
   const { payload } = await fetchWith404Fallback(
     ["/api/send-email", "/send-email", "/api/mail/send-email"],
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, subject, message }),
+      body: JSON.stringify({ name, email, subject, message, lang }),
     },
     "Contact API",
   );
@@ -268,7 +293,12 @@ export async function sendContactForm({ name, email, subject, message }) {
   return payload;
 }
 
-export async function subscribeNewsletterForm({ firstName, email, preferences }) {
+export async function subscribeNewsletterForm({
+  firstName,
+  email,
+  preferences,
+  lang = "fr",
+}) {
   const { payload } = await fetchWith404Fallback(
     [
       "/api/subscribe-newsletter",
@@ -278,7 +308,7 @@ export async function subscribeNewsletterForm({ firstName, email, preferences })
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ firstName, email, preferences }),
+      body: JSON.stringify({ firstName, email, preferences, lang }),
     },
     "Newsletter API",
   );
@@ -408,7 +438,9 @@ export async function getAdminDashboardData({ signal } = {}) {
       // Ignore JSON parse errors and keep generic message
     }
     throw new Error(
-      details ? `Admin API error ${res.status}: ${details}` : `Admin API error ${res.status}`,
+      details
+        ? `Admin API error ${res.status}: ${details}`
+        : `Admin API error ${res.status}`,
     );
   }
   return res.json();
@@ -449,7 +481,10 @@ export async function updateSitePhaseState({ currentPhase, mode } = {}) {
 export async function getPhase2SelectionStatus({ signal } = {}) {
   try {
     const { payload } = await fetchSameOriginWithFallback(
-      ["/api/site-phase/phase2-selection", "/MarsAi/api/site-phase/phase2-selection"],
+      [
+        "/api/site-phase/phase2-selection",
+        "/MarsAi/api/site-phase/phase2-selection",
+      ],
       {
         signal,
         cache: "no-store",
@@ -478,7 +513,10 @@ export async function getPhase2SelectionStatus({ signal } = {}) {
 
 export async function patchPhase2Selection(movieId, selected) {
   const { payload } = await fetchSameOriginWithFallback(
-    ["/api/site-phase/phase2-selection", "/MarsAi/api/site-phase/phase2-selection"],
+    [
+      "/api/site-phase/phase2-selection",
+      "/MarsAi/api/site-phase/phase2-selection",
+    ],
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -493,7 +531,10 @@ export async function patchPhase2Selection(movieId, selected) {
 
 export async function validatePhase2Selection() {
   const { payload } = await fetchSameOriginWithFallback(
-    ["/api/site-phase/phase2-selection/validate", "/MarsAi/api/site-phase/phase2-selection/validate"],
+    [
+      "/api/site-phase/phase2-selection/validate",
+      "/MarsAi/api/site-phase/phase2-selection/validate",
+    ],
     {
       method: "POST",
       credentials: "include",
@@ -507,7 +548,10 @@ export async function validatePhase2Selection() {
 export async function getPhase3SelectionStatus({ signal } = {}) {
   try {
     const { payload } = await fetchSameOriginWithFallback(
-      ["/api/site-phase/phase3-selection", "/MarsAi/api/site-phase/phase3-selection"],
+      [
+        "/api/site-phase/phase3-selection",
+        "/MarsAi/api/site-phase/phase3-selection",
+      ],
       {
         signal,
         cache: "no-store",
@@ -550,7 +594,10 @@ export async function getPhase3WinnersPublic({ signal } = {}) {
 
 export async function patchPhase3Selection(movieId, selected) {
   const { payload } = await fetchSameOriginWithFallback(
-    ["/api/site-phase/phase3-selection", "/MarsAi/api/site-phase/phase3-selection"],
+    [
+      "/api/site-phase/phase3-selection",
+      "/MarsAi/api/site-phase/phase3-selection",
+    ],
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -565,7 +612,10 @@ export async function patchPhase3Selection(movieId, selected) {
 
 export async function validatePhase3Selection() {
   const { payload } = await fetchSameOriginWithFallback(
-    ["/api/site-phase/phase3-selection/validate", "/MarsAi/api/site-phase/phase3-selection/validate"],
+    [
+      "/api/site-phase/phase3-selection/validate",
+      "/MarsAi/api/site-phase/phase3-selection/validate",
+    ],
     {
       method: "POST",
       credentials: "include",
@@ -584,7 +634,11 @@ export async function getMyAssignments() {
 
   const payload = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(payload?.details || payload?.error || `Assignments API error ${res.status}`);
+    throw new Error(
+      payload?.details ||
+        payload?.error ||
+        `Assignments API error ${res.status}`,
+    );
   }
   return payload;
 }
@@ -599,7 +653,9 @@ export async function claimMovieAssignment(movieId) {
 
   const payload = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(payload?.details || payload?.error || `Claim API error ${res.status}`);
+    throw new Error(
+      payload?.details || payload?.error || `Claim API error ${res.status}`,
+    );
   }
   return payload;
 }
@@ -614,7 +670,9 @@ export async function releaseMovieAssignment(movieId) {
 
   const payload = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(payload?.details || payload?.error || `Release API error ${res.status}`);
+    throw new Error(
+      payload?.details || payload?.error || `Release API error ${res.status}`,
+    );
   }
   return payload;
 }
@@ -627,7 +685,11 @@ export async function autoAssignMovieReviews() {
 
   const payload = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(payload?.details || payload?.error || `Auto-assign API error ${res.status}`);
+    throw new Error(
+      payload?.details ||
+        payload?.error ||
+        `Auto-assign API error ${res.status}`,
+    );
   }
   return payload;
 }
@@ -640,7 +702,9 @@ export async function rebalanceMovieReviews() {
 
   const payload = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(payload?.details || payload?.error || `Rebalance API error ${res.status}`);
+    throw new Error(
+      payload?.details || payload?.error || `Rebalance API error ${res.status}`,
+    );
   }
   return payload;
 }
@@ -653,7 +717,9 @@ export async function getMyMovieRating(movieId) {
 
   const payload = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(payload?.details || payload?.error || `Rating API error ${res.status}`);
+    throw new Error(
+      payload?.details || payload?.error || `Rating API error ${res.status}`,
+    );
   }
   return payload;
 }
@@ -668,7 +734,9 @@ export async function upsertMyMovieRating(movieId, score, comment = "") {
 
   const payload = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(payload?.details || payload?.error || `Rating API error ${res.status}`);
+    throw new Error(
+      payload?.details || payload?.error || `Rating API error ${res.status}`,
+    );
   }
   return payload;
 }
@@ -681,7 +749,9 @@ export async function deleteMyMovieRating(movieId) {
 
   const payload = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(payload?.details || payload?.error || `Rating API error ${res.status}`);
+    throw new Error(
+      payload?.details || payload?.error || `Rating API error ${res.status}`,
+    );
   }
   return payload;
 }

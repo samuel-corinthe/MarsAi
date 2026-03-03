@@ -555,7 +555,11 @@ const Gallery = () => {
           <div className="absolute inset-0 bg-gradient-to-b from-blue-900/70 to-blue-950"></div>
           <div className="relative z-10 container mx-auto px-6 text-center">
             <h1 className="text-3xl md:text-5xl font-black text-white mb-10 mt-8 tracking-tighter uppercase">
-              {i18n.language === "fr" ? "Decouvrez " : "Discover "}
+              {i18n.language === "ar"
+                ? "اكتشف "
+                : i18n.language === "fr"
+                  ? "Découvrez "
+                  : "Discover "}
               <span className="text-cyan-400">
                 {t("gallery.title_accent", "nos Merveilles")}
               </span>

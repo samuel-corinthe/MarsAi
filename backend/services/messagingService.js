@@ -166,17 +166,40 @@ export async function validateEmailAddress(email) {
   });
 }
 
-export async function sendContactMail({ name, email, subject, message }) {
+// send a contact notification; lang may be "fr" or "ar" (defaults to fr)
+export async function sendContactMail({
+  name,
+  email,
+  subject,
+  message,
+  lang = "fr",
+}) {
   assertMailConfig();
   const senderAddress = getSenderAddress();
+
+  // pick template based on language
+  const normalized = String(lang || "fr").split("-")[0];
+
+  const templates = {
+    fr: {
+      subject: `${subject}`,
+      text: `Nouveau message recu de : ${name} (${email})\n\nSujet: ${subject}\n\nMessage :\n${message}`,
+    },
+    ar: {
+      subject: `${subject}`,
+      text: `تم استلام رسالة جديدة من : ${name} (${email})\n\nالموضوع: ${subject}\n\nالرسالة:\n${message}`,
+    },
+  };
+
+  const { subject: mailSubject, text } = templates[normalized] || templates.fr;
 
   if (hasBrevoApiKey()) {
     await sendWithBrevoApi({
       senderName: name,
       toEmail: senderAddress,
       replyToEmail: email,
-      subject: `${subject} `,
-      textContent: `Nouveau message recu de : ${name} (${email})\n\nMessage :\n${message}`,
+      subject: mailSubject,
+      textContent: text,
     });
     return;
   }
@@ -185,8 +208,8 @@ export async function sendContactMail({ name, email, subject, message }) {
     from: `"${name}" <${senderAddress}>`,
     replyTo: email,
     to: senderAddress,
-    subject: `${subject} `,
-    text: `Nouveau message recu de : ${name} (${email})\n\nMessage :\n${message}`,
+    subject: mailSubject,
+    text,
   };
 
   await createSmtpTransporter().sendMail(mailOptions);
@@ -205,7 +228,9 @@ export async function sendUploadSuccessMail({
 
   const safeToEmail = String(toEmail || "").trim();
   if (!safeToEmail) {
-    throw new Error("Email destinataire manquant pour la confirmation d'upload.");
+    throw new Error(
+      "Email destinataire manquant pour la confirmation d'upload.",
+    );
   }
 
   const nameParts = [firstName, lastName]
@@ -264,7 +289,10 @@ export async function sendUploadSuccessMail({
     senderName: "marsAI Festival",
     senderCandidates: senderCandidates.length
       ? senderCandidates
-      : [String(senderAddress || "").trim(), String(process.env.EMAIL_USER || "").trim()],
+      : [
+          String(senderAddress || "").trim(),
+          String(process.env.EMAIL_USER || "").trim(),
+        ],
     toEmail: safeToEmail,
     subject,
     textContent,
@@ -272,9 +300,15 @@ export async function sendUploadSuccessMail({
   });
 }
 
-export async function createOrUpdateBrevoContact({ firstName, email, safePreferences }) {
+export async function createOrUpdateBrevoContact({
+  firstName,
+  email,
+  safePreferences,
+}) {
   if (!ensureBrevoClientsConfigured()) {
-    throw new Error("BREVO_API_KEY manquante: impossible d'ajouter le contact Brevo.");
+    throw new Error(
+      "BREVO_API_KEY manquante: impossible d'ajouter le contact Brevo.",
+    );
   }
 
   const contact = new SibApiV3Sdk.CreateContact();
@@ -289,19 +323,43 @@ export async function createOrUpdateBrevoContact({ firstName, email, safePrefere
   await contactsApi.createContact(contact);
 }
 
-export async function sendNewsletterWelcomeMail({ firstName, email, safePreferences }) {
+export async function sendNewsletterWelcomeMail({
+  firstName,
+  email,
+  safePreferences,
+  lang = "fr",
+}) {
   assertMailConfig();
   const senderAddress = getSenderAddress();
+  const normalized = String(lang || "fr").split("-")[0];
+  const prefs = safePreferences.join(", ");
+
+  const templates = {
+    fr: {
+      subject: `Bienvenue a bord, ${firstName} !`,
+      text: `Bienvenue ${firstName} !\nMerci de rejoindre la communaute marsAI.\nTes preferences : ${prefs}`,
+      html: `<h1>Bienvenue ${firstName} !</h1>
+           <p>Merci de rejoindre la communaute <strong>marsAI</strong>.</p>
+           <p>Tes preferences : ${prefs}</p>`,
+    },
+    ar: {
+      subject: `مرحباً بك   ${firstName} !`,
+      text: `مرحباً ${firstName} !\nشكراً لانضمامك إلى مجتمع marsAI.\nتفضيلاتك: ${prefs}`,
+      html: `<h1>مرحباً ${firstName} !</h1>
+           <p>شكراً لانضمامك إلى مجتمع <strong>marsAI</strong>.</p>
+           <p>تفضيلاتك: ${prefs}</p>`,
+    },
+  };
+
+  const { subject, text, html } = templates[normalized] || templates.fr;
 
   if (hasBrevoApiKey()) {
     await sendWithBrevoApi({
       senderName: "marsAI Festival",
       toEmail: email,
-      subject: `Bienvenue a bord, ${firstName} !`,
-      textContent: `Bienvenue ${firstName} !\nMerci de rejoindre la communaute marsAI.\nTes preferences : ${safePreferences.join(", ")}`,
-      htmlContent: `<h1>Bienvenue ${firstName} !</h1>
-           <p>Merci de rejoindre la communaute <strong>marsAI</strong>.</p>
-           <p>Tes preferences : ${safePreferences.join(", ")}</p>`,
+      subject,
+      textContent: text,
+      htmlContent: html,
     });
     return;
   }
@@ -309,10 +367,8 @@ export async function sendNewsletterWelcomeMail({ firstName, email, safePreferen
   const mailOptions = {
     from: `"marsAI Festival" <${senderAddress}>`,
     to: email,
-    subject: `Bienvenue a bord, ${firstName} !`,
-    html: `<h1>Bienvenue ${firstName} !</h1>
-           <p>Merci de rejoindre la communaute <strong>marsAI</strong>.</p>
-           <p>Tes preferences : ${safePreferences.join(", ")}</p>`,
+    subject,
+    html,
   };
 
   await createSmtpTransporter().sendMail(mailOptions);
