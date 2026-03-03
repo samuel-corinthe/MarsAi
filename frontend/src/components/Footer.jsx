@@ -121,7 +121,7 @@ export default function Footer() {
               </span>
               <span className="leading-none">
                 <span className={`block text-2xl font-black uppercase tracking-tight ${logoTitleClassName}`}>marsAI</span>
-                <span className={`block text-[10px] font-bold uppercase tracking-[0.22em] ${logoSubClassName}`}>
+                <span className={`block text-[11px] font-bold uppercase tracking-[0.22em] ${logoSubClassName}`}>
                   Festival 2026
                 </span>
               </span>
@@ -137,7 +137,6 @@ export default function Footer() {
                   target="_blank"
                   rel="noreferrer"
                   aria-label={social.name}
-                  title={social.name}
                   className={socialButtonClassName}
                 >
                   <SocialIcon network={social.key} className="h-4 w-4" />

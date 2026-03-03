@@ -84,6 +84,7 @@ export default function Navbar() {
   const themeToggleLabel = isLight
     ? t("nav.theme_night")
     : t("nav.theme_day");
+  const themeAnnouncement = isLight ? t("nav.theme.lightActivated") : t("nav.theme.darkActivated");
 
   const mainNav = useMemo(
     () => [
@@ -168,7 +169,7 @@ export default function Navbar() {
     >
       <div className="site-container">
         <div className="flex h-20 items-center justify-between gap-4">
-          <Link to={homePath} className="inline-flex items-center gap-3">
+          <Link to={homePath} className="inline-flex items-center gap-3" aria-hidden="true" tabIndex={-1}>
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-300 to-sky-500 text-slate-950 shadow-[0_10px_24px_rgba(14,165,233,0.45)]">
               <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                 <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm12.553 1.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
@@ -176,7 +177,7 @@ export default function Navbar() {
             </span>
             <span className="flex flex-col leading-none">
               <span className={`text-xl font-black uppercase tracking-tight ${isLight ? "text-slate-950" : "text-white"}`}>marsAI</span>
-              <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${isLight ? "text-cyan-700/90" : "text-cyan-300/90"}`}>
+              <span className={`text-[11px] font-bold uppercase tracking-[0.2em] ${isLight ? "text-cyan-700/90" : "text-cyan-300/90"}`}>
                 Festival 2026
               </span>
             </span>
@@ -351,12 +352,14 @@ export default function Navbar() {
               onClick={toggleTheme}
               aria-label={themeToggleLabel}
               title={themeToggleLabel}
+              aria-pressed={!isLight}
               className={`order-last ${isRtl ? "mr-4" : "ml-4"} inline-flex h-10 w-10 items-center justify-center rounded-xl border transition ${
                 isLight
                   ? "border-cyan-200/80 bg-white/80 text-amber-500 hover:border-cyan-400 hover:text-amber-600"
                   : "border-slate-500/80 bg-slate-900/80 text-cyan-200 hover:border-cyan-300/70 hover:text-white"
               }`}
             >
+              <span className="sr-only">{themeToggleLabel}</span>
               {isLight ? (
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z" />
@@ -507,13 +510,14 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={toggleTheme}
-                  aria-label={themeToggleLabel}
+                  aria-pressed={!isLight}
                   className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border ${
                     isLight
                       ? "border-cyan-300 bg-white/80 text-amber-500 hover:border-cyan-400 hover:text-amber-600"
                       : "border-slate-600/70 bg-slate-900/80 text-cyan-200 hover:border-cyan-300/70 hover:text-white"
                   }`}
                 >
+                  <span className="sr-only">{themeToggleLabel}</span>
                   {isLight ? (
                     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z" />
@@ -530,6 +534,9 @@ export default function Navbar() {
           </div>
         </div>
       )}
+      <span aria-live="polite" aria-atomic="true" className="sr-only">
+        {themeAnnouncement}
+      </span>
     </header>
   );
 }

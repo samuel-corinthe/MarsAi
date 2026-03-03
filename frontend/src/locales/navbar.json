@@ -17,7 +17,13 @@
       "contact": "Contact",
       "language": "Langue",
       "login": "Connexion",
-      "submitFilm": "Déposer un film"
+      "submitFilm": "Déposer un film",
+      "theme": {
+        "switchToDark": "Passer en mode sombre",
+        "switchToLight": "Passer en mode clair",
+        "darkActivated": "Mode sombre activé",
+        "lightActivated": "Mode clair activé"
+      }
     },
     "footer": {
       "description": "Le premier festival international dédié aux films créés avec l'intelligence artificielle. Une célébration de la créativité augmentée et de l'innovation cinématographique.",
@@ -48,7 +54,13 @@
       "contact": "Contact",
       "language": "Language",
       "login": "Login",
-      "submitFilm": "Submit a Film"
+      "submitFilm": "Submit a Film",
+      "theme": {
+        "switchToDark": "Switch to dark mode",
+        "switchToLight": "Switch to light mode",
+        "darkActivated": "Dark mode activated",
+        "lightActivated": "Light mode activated"
+      }
     },
     "footer": {
       "description": "The first international festival dedicated to films created with artificial intelligence. A celebration of augmented creativity and cinematic innovation.",

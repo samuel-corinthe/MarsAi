@@ -916,7 +916,7 @@ export default function YoutubeUpload() {
 
             <div className={`upload-modern-shell relative mx-auto max-w-2xl overflow-hidden rounded-2xl border ${shellClass}`}>
                 <div className={`border-b p-8 ${headerClass}`}>
-                    <p className="inline-flex rounded-full border border-cyan-300/45 bg-cyan-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">
+                    <p className="inline-flex rounded-full border border-cyan-300/45 bg-cyan-400/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-cyan-200">
                         Upload
                     </p>
                     <h1 className="text-3xl font-bold">{t('upload.page_title')}</h1>
@@ -1654,7 +1654,7 @@ export default function YoutubeUpload() {
 
                     {/* Fichier vidÃ©o */}
                     <div className="space-y-2">
-                        <label className="block text-sm font-semibold text-slate-700">
+                        <label htmlFor="video-upload" className="block text-sm font-semibold text-slate-700">
                             {t('upload.form.video_label')} <abbr title={requiredLabel} className="text-red-600 no-underline">*</abbr>
                         </label>
                         <div className={`border-2 border-dashed rounded-lg p-8 transition-colors ${errors.file ? 'border-red-500 bg-red-50' : 'border-slate-200 hover:border-blue-400'
@@ -1701,9 +1701,9 @@ export default function YoutubeUpload() {
 
                     {/* {t('upload.form.antispam_label')} Altcha */}
                     <div className="space-y-2">
-                        <label className="block text-sm font-semibold text-slate-700">
+                        <p className="block text-sm font-semibold text-slate-700">
                             {t('upload.form.antispam_label')} <abbr title={requiredLabel} className="text-red-600 no-underline">*</abbr>
-                        </label>
+                        </p>
                         <div className={`${errors.altcha ? 'border-2 border-red-500 rounded-lg p-2' : ''}`}>
                             <altcha-widget
                                 challengeurl={ALTCHA_CHALLENGE_URL}

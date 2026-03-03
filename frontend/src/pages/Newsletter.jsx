@@ -263,10 +263,11 @@ export default function Newsletter() {
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
-                    <label className={`mb-2 block text-sm font-medium ${theme.label}`}>
+                    <label htmlFor="newsletter-firstname" className={`mb-2 block text-sm font-medium ${theme.label}`}>
                       {t("newsletter.form.label_name")}
                     </label>
                     <input
+                      id="newsletter-firstname"
                       type="text"
                       name="firstName"
                       value={formData.firstName}
@@ -278,10 +279,11 @@ export default function Newsletter() {
                   </div>
 
                   <div>
-                    <label className={`mb-2 block text-sm font-medium ${theme.label}`}>
+                    <label htmlFor="newsletter-email" className={`mb-2 block text-sm font-medium ${theme.label}`}>
                       {t("newsletter.form.label_email")}
                     </label>
                     <input
+                      id="newsletter-email"
                       type="email"
                       name="email"
                       value={formData.email}

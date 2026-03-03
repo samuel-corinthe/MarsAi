@@ -136,7 +136,7 @@ export default function PhaseCountdownBanner({
                 <div className={`tabular-nums text-5xl font-black leading-none tracking-tight sm:text-6xl md:text-7xl ${homeValueClassName}`}>
                   {String(item.value).padStart(2, "0")}
                 </div>
-                <div className={`mt-1 text-[10px] font-black uppercase tracking-[0.24em] ${homeLabelClassName}`}>
+                <div className={`mt-1 text-[11px] font-black uppercase tracking-[0.24em] ${homeLabelClassName}`}>
                   {item.label}
                 </div>
               </div>

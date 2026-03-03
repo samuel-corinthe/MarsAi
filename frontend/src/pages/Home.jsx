@@ -325,6 +325,7 @@ export default function Home({ page }) {
           loop
           playsInline
           preload="metadata"
+          aria-hidden="true"
         />
         <div className={`absolute inset-0 bg-gradient-to-b ${theme.heroOverlay}`} />
         <div className={`absolute inset-0 ${theme.heroHalo}`} />
