@@ -16,6 +16,10 @@ import NotFound from "./NotFound";
 import LegalPage from "./LegalPage";
 import CallForProject from "./Appel a projet";
 import { useTheme } from "../context/ThemeContext";
+import {
+  buildLocalizedSlugPath,
+  getLocalizedPath,
+} from "../utils/localizedRoutes";
 
 const normalizeAgendaTagKey = (value = "") =>
   String(value)
@@ -266,14 +270,8 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   useEffect(() => {
     if (fixedSlug) return;
     const targetPath = isHome
-      ? i18n.language === "en"
-        ? "/en/home"
-        : i18n.language === "ar"
-          ? "/ar/home"
-          : "/accueil"
-      : i18n.language === "fr"
-        ? `/${routePathSlug}`
-        : `/${i18n.language}/${routePathSlug}`;
+      ? getLocalizedPath("home", i18n.language)
+      : buildLocalizedSlugPath(routePathSlug, i18n.language);
     if (location.pathname !== targetPath && (routeSlug || isHome)) {
       navigate(targetPath, { replace: true });
     }
@@ -635,17 +633,17 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
         ...dataToSend,
         lang: i18n.language,
       });
-      alert(result?.message || "Message envoye avec succes !");
+      alert(result?.message || t("contact.form.success_message"));
       e.target.reset();
     } catch (error) {
-      alert(error?.message || "Impossible de contacter le serveur.");
+      alert(error?.message || t("contact.form.error_message"));
     } finally {
       setIsSending(false);
     }
   };
 
   if (isCallForProjectRoute && canAccessCallForProject === false) {
-    return <Navigate to={i18n.language === "en" ? "/movies" : "/films"} replace />;
+    return <Navigate to={getLocalizedPath("films", i18n.language)} replace />;
   }
   if (isCallForProjectRoute && canAccessCallForProject == null) {
     return <PageLoader message={t("ui.loading_page", "Loading...")} />;
@@ -655,7 +653,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   if (error) {
     return (
       <div className="app-container page">
-        Impossible de charger la page pour le moment.
+        {t("common.load_page_error")}
       </div>
     );
   }
@@ -665,20 +663,23 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   const seoDescription =
     page?.excerpt?.rendered || page?.content?.rendered || "";
   const seoLang = i18n.language;
-  const homePath = i18n.language === "en" ? "/home" : "/accueil";
+  const homePath = getLocalizedPath("home", i18n.language);
+  const currentPagePath = isHome
+    ? homePath
+    : buildLocalizedSlugPath(routePathSlug, i18n.language);
   const getPageName = () => {
-    if (slug === "agenda" || slug === "schedule") return "Agenda";
-    if (slug === "contact") return "Contact";
+    if (pageKey === "agenda") return t("nav.agenda", "Agenda");
+    if (pageKey === "contact") return t("nav.contact", "Contact");
     return page?.title?.rendered?.replace(/<[^>]+>/g, "") || slug;
   };
   const breadcrumbItems = [
     {
-      name: i18n.language === "en" ? "Home" : "Accueil",
+      name: t("nav.home", "Accueil"),
       url: homePath,
     },
     {
       name: getPageName(),
-      url: `/${slug}`,
+      url: currentPagePath,
     },
   ];
   const contactTheme = isLight

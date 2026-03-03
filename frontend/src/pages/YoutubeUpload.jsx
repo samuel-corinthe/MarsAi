@@ -5,6 +5,7 @@ import { validateForm, FORM_CONSTRAINTS, exceedsMaxLength } from '../utils/formv
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import usePhaseAccessController from "../controllers/usePhaseAccessController";
+import { getLocalizedPath } from "../utils/localizedRoutes";
 import {
     fetchAltchaChallenge,
     fetchUploadCountries,
@@ -902,7 +903,7 @@ export default function YoutubeUpload() {
     }
 
     if (!isUploadAllowed) {
-        const redirectPath = i18n.language === 'en' ? '/call-for-project' : '/appel-a-projet';
+        const redirectPath = getLocalizedPath('call', i18n.language);
         return <Navigate to={redirectPath} replace />;
     }
 

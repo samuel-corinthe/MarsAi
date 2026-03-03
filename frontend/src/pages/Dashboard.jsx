@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import FilmRow from "../components/dashboard/FilmRow";
 import ProgressBar from "../components/dashboard/ProgressBar";
 import PageLoader from "../components/ui/PageLoader";
+import { getLocalizedPath } from "../utils/localizedRoutes";
 import {
   autoAssignMovieReviews,
   claimMovieAssignment,
@@ -75,8 +76,8 @@ export default function Dashboard() {
     typeof translation?.t === "function"
       ? translation.t
       : (key, defaultValue) => defaultValue ?? key;
-  const homePath = i18n.language === "en" ? "/home" : "/accueil";
-  const filmsBasePath = i18n.language === "en" ? "/movies" : "/films";
+  const homePath = getLocalizedPath("home", i18n.language);
+  const filmsBasePath = getLocalizedPath("films", i18n.language);
   const [adminData, setAdminData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");

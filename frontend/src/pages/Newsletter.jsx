@@ -1,10 +1,18 @@
 import { useState } from "react";
 import Seo from "../components/Seo";
+import { BreadcrumbSchema } from "../components/Schema";
 import { useTranslation } from "react-i18next";
 import { subscribeNewsletterForm } from "../api";
+import { useTheme } from "../context/ThemeContext";
+import {
+  getLocalizedPath,
+  normalizeLanguage,
+} from "../utils/localizedRoutes";
 
-const Newsletter = () => {
+export default function Newsletter() {
   const { t, i18n } = useTranslation();
+  const { isLight } = useTheme();
+  const isArabic = normalizeLanguage(i18n.language) === "ar";
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -14,8 +22,8 @@ const Newsletter = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -23,17 +31,20 @@ const Newsletter = () => {
     setFormData((prev) => ({
       ...prev,
       preferences: prev.preferences.includes(preference)
-        ? prev.preferences.filter((p) => p !== preference)
+        ? prev.preferences.filter((item) => item !== preference)
         : [...prev.preferences, preference],
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setIsLoading(true);
 
     try {
-      await subscribeNewsletterForm({ ...formData, lang: i18n.language });
+      await subscribeNewsletterForm({
+        ...formData,
+        lang: i18n.language,
+      });
       setIsSubmitted(true);
       setTimeout(() => {
         setIsSubmitted(false);
@@ -46,7 +57,6 @@ const Newsletter = () => {
     }
   };
 
-  // Mappage des stats selon ton JSON
   const stats = [
     { number: "15K+", label: t("newsletter.stats.subscribers") },
     {
@@ -56,13 +66,12 @@ const Newsletter = () => {
     { number: "95%", label: t("newsletter.stats.open_rate") },
   ];
 
-  // Mappage des avantages (Benefits)
   const benefitCards = [
     {
       id: "preview",
       icon: (
         <svg
-          className="w-8 h-8"
+          className="h-8 w-8"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -80,7 +89,7 @@ const Newsletter = () => {
       id: "offers",
       icon: (
         <svg
-          className="w-8 h-8"
+          className="h-8 w-8"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -98,7 +107,7 @@ const Newsletter = () => {
       id: "content",
       icon: (
         <svg
-          className="w-8 h-8"
+          className="h-8 w-8"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -114,57 +123,124 @@ const Newsletter = () => {
     },
   ];
 
+  const breadcrumbItems = [
+    {
+      name: t("nav.home", "Accueil"),
+      url: getLocalizedPath("home", i18n.language),
+    },
+    {
+      name: t("newsletter.hero.badge", "Newsletter"),
+      url: getLocalizedPath("newsletter", i18n.language),
+    },
+  ];
+  const theme = isLight
+    ? {
+      page: "site-page newsletter-page text-slate-900",
+      heroOverlay: "from-sky-300/20 via-transparent to-transparent",
+      badge: "border-sky-300/70 bg-sky-100 text-sky-700",
+      title: "text-slate-900",
+      titleAccent: "from-sky-600 via-cyan-500 to-indigo-500",
+      subtitle: "text-slate-600",
+      statsBorder: "border-sky-200/80",
+      statValue: "from-sky-600 to-cyan-500",
+      statLabel: "text-slate-500",
+      panel: "border-slate-200 bg-white",
+      panelTitle: "text-slate-900",
+      panelSubtitle: "text-slate-600",
+      label: "text-slate-700",
+      input: "border-slate-300 bg-white text-slate-900 focus:border-sky-400",
+      checkboxText: "text-slate-600 group-hover:text-slate-800",
+      helper: "text-slate-500",
+      helperLink: "text-sky-700 hover:underline",
+      success: "border-emerald-300/70 bg-emerald-50",
+      successTitle: "text-emerald-700",
+      successText: "text-emerald-800",
+      successHint: "text-emerald-700/90",
+      sectionBorder: "border-sky-200/80",
+      sectionTitle: "text-slate-900",
+      sectionSubtitle: "text-slate-600",
+      benefitCard: "border-slate-200 bg-white hover:border-sky-300/70",
+      benefitTitle: "text-slate-900",
+      benefitText: "text-slate-600",
+      faqCard: "border-slate-200 bg-white",
+      faqTitle: "text-slate-900",
+      faqText: "text-slate-600",
+    }
+    : {
+      page: "min-h-screen bg-[#020617] text-slate-100",
+      heroOverlay: "from-cyan-400/10 via-transparent to-transparent",
+      badge: "border-cyan-300/35 bg-cyan-400/10 text-cyan-200",
+      title: "text-white",
+      titleAccent: "from-cyan-300 via-sky-300 to-indigo-300",
+      subtitle: "text-slate-300",
+      statsBorder: "border-slate-800/80",
+      statValue: "from-cyan-300 to-sky-300",
+      statLabel: "text-slate-400",
+      panel: "border-slate-700 bg-gradient-to-br from-[#0f172a] to-[#020617]",
+      panelTitle: "text-white",
+      panelSubtitle: "text-slate-400",
+      label: "text-slate-300",
+      input: "border-slate-700 bg-slate-900 text-white focus:border-cyan-300",
+      checkboxText: "text-slate-400 group-hover:text-slate-300",
+      helper: "text-slate-500",
+      helperLink: "text-cyan-300 hover:underline",
+      success: "border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-teal-500/10",
+      successTitle: "text-white",
+      successText: "text-slate-300",
+      successHint: "text-slate-400",
+      sectionBorder: "border-slate-800/80",
+      sectionTitle: "text-white",
+      sectionSubtitle: "text-slate-400",
+      benefitCard: "border-slate-700 bg-gradient-to-br from-[#0f172a] to-[#020617] hover:border-cyan-300/55",
+      benefitTitle: "text-white",
+      benefitText: "text-slate-400",
+      faqCard: "border-slate-700 bg-[#0f172a]/90",
+      faqTitle: "text-white",
+      faqText: "text-slate-400",
+    };
+
   return (
     <>
       <Seo
         title={t("newsletter.hero.badge")}
         description={t("newsletter.hero.description")}
       />
-      <div className="min-h-screen bg-black">
-        {/* Hero Section */}
-        <section className="relative pt-32 pb-20 px-4 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/10 via-transparent to-transparent"></div>
-          <div className="max-w-4xl mx-auto relative z-10 text-center space-y-6">
-            <div className="inline-flex items-center space-x-2 px-4 py-2 bg-cyan-400/10 border border-cyan-400/30 rounded-full text-cyan-400 text-sm font-medium">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+      <BreadcrumbSchema items={breadcrumbItems} />
+
+      <div className={theme.page} dir={isArabic ? "rtl" : "ltr"}>
+        <section className="relative overflow-hidden px-4 pb-20 pt-32">
+          <div className={`absolute inset-0 bg-gradient-to-b ${theme.heroOverlay}`}></div>
+          <div className="relative z-10 mx-auto max-w-4xl space-y-6 text-center">
+            <div className={`inline-flex items-center space-x-2 rounded-full border px-4 py-2 text-sm font-semibold ${theme.badge}`}>
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
                 <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
               </svg>
               <span>{t("newsletter.hero.badge")}</span>
             </div>
 
-            <h1
-              className="text-4xl md:text-6xl lg:text-7xl font-black text-white leading-tight uppercase"
-              style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-            >
+            <h1 className={`text-4xl font-black uppercase leading-tight md:text-6xl lg:text-7xl ${theme.title}`}>
               {t("newsletter.hero.title_main")}
               <br />
-              <span className="bg-gradient-to-r from-cyan-400 via-pink-500 to-purple-600 bg-clip-text text-transparent">
+              <span className={`bg-gradient-to-r bg-clip-text text-transparent ${theme.titleAccent}`}>
                 {t("newsletter.hero.title_accent")}
               </span>
             </h1>
 
-            <p
-              className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed"
-              style={{ fontFamily: "'Inter', sans-serif" }}
-            >
+            <p className={`mx-auto max-w-2xl text-lg leading-relaxed md:text-xl ${theme.subtitle}`}>
               {t("newsletter.hero.description")}
             </p>
           </div>
         </section>
 
-        {/* Stats Section */}
-        <section className="py-12 px-4 border-y border-gray-900">
-          <div className="max-w-4xl mx-auto grid grid-cols-3 gap-4 md:gap-8">
+        <section className={`border-y py-12 px-4 ${theme.statsBorder}`}>
+          <div className="mx-auto grid max-w-4xl grid-cols-3 gap-4 md:gap-8">
             {stats.map((stat, index) => (
-              <div key={index} className="text-center space-y-2">
-                <div
-                  className="text-3xl md:text-5xl font-black text-transparent bg-gradient-to-r from-cyan-400 to-pink-500 bg-clip-text"
-                  style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-                >
+              <div key={index} className="space-y-2 text-center">
+                <div className={`text-3xl font-black text-transparent bg-gradient-to-r bg-clip-text md:text-5xl ${theme.statValue}`}>
                   {stat.number}
                 </div>
-                <div className="text-gray-400 text-xs md:text-base">
+                <div className={`text-xs md:text-base ${theme.statLabel}`}>
                   {stat.label}
                 </div>
               </div>
@@ -172,26 +248,20 @@ const Newsletter = () => {
           </div>
         </section>
 
-        {/* Form Section */}
-        <section className="py-20 px-4">
-          <div className="max-w-2xl mx-auto">
+        <section className="px-4 py-20">
+          <div className="mx-auto max-w-2xl">
             {!isSubmitted ? (
-              <div className="bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-3xl p-6 md:p-12 shadow-2xl">
-                <div className="text-center mb-8">
-                  <h2
-                    className="text-3xl md:text-4xl font-black text-white mb-3"
-                    style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-                  >
+              <div className={`rounded-3xl border p-6 shadow-2xl md:p-12 ${theme.panel}`}>
+                <div className="mb-8 text-center">
+                  <h2 className={`mb-3 text-3xl font-black uppercase md:text-4xl ${theme.panelTitle}`}>
                     {t("newsletter.form.title")}
                   </h2>
-                  <p className="text-gray-400">
-                    {t("newsletter.form.subtitle")}
-                  </p>
+                  <p className={theme.panelSubtitle}>{t("newsletter.form.subtitle")}</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label className={`mb-2 block text-sm font-medium ${theme.label}`}>
                       {t("newsletter.form.label_name")}
                     </label>
                     <input
@@ -200,13 +270,13 @@ const Newsletter = () => {
                       value={formData.firstName}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-lg text-white outline-none focus:border-cyan-400 transition-all"
+                      className={`w-full rounded-lg border px-4 py-3 outline-none transition-all ${theme.input}`}
                       placeholder={t("newsletter.form.placeholder_name")}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label className={`mb-2 block text-sm font-medium ${theme.label}`}>
                       {t("newsletter.form.label_email")}
                     </label>
                     <input
@@ -215,38 +285,38 @@ const Newsletter = () => {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-3 bg-gray-900 border border-gray-800 rounded-lg text-white outline-none focus:border-cyan-400 transition-all"
+                      className={`w-full rounded-lg border px-4 py-3 outline-none transition-all ${theme.input}`}
                       placeholder={t("newsletter.form.placeholder_email")}
                     />
                   </div>
 
                   <div className="space-y-3">
-                    <label className="block text-sm font-medium text-gray-300 mb-3">
+                    <label className={`mb-3 block text-sm font-medium ${theme.label}`}>
                       {t("newsletter.form.label_preferences")}
                     </label>
                     {["news", "films", "events", "partners"].map((id) => (
                       <label
                         key={id}
-                        className="flex items-center space-x-3 cursor-pointer group"
+                        className="group flex cursor-pointer items-center space-x-3"
                       >
                         <input
                           type="checkbox"
                           checked={formData.preferences.includes(id)}
                           onChange={() => handleCheckboxChange(id)}
-                          className="w-5 h-5 rounded border-gray-700 text-cyan-400 bg-gray-900 cursor-pointer"
+                          className="h-5 w-5 cursor-pointer rounded border-slate-700 bg-slate-900 text-cyan-300"
                         />
-                        <span className="text-gray-400 group-hover:text-gray-300 transition-colors">
+                        <span className={`transition-colors ${theme.checkboxText}`}>
                           {t(`newsletter.preferences.${id}`)}
                         </span>
                       </label>
                     ))}
                   </div>
 
-                  <p className="text-xs text-gray-500 leading-relaxed">
+                  <p className={`text-xs leading-relaxed ${theme.helper}`}>
                     {t("newsletter.form.rgpd")}
                     <a
-                      href="/privacy"
-                      className="text-cyan-400 hover:underline ml-1"
+                      href={getLocalizedPath("privacy", i18n.language)}
+                      className={`ml-1 ${theme.helperLink}`}
                     >
                       {t("newsletter.form.privacy_link")}
                     </a>
@@ -255,45 +325,21 @@ const Newsletter = () => {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full group relative px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-lg rounded-full overflow-hidden transition-all duration-300 hover:scale-105 disabled:opacity-50"
+                    className="w-full rounded-full bg-gradient-to-r from-cyan-400 to-sky-500 px-8 py-4 text-lg font-black uppercase text-slate-950 transition-all duration-300 hover:scale-[1.01] disabled:opacity-50"
                   >
-                    <span className="relative z-10 flex items-center justify-center space-x-2">
-                      {isLoading ? (
-                        <span>{t("newsletter.form.loading")}</span>
-                      ) : (
-                        <>
-                          <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                            />
-                          </svg>
-                          <span>{t("newsletter.form.submit")}</span>
-                        </>
-                      )}
-                    </span>
+                    {isLoading ? t("newsletter.form.loading") : t("newsletter.form.submit")}
                   </button>
                 </form>
               </div>
             ) : (
-              <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-3xl p-6 md:p-12 text-center animate-fadeIn">
-                <h3
-                  className="text-3xl md:text-4xl font-black text-white mb-4 uppercase"
-                  style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-                >
+              <div className={`animate-fadeIn rounded-3xl border p-6 text-center md:p-12 ${theme.success}`}>
+                <h3 className={`mb-4 text-3xl font-black uppercase md:text-4xl ${theme.successTitle}`}>
                   {t("newsletter.form.success_title")}
                 </h3>
-                <p className="text-lg text-gray-300 mb-6">
+                <p className={`mb-6 text-lg ${theme.successText}`}>
                   {t("newsletter.form.success_msg")}
                 </p>
-                <p className="text-sm text-gray-400">
+                <p className={`text-sm ${theme.successHint}`}>
                   {t("newsletter.form.success_hint")}
                 </p>
               </div>
@@ -301,33 +347,29 @@ const Newsletter = () => {
           </div>
         </section>
 
-        {/* Benefits Section */}
-        <section className="py-20 px-4 border-t border-gray-900">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-16">
-              <h2
-                className="text-3xl md:text-5xl font-black text-white mb-4 uppercase"
-                style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-              >
+        <section className={`border-t px-4 py-20 ${theme.sectionBorder}`}>
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-16 text-center">
+              <h2 className={`mb-4 text-3xl font-black uppercase md:text-5xl ${theme.sectionTitle}`}>
                 {t("newsletter.benefits.title")}
               </h2>
-              <p className="text-xl text-gray-400">
+              <p className={`text-xl ${theme.sectionSubtitle}`}>
                 {t("newsletter.benefits.subtitle")}
               </p>
             </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 md:gap-8">
               {benefitCards.map((benefit) => (
                 <div
                   key={benefit.id}
-                  className="group p-6 md:p-8 bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-2xl hover:border-cyan-400/50 transition-all"
+                  className={`group rounded-2xl border p-6 transition-all md:p-8 ${theme.benefitCard}`}
                 >
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-400 to-pink-500 flex items-center justify-center text-black mb-6 group-hover:scale-110 transition-transform">
+                  <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-300 to-sky-400 text-slate-950 transition-transform group-hover:scale-110">
                     {benefit.icon}
                   </div>
-                  <h3 className="text-xl md:text-2xl font-bold text-white mb-3">
+                  <h3 className={`mb-3 text-xl font-bold md:text-2xl ${theme.benefitTitle}`}>
                     {t(`newsletter.benefits.${benefit.id}.title`)}
                   </h3>
-                  <p className="text-gray-400 leading-relaxed">
+                  <p className={`leading-relaxed ${theme.benefitText}`}>
                     {t(`newsletter.benefits.${benefit.id}.desc`)}
                   </p>
                 </div>
@@ -336,25 +378,21 @@ const Newsletter = () => {
           </div>
         </section>
 
-        {/* FAQ Section */}
-        <section className="py-20 px-4">
-          <div className="max-w-3xl mx-auto">
-            <h2
-              className="text-3xl md:text-4xl font-black text-white text-center mb-12 uppercase"
-              style={{ fontFamily: "'Bebas Neue', sans-serif" }}
-            >
+        <section className="px-4 py-20">
+          <div className="mx-auto max-w-3xl">
+            <h2 className={`mb-12 text-center text-3xl font-black uppercase md:text-4xl ${theme.sectionTitle}`}>
               {t("newsletter.faq.title")}
             </h2>
             <div className="space-y-4">
               {["q1", "q2", "q3"].map((key) => (
                 <div
                   key={key}
-                  className="p-6 bg-gray-900 border border-gray-800 rounded-xl"
+                  className={`rounded-xl border p-6 ${theme.faqCard}`}
                 >
-                  <h3 className="text-lg font-bold text-white mb-2">
+                  <h3 className={`mb-2 text-lg font-bold ${theme.faqTitle}`}>
                     {t(`newsletter.faq.${key}`)}
                   </h3>
-                  <p className="text-gray-400 leading-relaxed">
+                  <p className={`leading-relaxed ${theme.faqText}`}>
                     {t(`newsletter.faq.${key.replace("q", "a")}`)}
                   </p>
                 </div>
@@ -364,12 +402,15 @@ const Newsletter = () => {
         </section>
 
         <style>{`
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        .animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
-      `}</style>
+          @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+          }
+          .animate-fadeIn {
+            animation: fadeIn 0.5s ease-out forwards;
+          }
+        `}</style>
       </div>
     </>
   );
-};
-
-export default Newsletter;
+}

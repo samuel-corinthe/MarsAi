@@ -7,6 +7,11 @@ import MascotCameraPlayer from "../components/MascotCameraPlayer";
 import SocialIcon from "../components/ui/SocialIcon";
 import { useTheme } from "../context/ThemeContext";
 import {
+  getLocalizedMoviePath,
+  getLocalizedPath,
+  normalizeLanguage,
+} from "../utils/localizedRoutes";
+import {
   deleteMyMovieRating,
   getCurrentSessionUser,
   getMovieById,
@@ -179,8 +184,9 @@ const MovieDetails = () => {
   const { id } = useParams();
   const { t, i18n } = useTranslation();
   const { isLight } = useTheme();
-  const homePath = i18n.language === "en" ? "/home" : "/accueil";
-  const galleryPath = i18n.language === "en" ? "/movies" : "/films";
+  const isArabic = normalizeLanguage(i18n.language) === "ar";
+  const homePath = getLocalizedPath("home", i18n.language);
+  const galleryPath = getLocalizedPath("films", i18n.language);
 
   const [movie, setMovie] = useState(null);
   const [movieLoading, setMovieLoading] = useState(true);
@@ -286,7 +292,7 @@ const MovieDetails = () => {
       } catch (error) {
         if (!cancelled) {
           setMovie(null);
-          setMovieError(error?.message || "Impossible de charger ce film.");
+          setMovieError(error?.message || t("movie_details.load_error"));
         }
       } finally {
         if (!cancelled) {
@@ -298,7 +304,7 @@ const MovieDetails = () => {
     return () => {
       cancelled = true;
     };
-  }, [movieId]);
+  }, [movieId, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -488,7 +494,7 @@ const MovieDetails = () => {
   const movieGenreList = Array.isArray(movie.genre) ? movie.genre : [];
   const breadcrumbItems = [
     {
-      name: i18n.language === "en" ? "Home" : "Accueil",
+      name: t("nav.home", "Accueil"),
       url: homePath,
     },
     {
@@ -497,7 +503,7 @@ const MovieDetails = () => {
     },
     {
       name: movie.title,
-      url: `/movie/${movie.id}`,
+      url: getLocalizedMoviePath(movie.id, i18n.language),
     },
   ];
   const theme = isLight
@@ -555,7 +561,10 @@ const MovieDetails = () => {
         genre={movieGenreList}
       />
       <BreadcrumbSchema items={breadcrumbItems} />
-      <div className={`movie-details-page min-h-screen font-sans relative ${theme.page}`}>
+      <div
+        className={`movie-details-page min-h-screen font-sans relative ${theme.page}`}
+        dir={isArabic ? "rtl" : "ltr"}
+      >
         <div className={`sticky top-0 z-30 border-b backdrop-blur-md ${theme.nav}`}>
           <div className="mx-auto w-full max-w-7xl px-4 py-3 sm:px-6">
             <Link
@@ -683,14 +692,14 @@ const MovieDetails = () => {
                   <div className="mb-12 overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-xl">
                     <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
                       <p className="text-sm font-bold uppercase tracking-wider text-slate-700">
-                        YouTube Player
+                        {t("movie_details.youtube_player")}
                       </p>
                       <button
                         type="button"
                         onClick={() => setIsPlayerOpen(false)}
                         className="rounded-lg px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-500 hover:bg-slate-100 hover:text-slate-700"
                       >
-                        Fermer
+                        {t("movie_details.close_player")}
                       </button>
                     </div>
                     <div className="aspect-video w-full">
@@ -789,11 +798,11 @@ const MovieDetails = () => {
                           <img
                             src={person.img || `https://i.pravatar.cc/150?u=cast-${movie.id}-${index}`}
                             className="w-16 h-16 rounded-2xl object-cover shadow-md"
-                            alt={person.name || "Casting"}
+                            alt={person.name || t("movie_details.casting")}
                           />
                           <div>
                             <p className="font-black text-blue-900 leading-tight uppercase tracking-tighter">
-                              {person.name || "Inconnu"}
+                              {person.name || t("movie_details.unknown_person")}
                             </p>
                             <p className="text-sm text-slate-400 font-bold uppercase tracking-wider">
                               {person.role || t("movie_details.na")}
@@ -854,7 +863,7 @@ const MovieDetails = () => {
                         {countryFlagPath && (
                           <img
                             src={countryFlagPath}
-                            alt={`Drapeau ${countryName}`}
+                            alt={`${t("upload.form.flag_alt")} ${countryName}`}
                             className="h-4 w-6 rounded-sm border border-slate-200 object-cover"
                             loading="lazy"
                           />

@@ -1181,4 +1181,197 @@ i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
 });
 
+const extraTranslations = {
+  fr: {
+    nav: {
+      profile: "Profil",
+      theme_day: "Mode jour",
+      theme_night: "Mode nuit",
+    },
+    home: {
+      hero_cta: {
+        call_badge: "Appel a projet",
+        selection_badge: "Selection officielle",
+        call_title: "Participer",
+        selection_title: "Visionner les films",
+        call_subtitle: "Clique pour deposer ton film",
+        selection_subtitle: "Clique pour ouvrir la galerie",
+        call_aria: "Deposer un film",
+        selection_aria: "Ouvrir la galerie des films",
+      },
+      hero_link_aria: "Acceder a {{label}}",
+    },
+    projects: {
+      phase_error: "Impossible de charger l'etat des phases.",
+      open_badge: "Appel a projet ouvert",
+      open_text: "Depose ton film directement depuis le formulaire d'upload.",
+    },
+    gallery: {
+      discover_prefix: "Decouvrez ",
+      access_error: "Impossible de verifier l'acces galerie.",
+      load_error: "Impossible de charger la galerie.",
+      filter_button_aria: "Ouvrir les filtres avances",
+      filter_button_title: "Filtres avances",
+      sort_chip: "Tri: {{label}}",
+      rating_chip: "Note {{min}}-{{max}}",
+      selection_phase2: "Selection phase 2",
+      selection_phase3: "Selection jury phase 3",
+      quota_reached: "Quota atteint",
+      selection_quota_error: "Quota atteint: {{count}}/{{max}}. Retire un film avant d'en ajouter un autre.",
+      phase3_eligibility_error: "Ce film n'est pas dans la selection phase 2 et ne peut pas etre promu en phase 3.",
+      selection_update_error: "Impossible de modifier la selection en cours.",
+      not_selected_phase2: "Non retenu phase 2",
+      remove_phase2: "Retirer de la phase 2",
+      remove_phase3: "Retirer de la phase 3",
+      select_phase2: "Selectionner pour phase 2",
+      select_phase3: "Selectionner pour phase 3",
+      unknown_director: "Anonyme",
+    },
+    movie_details: {
+      load_error: "Impossible de charger ce film.",
+      youtube_player: "Lecteur YouTube",
+      close_player: "Fermer",
+      unknown_person: "Inconnu",
+      download_movie: "Telecharger le film",
+    },
+    contact: {
+      form: {
+        success_message: "Message envoye avec succes !",
+        error_message: "Impossible de contacter le serveur.",
+      },
+    },
+    common: {
+      load_page_error: "Impossible de charger la page pour le moment.",
+    },
+  },
+  en: {
+    nav: {
+      profile: "Profile",
+      theme_day: "Day mode",
+      theme_night: "Night mode",
+    },
+    home: {
+      hero_cta: {
+        call_badge: "Call for projects",
+        selection_badge: "Official selection",
+        call_title: "Participate",
+        selection_title: "Watch films",
+        call_subtitle: "Click to submit your film",
+        selection_subtitle: "Click to open the gallery",
+        call_aria: "Submit your film",
+        selection_aria: "Open movie gallery",
+      },
+      hero_link_aria: "Go to {{label}}",
+    },
+    projects: {
+      phase_error: "Unable to load the phase status.",
+      open_badge: "Call for projects is open",
+      open_text: "Submit your film directly from the upload form.",
+    },
+    gallery: {
+      discover_prefix: "Discover ",
+      access_error: "Unable to verify gallery access.",
+      load_error: "Unable to load the gallery.",
+      filter_button_aria: "Open advanced filters",
+      filter_button_title: "Advanced filters",
+      sort_chip: "Sort: {{label}}",
+      rating_chip: "Rating {{min}}-{{max}}",
+      selection_phase2: "Phase 2 selection",
+      selection_phase3: "Phase 3 jury selection",
+      quota_reached: "Quota reached",
+      selection_quota_error: "Quota reached: {{count}}/{{max}}. Remove a movie before adding another one.",
+      phase3_eligibility_error: "This movie is not in the phase 2 selection and cannot be promoted to phase 3.",
+      selection_update_error: "Unable to update the current selection.",
+      not_selected_phase2: "Not selected for phase 2",
+      remove_phase2: "Remove from phase 2",
+      remove_phase3: "Remove from phase 3",
+      select_phase2: "Select for phase 2",
+      select_phase3: "Select for phase 3",
+      unknown_director: "Anonymous",
+    },
+    movie_details: {
+      load_error: "Unable to load this movie.",
+      youtube_player: "YouTube player",
+      close_player: "Close",
+      unknown_person: "Unknown",
+      download_movie: "Download movie",
+    },
+    contact: {
+      form: {
+        success_message: "Message sent successfully!",
+        error_message: "Unable to contact the server.",
+      },
+    },
+    common: {
+      load_page_error: "Unable to load the page right now.",
+    },
+  },
+  ar: {
+    nav: {
+      profile: "الملف الشخصي",
+      theme_day: "الوضع النهاري",
+      theme_night: "الوضع الليلي",
+    },
+    home: {
+      hero_cta: {
+        call_badge: "دعوة لتقديم المشاريع",
+        selection_badge: "الاختيار الرسمي",
+        call_title: "شارك",
+        selection_title: "شاهد الافلام",
+        call_subtitle: "اضغط لتقديم فيلمك",
+        selection_subtitle: "اضغط لفتح المعرض",
+        call_aria: "تقديم فيلم",
+        selection_aria: "فتح معرض الافلام",
+      },
+      hero_link_aria: "الانتقال الى {{label}}",
+    },
+    projects: {
+      phase_error: "تعذر تحميل حالة المراحل.",
+      open_badge: "دعوة تقديم المشاريع مفتوحة",
+      open_text: "قدم فيلمك مباشرة من نموذج الرفع.",
+    },
+    gallery: {
+      discover_prefix: "اكتشف ",
+      access_error: "تعذر التحقق من الوصول الى المعرض.",
+      load_error: "تعذر تحميل المعرض.",
+      filter_button_aria: "فتح الفلاتر المتقدمة",
+      filter_button_title: "فلاتر متقدمة",
+      sort_chip: "الترتيب: {{label}}",
+      rating_chip: "التقييم {{min}}-{{max}}",
+      selection_phase2: "اختيار المرحلة الثانية",
+      selection_phase3: "اختيار لجنة المرحلة الثالثة",
+      quota_reached: "تم بلوغ الحد الاقصى",
+      selection_quota_error: "تم بلوغ الحد الاقصى: {{count}}/{{max}}. ازل فيلما قبل اضافة فيلم اخر.",
+      phase3_eligibility_error: "هذا الفيلم غير موجود في اختيار المرحلة الثانية ولا يمكن ترقيته الى المرحلة الثالثة.",
+      selection_update_error: "تعذر تعديل الاختيار الحالي.",
+      not_selected_phase2: "غير مختار للمرحلة الثانية",
+      remove_phase2: "ازالة من المرحلة الثانية",
+      remove_phase3: "ازالة من المرحلة الثالثة",
+      select_phase2: "اختيار للمرحلة الثانية",
+      select_phase3: "اختيار للمرحلة الثالثة",
+      unknown_director: "مجهول",
+    },
+    movie_details: {
+      load_error: "تعذر تحميل هذا الفيلم.",
+      youtube_player: "مشغل يوتيوب",
+      close_player: "اغلاق",
+      unknown_person: "غير معروف",
+      download_movie: "تنزيل الفيلم",
+    },
+    contact: {
+      form: {
+        success_message: "تم ارسال الرسالة بنجاح!",
+        error_message: "تعذر الاتصال بالخادم.",
+      },
+    },
+    common: {
+      load_page_error: "تعذر تحميل الصفحة حاليا.",
+    },
+  },
+};
+
+Object.entries(extraTranslations).forEach(([language, bundle]) => {
+  i18n.addResourceBundle(language, "translation", bundle, true, true);
+});
+
 export default i18n;

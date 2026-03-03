@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { getLocalizedMoviePath } from "../../utils/localizedRoutes";
 
 const CAROUSEL_SHIFT = "clamp(62px, 16vw, 240px)";
 const CAROUSEL_POSITIONS = [
@@ -51,7 +52,7 @@ export default function GalleryHeroCarousel({
             isLight ? "text-white" : "text-slate-100"
           }`}
         >
-          {language === "fr" ? "Decouvrez " : "Discover "}
+          {t("gallery.discover_prefix", "Decouvrez ")}
           <span className={isLight ? "text-cyan-400" : "text-cyan-300"}>
             {t("gallery.title_accent", "nos Merveilles")}
           </span>
@@ -79,7 +80,7 @@ export default function GalleryHeroCarousel({
 
                 return (
                   <Link
-                    to={`/movie/${movie.id}`}
+                    to={getLocalizedMoviePath(movie.id, language)}
                     key={movie.id}
                     className="absolute left-1/2 top-1/2 w-44 sm:w-60 md:w-72 transition-all duration-700 ease-out"
                     style={{
