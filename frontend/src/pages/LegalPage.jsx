@@ -154,9 +154,19 @@ export default function LegalPage({ page, variant = "cgv" }) {
     () => parseSections(page?.content?.rendered),
     [page?.content?.rendered],
   );
-  const locale = i18n.language === "fr" ? "fr-FR" : "en-GB";
+  const locale =
+    i18n.language === "ar"
+      ? "ar"
+      : i18n.language === "fr"
+        ? "fr-FR"
+        : "en-GB";
   const lastUpdated = formatDate(page?.modified || page?.date, locale);
-  const homePath = i18n.language === "en" ? "/home" : "/accueil";
+  const homePath =
+    i18n.language === "en"
+      ? "/en/home"
+      : i18n.language === "ar"
+        ? "/ar/home"
+        : "/accueil";
   const localizedRouteMap = {
     "/cgu": "/gcu",
     "/cgv": "/tos",
@@ -164,10 +174,11 @@ export default function LegalPage({ page, variant = "cgv" }) {
     "/agenda": "/schedule",
     "/jury": "/jury-eng",
   };
-  const otherLinkPath =
-    i18n.language === "en"
-      ? localizedRouteMap[config.otherLink.path] || config.otherLink.path
-      : config.otherLink.path;
+  const localizePath = (path) => {
+    if (i18n.language === "fr") return path;
+    return `/${i18n.language}${localizedRouteMap[path] || path}`;
+  };
+  const otherLinkPath = localizePath(config.otherLink.path);
 
   return (
     <>

@@ -172,56 +172,87 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const slugMapping = {
-    agenda: { fr: "agenda", en: "schedule", ar: "agenda" },
+  const routeSlugMapping = {
+    agenda: { fr: "agenda", en: "schedule", ar: "schedule" },
+    home: { fr: "accueil", en: "home", ar: "home" },
+    call: {
+      fr: "appel-a-projet",
+      en: "call-for-project",
+      ar: "call-for-project",
+    },
+    jury: { fr: "jury", en: "jury", ar: "jury" },
+    contact: { fr: "contact", en: "contact", ar: "contact" },
+    legal: { fr: "mentions-legales", en: "legal-notice", ar: "legal-notice" },
+    cgu: { fr: "cgu", en: "gcu", ar: "gcu" },
+    cgv: { fr: "cgv", en: "tos", ar: "tos" },
+  };
+  const wpSlugMapping = {
+    agenda: { fr: "agenda", en: "schedule", ar: "برنامج" },
     home: { fr: "accueil", en: "home", ar: "home-ar" },
     call: {
       fr: "appel-a-projet",
       en: "call-for-project",
       ar: "call-for-project",
     },
-    jury: { fr: "jury", en: "jury-eng", ar: "jury" },
-    legal: { fr: "mentions-legales", en: "legal-notice", ar: "legal-notice" },
-    cgu: { fr: "cgu", en: "gcu", ar: "gcu" },
-    cgv: { fr: "cgv", en: "tos", ar: "tos" },
+    jury: { fr: "jury", en: "jury-eng", ar: "jury-ar" },
+    contact: { fr: "contact", en: "contact", ar: "contact" },
+    legal: { fr: "mentions-legales", en: "legal-notice", ar: "إشعار-قانوني" },
+    cgu: { fr: "cgu", en: "tos", ar: "cgu-ar" },
+    cgv: { fr: "cgv", en: "gcu", ar: "cgv-ar" },
   };
   const slugAliases = {
     "call-for-projects": "call-for-project",
   };
   const legalVariantBySlug = {
     cgv: "cgv",
-    tos: "cgv",
+    tos: "cgu",
     cgu: "cgu",
-    gcu: "cgu",
+    gcu: "cgv",
     "mentions-legales": "mentions",
     "legal-notice": "mentions",
   };
 
-  const getActiveSlug = () => {
-    if (fixedSlug) return fixedSlug;
+  const findSlugMappingKey = (mapping, value) => {
+    if (!value) return null;
 
-    const lang = i18n.language || "fr";
-
-    // Gestion spécifique de la Home
-    if (isHome) {
-      return slugMapping.home[lang] || slugMapping.home.fr;
-    }
-
-    const normalizedRouteSlug = slugAliases[routeSlug] || routeSlug;
-
-    // Cherche si le slug actuel correspond à une entrée du mapping
-    const entry = Object.values(slugMapping).find(
-      (m) =>
-        m.fr === normalizedRouteSlug ||
-        m.en === normalizedRouteSlug ||
-        m.ar === normalizedRouteSlug,
+    const normalizedValue = slugAliases[value] || value;
+    const match = Object.entries(mapping).find(([, localizedSlugs]) =>
+      Object.values(localizedSlugs).includes(normalizedValue),
     );
 
-    if (entry) return entry[lang];
-    return normalizedRouteSlug;
+    return match ? match[0] : null;
+  };
+
+  const resolvePageKey = (value) =>
+    findSlugMappingKey(wpSlugMapping, value) ||
+    findSlugMappingKey(routeSlugMapping, value) ||
+    (value ? slugAliases[value] || value : null);
+
+  const getActiveSlug = () => {
+    const lang = i18n.language || "fr";
+    const pageKey = isHome ? "home" : resolvePageKey(fixedSlug || routeSlug);
+
+    if (pageKey && wpSlugMapping[pageKey]) {
+      return wpSlugMapping[pageKey][lang] || wpSlugMapping[pageKey].fr;
+    }
+
+    return slugAliases[routeSlug] || routeSlug;
+  };
+
+  const getActiveRouteSlug = () => {
+    const lang = i18n.language || "fr";
+    const pageKey = isHome ? "home" : resolvePageKey(fixedSlug || routeSlug);
+
+    if (pageKey && routeSlugMapping[pageKey]) {
+      return routeSlugMapping[pageKey][lang] || routeSlugMapping[pageKey].fr;
+    }
+
+    return slugAliases[routeSlug] || routeSlug;
   };
 
   const slug = getActiveSlug();
+  const routePathSlug = getActiveRouteSlug();
+  const pageKey = resolvePageKey(fixedSlug || routeSlug || slug);
 
   useEffect(() => {
     if (fixedSlug) return;
@@ -232,8 +263,8 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
           ? "/ar/home"
           : "/accueil"
       : i18n.language === "fr"
-        ? `/${slug}`
-        : `/${i18n.language}/${slug}`;
+        ? `/${routePathSlug}`
+        : `/${i18n.language}/${routePathSlug}`;
     if (location.pathname !== targetPath && (routeSlug || isHome)) {
       navigate(targetPath, { replace: true });
     }
@@ -243,6 +274,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     isHome,
     location.pathname,
     navigate,
+    routePathSlug,
     routeSlug,
     slug,
   ]);
@@ -348,12 +380,12 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
       setLoading(true);
       setError(false);
       try {
-        const isCallForProjectSlug = slug === "call-for-project";
-        const slugCandidates = isCallForProjectSlug
-          ? ["call-for-project", "call-for-projects", "appel-a-projet"]
+        const isCallForProjectPage = pageKey === "call";
+        const slugCandidates = isCallForProjectPage
+          ? [...new Set([slug, "call-for-project", "call-for-projects", "appel-a-projet"])]
           : [slug];
-        const languageCandidates = isCallForProjectSlug
-          ? ["en", "fr"]
+        const languageCandidates = isCallForProjectPage
+          ? [...new Set([i18n.language, "en", "fr"])]
           : [i18n.language];
         let pageData = null;
 
@@ -371,8 +403,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
         } else {
           setPage(pageData);
           const agendaCategoryId = i18n.language === "fr" ? 14 : 51;
-          const isAgendaSlug = slug === "agenda" || slug === "schedule";
-          if (isAgendaSlug) {
+          if (pageKey === "agenda") {
             try {
               const res = await fetch(
                 `https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-json/wp/v2/posts?categories=${agendaCategoryId}&_embed&per_page=100&order=asc&orderby=date&lang=${i18n.language}`,
@@ -440,7 +471,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     return () => {
       cancelled = true;
     };
-  }, [slug, i18n.language, t]);
+  }, [slug, i18n.language, pageKey, t]);
 
   const dateOptions = useMemo(() => {
     const unique = Array.from(new Set(agendaItems.map((item) => item.date)));
@@ -567,24 +598,24 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     page?.excerpt?.rendered || page?.content?.rendered || "";
   const seoLang = i18n.language;
 
-  if (slug === "appel-a-projet" || slug === "call-for-project") {
+  if (pageKey === "call") {
     return <CallForProject page={page} />;
   }
 
-  if (slug === "accueil" || slug === "home" || slug === "home-ar") {
+  if (pageKey === "home") {
     return <Home page={page} />;
   }
 
-  if (slug === "jury") {
+  if (pageKey === "jury") {
     return <JuryWpage page={page} />;
   }
 
-  const legalVariant = legalVariantBySlug[slug];
+  const legalVariant = legalVariantBySlug[fixedSlug] || legalVariantBySlug[slug];
   if (legalVariant) {
     return <LegalPage page={page} variant={legalVariant} />;
   }
 
-  if (slug === "contact") {
+  if (pageKey === "contact") {
     return (
       <main className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white relative overflow-hidden">
         <Seo title={seoTitle} description={seoDescription} lang={seoLang} />
@@ -782,7 +813,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     );
   }
 
-  const isAgenda = slug === "agenda" || slug === "schedule";
+  const isAgenda = pageKey === "agenda";
   const selectedParts = selectedDate ? formatDateParts(selectedDate) : null;
 
   return (

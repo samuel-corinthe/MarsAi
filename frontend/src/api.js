@@ -1,4 +1,18 @@
 const WP_V2 = "/wp-json/wp/v2";
+const WORDPRESS_SITE_URL =
+  "https://samuel-corinthe.students-laplateforme.io/MarsAi";
+
+function buildWordPressUrl(path, params = {}) {
+  const query = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value == null || value === "") return;
+    query.set(key, String(value));
+  });
+
+  const queryString = query.toString();
+  return `${WORDPRESS_SITE_URL}${path}${queryString ? `?${queryString}` : ""}`;
+}
 
 function isLocalBrowserHost() {
   if (typeof window === "undefined") return false;
@@ -203,10 +217,10 @@ async function fetchSameOriginWithFallback(
 
 export const getPageBySlug = async (slug, lang = "fr") => {
   const response = await fetch(
-    `https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-json/wp/v2/pages?slug=${slug}&lang=${lang}`,
+    buildWordPressUrl(`${WP_V2}/pages`, { slug, lang }),
   );
   const data = await response.json();
-  return data[0];
+  return Array.isArray(data) ? data[0] : null;
 };
 
 export async function getAgendaPosts() {
