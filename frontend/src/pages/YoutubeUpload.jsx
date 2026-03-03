@@ -1487,6 +1487,7 @@ export default function YoutubeUpload() {
                                             <div className="space-y-1">
                                                 <input
                                                     type="text"
+                                                    aria-label={t('upload.form.cast_field_aria', { num: index + 1, field: t('upload.form.cast_name_placeholder') })}
                                                     placeholder={t('upload.form.cast_name_placeholder')}
                                                     className={`w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none ${castNameError ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
                                                     value={member.name}
@@ -1499,6 +1500,7 @@ export default function YoutubeUpload() {
                                             <div className="space-y-1">
                                                 <input
                                                     type="text"
+                                                    aria-label={t('upload.form.cast_field_aria', { num: index + 1, field: t('upload.form.cast_role_placeholder') })}
                                                     placeholder={t('upload.form.cast_role_placeholder')}
                                                     className={`w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none ${castRoleError ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
                                                     value={member.role}
@@ -1511,6 +1513,7 @@ export default function YoutubeUpload() {
                                             <div className="space-y-1">
                                                 <input
                                                     type="url"
+                                                    aria-label={t('upload.form.cast_field_aria', { num: index + 1, field: t('upload.form.cast_avatar_placeholder') })}
                                                     placeholder={t('upload.form.cast_avatar_placeholder')}
                                                     className={`w-full border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none ${castAvatarError ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
                                                     value={member.avatarUrl}
@@ -1551,10 +1554,11 @@ export default function YoutubeUpload() {
 
                     {/* {t('upload.form.poster_label')} */}
                     <div className="space-y-2">
-                        <label className="block text-sm font-semibold text-slate-700">
+                        <label htmlFor="poster-upload" className="block text-sm font-semibold text-slate-700">
                             {t('upload.form.poster_label')} <span className="text-slate-500 font-normal">({optionalLabel})</span>
                         </label>
                         <input
+                            id="poster-upload"
                             type="file"
                             accept="image/jpeg,image/png,image/webp,image/gif"
                             onChange={handlePosterChange}
@@ -1585,10 +1589,11 @@ export default function YoutubeUpload() {
 
                     {/* Fichier sous-titres SRT */}
                     <div className="space-y-2">
-                        <label className="block text-sm font-semibold text-slate-700">
+                        <label htmlFor="subtitle-upload" className="block text-sm font-semibold text-slate-700">
                             {t('upload.form.subtitle_label')} <span className="text-slate-500 font-normal">({optionalLabel})</span>
                         </label>
                         <input
+                            id="subtitle-upload"
                             type="file"
                             accept=".srt"
                             onChange={(e) => {
