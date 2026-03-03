@@ -2,6 +2,43 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import navbarTranslations from "./locales/navbar.json";
 
+const LANGUAGE_STORAGE_KEY = "marsai-language";
+
+function normalizeLanguageCode(value = "fr") {
+  const language = String(value || "").toLowerCase();
+  if (language.startsWith("ar")) return "ar";
+  if (language.startsWith("en")) return "en";
+  return "fr";
+}
+
+function getLanguageFromPathname() {
+  if (typeof window === "undefined") return null;
+  const pathname = String(window.location?.pathname || "").toLowerCase();
+  if (pathname === "/ar" || pathname.startsWith("/ar/")) return "ar";
+  if (pathname === "/en" || pathname.startsWith("/en/")) return "en";
+  return null;
+}
+
+function getStoredLanguage() {
+  if (typeof window === "undefined") return null;
+  try {
+    return normalizeLanguageCode(window.localStorage.getItem(LANGUAGE_STORAGE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+function resolveInitialLanguage() {
+  return getLanguageFromPathname() || getStoredLanguage() || "fr";
+}
+
+function applyDocumentLanguage(language) {
+  if (typeof document === "undefined") return;
+  const normalized = normalizeLanguageCode(language);
+  document.documentElement.lang = normalized;
+  document.documentElement.dir = normalized === "ar" ? "rtl" : "ltr";
+}
+
 i18n.use(initReactI18next).init({
   resources: {
     fr: {
@@ -1176,7 +1213,7 @@ i18n.use(initReactI18next).init({
     },
   },
 
-  lng: "fr",
+  lng: resolveInitialLanguage(),
   fallbackLng: "fr",
   interpolation: { escapeValue: false },
 });
@@ -1187,6 +1224,7 @@ const extraTranslations = {
       profile: "Profil",
       theme_day: "Mode jour",
       theme_night: "Mode nuit",
+      toggle_menu: "Ouvrir le menu",
     },
     home: {
       hero_cta: {
@@ -1243,12 +1281,24 @@ const extraTranslations = {
     common: {
       load_page_error: "Impossible de charger la page pour le moment.",
     },
+    ui: {
+      loading_page: "Chargement...",
+      loading_stream: "Chargement du flux...",
+      loading_gallery_access: "Verification des acces galerie...",
+      loading_admin_session: "Verification de la session admin...",
+      loading_admin_dashboard: "Chargement du dashboard admin...",
+      loading_admin_profile: "Chargement du profil admin...",
+      loading_upload_access: "Verification des droits d upload...",
+      admin_no_data: "Aucune donnee admin disponible.",
+      no_phase_config: "Aucune phase configuree.",
+    },
   },
   en: {
     nav: {
       profile: "Profile",
       theme_day: "Day mode",
       theme_night: "Night mode",
+      toggle_menu: "Open menu",
     },
     home: {
       hero_cta: {
@@ -1305,12 +1355,24 @@ const extraTranslations = {
     common: {
       load_page_error: "Unable to load the page right now.",
     },
+    ui: {
+      loading_page: "Loading...",
+      loading_stream: "Loading stream...",
+      loading_gallery_access: "Checking gallery access...",
+      loading_admin_session: "Checking admin session...",
+      loading_admin_dashboard: "Loading admin dashboard...",
+      loading_admin_profile: "Loading admin profile...",
+      loading_upload_access: "Checking upload access...",
+      admin_no_data: "No admin data available.",
+      no_phase_config: "No phase configured.",
+    },
   },
   ar: {
     nav: {
       profile: "الملف الشخصي",
       theme_day: "الوضع النهاري",
       theme_night: "الوضع الليلي",
+      toggle_menu: "فتح القائمة",
     },
     home: {
       hero_cta: {
@@ -1367,11 +1429,36 @@ const extraTranslations = {
     common: {
       load_page_error: "تعذر تحميل الصفحة حاليا.",
     },
+    ui: {
+      loading_page: "جار التحميل...",
+      loading_stream: "جار تحميل البث...",
+      loading_gallery_access: "جار التحقق من الوصول الى المعرض...",
+      loading_admin_session: "جار التحقق من جلسة الادارة...",
+      loading_admin_dashboard: "جار تحميل لوحة الادارة...",
+      loading_admin_profile: "جار تحميل ملف الادارة...",
+      loading_upload_access: "جار التحقق من صلاحيات الرفع...",
+      admin_no_data: "لا توجد بيانات ادارية متاحة.",
+      no_phase_config: "لا توجد مرحلة مهيأة.",
+    },
   },
 };
 
 Object.entries(extraTranslations).forEach(([language, bundle]) => {
   i18n.addResourceBundle(language, "translation", bundle, true, true);
+});
+
+applyDocumentLanguage(i18n.language);
+
+i18n.on("languageChanged", (language) => {
+  const normalized = normalizeLanguageCode(language);
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, normalized);
+    } catch {
+      // Ignore storage write failures.
+    }
+  }
+  applyDocumentLanguage(normalized);
 });
 
 export default i18n;
