@@ -465,7 +465,7 @@ export default function Home({ page }) {
                     {event.image ? (
                       <img
                         src={event.image}
-                        alt={`Affiche de l'événement : ${event.title}`}
+                        alt={t("home.event_poster_alt", { title: event.title })}
                         loading="lazy"
                         className="h-full w-full object-cover"
                       />

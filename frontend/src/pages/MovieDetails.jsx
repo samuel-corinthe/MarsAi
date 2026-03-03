@@ -1030,7 +1030,7 @@ const MovieDetails = () => {
                   <button
                     key={num}
                     onClick={() => setTempRating(num)}
-                    aria-label={`Note ${num} sur 5`}
+                    aria-label={t("movie_details.modal_rating_star", { num })}
                     aria-pressed={tempRating === num}
                     className={`w-12 h-14 rounded-2xl font-black text-2xl transition-all ${tempRating === num ? "bg-blue-600 text-white scale-110 shadow-xl" : "bg-slate-100 text-slate-300"}`}
                   >

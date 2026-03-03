@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 export default function GalleryFilterModal({
   isOpen,
   isLight,
@@ -11,6 +13,7 @@ export default function GalleryFilterModal({
   onMaxRatingChange,
   onReset,
 }) {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   return (
@@ -45,7 +48,7 @@ export default function GalleryFilterModal({
           </h2>
           <button
             onClick={onClose}
-            aria-label="Fermer les filtres"
+            aria-label={t("gallery.filter_modal.close")}
             className={`rounded-full p-2 ${
               isLight
                 ? "bg-cyan-100 text-cyan-700 hover:bg-cyan-200"

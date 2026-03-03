@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import * as tz from "date-fns-tz";
 import { fr } from "date-fns/locale";
 import useMultiPhaseCountdown from "../hooks/useMultiPhaseCountdown";
@@ -124,13 +125,9 @@ const SimpleCountdown = ({ initialSeconds = 0, onComplete }) => {
   );
 };
 
-const TimeUnit = React.memo(({ value, label, ariaLabel }) => (
+const TimeUnit = React.memo(({ value, label }) => (
   <div
     className="flex flex-col items-center justify-center p-4 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 min-w-[100px] shadow-xl"
-    role="timer"
-    aria-live="polite"
-    aria-atomic="true"
-    aria-label={ariaLabel || `${value} ${label}`}
   >
     <span className="text-4xl font-bold text-white tabular-nums" aria-hidden="true">
       {String(value).padStart(2, "0")}
@@ -138,15 +135,13 @@ const TimeUnit = React.memo(({ value, label, ariaLabel }) => (
     <span className="text-xs uppercase tracking-widest text-white/70 mt-1 font-medium" aria-hidden="true">
       {label}
     </span>
-    <span className="sr-only">
-      {value} {value === 1 ? label.slice(0, -1) : label}
-    </span>
   </div>
 ));
 TimeUnit.displayName = "TimeUnit";
 
 // --- Mode multi-phase (site) ---
 const MultiPhaseTimer = ({ phases = DEFAULT_PHASES, timezone, onPhaseComplete }) => {
+  const { t } = useTranslation();
   const { timeLeft, currentPhase, isFinished } = useMultiPhaseCountdown(phases, timezone);
   const announcedPhaseRef = useRef(null);
 
@@ -178,20 +173,27 @@ const MultiPhaseTimer = ({ phases = DEFAULT_PHASES, timezone, onPhaseComplete })
   }
 
   const timeUnits = [
-    { value: timeLeft.days, label: "Jours", key: "days" },
-    { value: timeLeft.hours, label: "Heures", key: "hours" },
-    { value: timeLeft.minutes, label: "Minutes", key: "minutes" },
-    { value: timeLeft.seconds, label: "Secondes", key: "seconds" },
+    { value: timeLeft.days, label: t("countdown.days"), key: "days" },
+    { value: timeLeft.hours, label: t("countdown.hours"), key: "hours" },
+    { value: timeLeft.minutes, label: t("countdown.minutes"), key: "minutes" },
+    { value: timeLeft.seconds, label: t("countdown.seconds"), key: "seconds" },
   ];
 
   return (
-    <div className={`p-10 rounded-[2.5rem] bg-gradient-to-br ${currentPhase?.color ?? ""} shadow-2xl transition-all duration-700`} role="main">
-      <h3 className="text-center text-white/90 font-bold tracking-[0.2em] mb-8 text-sm uppercase">
+    <div className={`p-10 rounded-[2.5rem] bg-gradient-to-br ${currentPhase?.color ?? ""} shadow-2xl transition-all duration-700`}>
+      <h3 id="phase-timer-title" className="text-center text-white/90 font-bold tracking-[0.2em] mb-8 text-sm uppercase">
         {currentPhase?.label}
       </h3>
-      <div className="flex gap-4 justify-center items-center" role="group" aria-label="Temps restant">
+      <div
+        role="timer"
+        aria-live="polite"
+        aria-atomic="true"
+        aria-labelledby="phase-timer-title"
+        aria-label={t("countdown.timer_aria", { days: timeLeft.days, hours: timeLeft.hours, minutes: timeLeft.minutes, seconds: timeLeft.seconds })}
+        className="flex gap-4 justify-center items-center"
+      >
         {timeUnits.map(({ value, label, key }) => (
-          <TimeUnit key={key} value={value} label={label} ariaLabel={`${value} ${label} restantes`} />
+          <TimeUnit key={key} value={value} label={label} />
         ))}
       </div>
     </div>

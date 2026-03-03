@@ -109,6 +109,7 @@ export default function GalleryHeroCarousel({
                           }`}
                         >
                           <svg
+                            aria-hidden="true"
                             className="w-6 h-6 ml-1"
                             fill="currentColor"
                             viewBox="0 0 20 20"

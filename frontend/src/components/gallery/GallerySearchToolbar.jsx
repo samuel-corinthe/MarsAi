@@ -31,6 +31,7 @@ export default function GallerySearchToolbar({
         <div className="relative flex-grow" ref={searchRef}>
           <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
             <svg
+              aria-hidden="true"
               className={`h-5 w-5 ${isLight ? "text-cyan-700/70" : "text-slate-400"}`}
               fill="none"
               stroke="currentColor"
@@ -113,6 +114,7 @@ export default function GallerySearchToolbar({
           title={t("gallery.filter_button_title")}
         >
           <svg
+            aria-hidden="true"
             className="mx-auto h-6 w-6"
             fill="none"
             stroke="currentColor"
