@@ -31,6 +31,7 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [utilityMenuOpen, setUtilityMenuOpen] = useState(false);
   const currentLanguage = normalizeLanguage(i18n.language);
+  const isRtl = currentLanguage === "ar";
   const {
     hasSession,
     hideGalleryForVisitors,
@@ -152,6 +153,7 @@ export default function Navbar() {
 
   return (
     <header
+      dir={isRtl ? "rtl" : "ltr"}
       className={`sticky top-0 z-[80] border-b transition-all duration-300 ${
         isLight
           ? (isScrolled
@@ -221,7 +223,7 @@ export default function Navbar() {
               </button>
 
               {utilityMenuOpen && (
-                <div className={`absolute right-0 mt-2 w-64 overflow-hidden rounded-2xl p-2 ${
+                <div className={`absolute ${isRtl ? "left-0" : "right-0"} mt-2 w-64 overflow-hidden rounded-2xl p-2 ${
                   isLight
                     ? "border border-cyan-200/80 bg-[linear-gradient(145deg,rgba(248,252,255,0.96),rgba(226,240,255,0.92))] shadow-[0_18px_44px_rgba(2,132,199,0.16)]"
                     : "border border-slate-600/70 bg-slate-900/95 shadow-[0_18px_44px_rgba(2,6,23,0.7)]"
@@ -246,7 +248,7 @@ export default function Navbar() {
           </nav>
 
           <div className="hidden items-center gap-2 md:flex">
-            <div className={`mr-1 inline-flex items-center rounded-full border p-1 ${
+            <div className={`${isRtl ? "ml-1" : "mr-1"} inline-flex items-center rounded-full border p-1 ${
               isLight
                 ? "border-cyan-200/80 bg-white/70"
                 : "border-slate-600/80 bg-slate-900/70"
@@ -313,7 +315,7 @@ export default function Navbar() {
               onClick={toggleTheme}
               aria-label={themeToggleLabel}
               title={themeToggleLabel}
-              className={`order-last ml-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border transition ${
+              className={`order-last ${isRtl ? "mr-4" : "ml-4"} inline-flex h-10 w-10 items-center justify-center rounded-xl border transition ${
                 isLight
                   ? "border-cyan-200/80 bg-white/80 text-amber-500 hover:border-cyan-400 hover:text-amber-600"
                   : "border-slate-500/80 bg-slate-900/80 text-cyan-200 hover:border-cyan-300/70 hover:text-white"
@@ -351,7 +353,7 @@ export default function Navbar() {
                 : "border-slate-600/70 bg-slate-900/80 text-slate-100 hover:border-cyan-300/70 hover:text-cyan-200"
             }`}
             aria-expanded={mobileMenuOpen}
-            aria-label="Toggle menu"
+            aria-label={t("nav.toggle_menu")}
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               {mobileMenuOpen ? (
@@ -400,7 +402,7 @@ export default function Navbar() {
               </Link>
             )}
 
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:justify-between">
+            <div className={`mt-4 flex flex-wrap items-center justify-center gap-2 ${isRtl ? "sm:flex-row-reverse sm:justify-between" : "sm:justify-between"}`}>
               <div className="flex items-center gap-2">
                 <button
                   type="button"

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CookieModal from "./components/CookieModal";
@@ -17,6 +18,7 @@ const TestCountdown = lazy(() => import("./pages/TestCountdown"));
 
 export default function App() {
   const location = useLocation();
+  const { t, i18n } = useTranslation();
   const hideChrome = location.pathname.startsWith("/dashboard");
 
   useEffect(() => {
@@ -31,7 +33,16 @@ export default function App() {
     <div className="min-h-screen flex flex-col">
       {!hideChrome && <Navbar />}
       <div className="flex-1">
-        <Suspense fallback={<div className="p-8 text-center text-sm text-slate-400">Chargement...</div>}>
+        <Suspense
+          fallback={(
+            <div
+              className="p-8 text-center text-sm text-slate-400"
+              dir={i18n.dir(i18n.language)}
+            >
+              {t("common.loading")}
+            </div>
+          )}
+        >
           <Routes>
             <Route path="/" element={<WpPage isHome={true} />} />
             <Route path="/accueil" element={<WpPage isHome={true} />} />

@@ -4,11 +4,12 @@ import { useTranslation } from "react-i18next";
 import SocialIcon from "./ui/SocialIcon";
 import { useTheme } from "../context/ThemeContext";
 import usePhaseAccessController from "../controllers/usePhaseAccessController";
-import { getLocalizedPath } from "../utils/localizedRoutes";
+import { getLocalizedPath, normalizeLanguage } from "../utils/localizedRoutes";
 
 export default function Footer() {
   const { t, i18n } = useTranslation();
   const { isLight } = useTheme();
+  const isRtl = normalizeLanguage(i18n.language) === "ar";
   const {
     hideGalleryForVisitors,
     hideSubmitForVisitors,
@@ -107,12 +108,12 @@ export default function Footer() {
     : "mt-10 border-t border-slate-700/70 pt-5 text-center text-xs font-semibold text-slate-400";
 
   return (
-    <footer className={footerClassName}>
+    <footer className={footerClassName} dir={isRtl ? "rtl" : "ltr"}>
       <div className={lineClassName} />
       <div className="site-container py-12 md:py-14">
-        <div className="grid gap-10 text-center lg:grid-cols-5 lg:text-left">
+        <div className={`grid gap-10 text-center lg:grid-cols-5 ${isRtl ? "lg:text-right" : "lg:text-left"}`}>
           <div className="lg:col-span-2">
-            <Link to={homePath} className="inline-flex items-center gap-3 justify-center lg:justify-start">
+            <Link to={homePath} className={`inline-flex items-center gap-3 justify-center ${isRtl ? "lg:justify-end" : "lg:justify-start"}`}>
               <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-300 to-sky-500 text-slate-950 shadow-[0_12px_28px_rgba(14,165,233,0.42)]">
                 <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                   <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm12.553 1.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
@@ -126,9 +127,9 @@ export default function Footer() {
               </span>
             </Link>
 
-            <p className={`mt-5 max-w-md text-sm leading-relaxed mx-auto lg:mx-0 ${descriptionClassName}`}>{t("footer.description")}</p>
+            <p className={`mt-5 max-w-md text-sm leading-relaxed mx-auto ${isRtl ? "lg:mr-0 lg:ml-auto" : "lg:mx-0"} ${descriptionClassName}`}>{t("footer.description")}</p>
 
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-2 lg:justify-start">
+            <div className={`mt-6 flex flex-wrap items-center justify-center gap-2 ${isRtl ? "lg:justify-end" : "lg:justify-start"}`}>
               {socialLinks.map((social) => (
                 <a
                   key={social.name}
