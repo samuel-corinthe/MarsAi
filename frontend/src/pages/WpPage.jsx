@@ -111,7 +111,8 @@ const buildTranslationSignature = (translations) => {
 };
 
 const findMatchingAgendaArticle = (previousArticle, items, targetLanguage) => {
-  if (!previousArticle || !Array.isArray(items) || items.length === 0) return null;
+  if (!previousArticle || !Array.isArray(items) || items.length === 0)
+    return null;
 
   const previousTranslations = previousArticle.translations;
   if (
@@ -136,14 +137,17 @@ const findMatchingAgendaArticle = (previousArticle, items, targetLanguage) => {
   }
 
   if (previousArticle.slug) {
-    const matchBySlug = items.find((item) => item.slug === previousArticle.slug);
+    const matchBySlug = items.find(
+      (item) => item.slug === previousArticle.slug,
+    );
     if (matchBySlug) return matchBySlug;
   }
 
   if (previousArticle.date && previousArticle.heure) {
     const matchByDateHour = items.find(
       (item) =>
-        item.date === previousArticle.date && item.heure === previousArticle.heure,
+        item.date === previousArticle.date &&
+        item.heure === previousArticle.heure,
     );
     if (matchByDateHour) return matchByDateHour;
   }
@@ -161,7 +165,9 @@ const findMatchingAgendaArticle = (previousArticle, items, targetLanguage) => {
   }
 
   if (previousArticle.date) {
-    const matchByDate = items.find((item) => item.date === previousArticle.date);
+    const matchByDate = items.find(
+      (item) => item.date === previousArticle.date,
+    );
     if (matchByDate) return matchByDate;
   }
 
@@ -175,47 +181,99 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const slugMapping = {
-    agenda: "schedule",
-    accueil: "home",
-    "appel-a-projet": "call-for-project",
-    jury: "jury-eng",
-    "mentions-legales": "legal-notice",
-    cgu: "gcu",
-    cgv: "tos",
+  const routeSlugMapping = {
+    agenda: { fr: "agenda", en: "schedule", ar: "schedule" },
+    home: { fr: "accueil", en: "home", ar: "home" },
+    call: {
+      fr: "appel-a-projet",
+      en: "call-for-project",
+      ar: "call-for-project",
+    },
+    jury: { fr: "jury", en: "jury", ar: "jury" },
+    contact: { fr: "contact", en: "contact", ar: "contact" },
+    legal: { fr: "mentions-legales", en: "legal-notice", ar: "legal-notice" },
+    cgu: { fr: "cgu", en: "gcu", ar: "gcu" },
+    cgv: { fr: "cgv", en: "tos", ar: "tos" },
+  };
+  const wpSlugMapping = {
+    agenda: { fr: "agenda", en: "schedule", ar: "برنامج" },
+    home: { fr: "accueil", en: "home", ar: "home-ar" },
+    call: {
+      fr: "appel-a-projet",
+      en: "call-for-project",
+      ar: "call-for-project",
+    },
+    jury: { fr: "jury", en: "jury-eng", ar: "jury-ar" },
+    contact: { fr: "contact", en: "contact", ar: "contact" },
+    legal: { fr: "mentions-legales", en: "legal-notice", ar: "إشعار-قانوني" },
+    cgu: { fr: "cgu", en: "tos", ar: "cgu-ar" },
+    cgv: { fr: "cgv", en: "gcu", ar: "cgv-ar" },
   };
   const slugAliases = {
     "call-for-projects": "call-for-project",
   };
   const legalVariantBySlug = {
     cgv: "cgv",
-    tos: "cgv",
+    tos: "cgu",
     cgu: "cgu",
-    gcu: "cgu",
+    gcu: "cgv",
     "mentions-legales": "mentions",
     "legal-notice": "mentions",
   };
 
-  const getActiveSlug = () => {
-    if (fixedSlug) return fixedSlug;
-    if (isHome) return i18n.language === "en" ? "home" : "accueil";
-    const normalizedRouteSlug = slugAliases[routeSlug] || routeSlug;
-    const entry = Object.entries(slugMapping).find(
-      ([fr, en]) => fr === normalizedRouteSlug || en === normalizedRouteSlug,
+  const findSlugMappingKey = (mapping, value) => {
+    if (!value) return null;
+
+    const normalizedValue = slugAliases[value] || value;
+    const match = Object.entries(mapping).find(([, localizedSlugs]) =>
+      Object.values(localizedSlugs).includes(normalizedValue),
     );
-    if (entry) return i18n.language === "en" ? entry[1] : entry[0];
-    return normalizedRouteSlug;
+
+    return match ? match[0] : null;
+  };
+
+  const resolvePageKey = (value) =>
+    findSlugMappingKey(wpSlugMapping, value) ||
+    findSlugMappingKey(routeSlugMapping, value) ||
+    (value ? slugAliases[value] || value : null);
+
+  const getActiveSlug = () => {
+    const lang = i18n.language || "fr";
+    const pageKey = isHome ? "home" : resolvePageKey(fixedSlug || routeSlug);
+
+    if (pageKey && wpSlugMapping[pageKey]) {
+      return wpSlugMapping[pageKey][lang] || wpSlugMapping[pageKey].fr;
+    }
+
+    return slugAliases[routeSlug] || routeSlug;
+  };
+
+  const getActiveRouteSlug = () => {
+    const lang = i18n.language || "fr";
+    const pageKey = isHome ? "home" : resolvePageKey(fixedSlug || routeSlug);
+
+    if (pageKey && routeSlugMapping[pageKey]) {
+      return routeSlugMapping[pageKey][lang] || routeSlugMapping[pageKey].fr;
+    }
+
+    return slugAliases[routeSlug] || routeSlug;
   };
 
   const slug = getActiveSlug();
+  const routePathSlug = getActiveRouteSlug();
+  const pageKey = resolvePageKey(fixedSlug || routeSlug || slug);
 
   useEffect(() => {
     if (fixedSlug) return;
     const targetPath = isHome
       ? i18n.language === "en"
-        ? "/home"
-        : "/accueil"
-      : `/${slug}`;
+        ? "/en/home"
+        : i18n.language === "ar"
+          ? "/ar/home"
+          : "/accueil"
+      : i18n.language === "fr"
+        ? `/${routePathSlug}`
+        : `/${i18n.language}/${routePathSlug}`;
     if (location.pathname !== targetPath && (routeSlug || isHome)) {
       navigate(targetPath, { replace: true });
     }
@@ -225,6 +283,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     isHome,
     location.pathname,
     navigate,
+    routePathSlug,
     routeSlug,
     slug,
   ]);
@@ -314,7 +373,12 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
 
   const formatDateParts = (dateStr) => {
     const d = parseDate(dateStr);
-    const locale = i18n.language === "fr" ? "fr-FR" : "en-GB";
+    const locale =
+      i18n.language === "fr"
+        ? "fr-FR"
+        : i18n.language === "ar"
+          ? "ar"
+          : "en-GB";
     const monthShort = d
       .toLocaleDateString(locale, { month: "short" })
       .replace(".", "");
@@ -357,12 +421,15 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
       setLoading(true);
       setError(false);
       try {
-        const isCallForProjectSlug = slug === "call-for-project";
-        const slugCandidates = isCallForProjectSlug
-          ? ["call-for-project", "call-for-projects", "appel-a-projet"]
+        const isCallForProjectPage = pageKey === "call";
+        const isAgendaPage = pageKey === "agenda";
+        const slugCandidates = isCallForProjectPage
+          ? [...new Set([slug, "call-for-project", "call-for-projects", "appel-a-projet"])]
+          : isAgendaPage
+            ? [...new Set([slug, "برنامج", "schedule-ar", "agenda", "schedule"])]
           : [slug];
-        const languageCandidates = isCallForProjectSlug
-          ? ["en", "fr"]
+        const languageCandidates = isCallForProjectPage
+          ? [...new Set([i18n.language, "en", "fr"])]
           : [i18n.language];
         let pageData = null;
 
@@ -379,9 +446,13 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
           setPage(null);
         } else {
           setPage(pageData);
-          const agendaCategoryId = i18n.language === "fr" ? 14 : 51;
-          const isAgendaSlug = slug === "agenda" || slug === "schedule";
-          if (isAgendaSlug) {
+          const categoryMap = {
+            fr: 14,
+            en: 51,
+            ar: 103,
+          };
+          const agendaCategoryId = categoryMap[i18n.language] || categoryMap.fr;
+          if (pageKey === "agenda") {
             try {
               const allPosts = await getWpPostsByCategory({
                 categoryId: agendaCategoryId,
@@ -392,13 +463,21 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                 embed: true,
               });
               if (allPosts && Array.isArray(allPosts)) {
-                const timeLocale = i18n.language === "fr" ? "fr-FR" : "en-GB";
+                const timeLocale =
+                  i18n.language === "fr"
+                    ? "fr-FR"
+                    : i18n.language === "ar"
+                      ? "ar"
+                      : "en-GB";
                 const formattedEvents = allPosts.map((post) => {
                   const rawTermsData = extractAgendaTerms(
                     post._embedded?.["wp:term"],
                     agendaCategoryId,
                   );
-                  const termsData = inferAgendaFallbackTerms(post, rawTermsData);
+                  const termsData = inferAgendaFallbackTerms(
+                    post,
+                    rawTermsData,
+                  );
                   const dateOnly = post.date.split("T")[0];
                   const excerpt =
                     post.excerpt?.rendered || post.content?.rendered || "";
@@ -409,7 +488,8 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                     id: post.id,
                     slug: String(post.slug || ""),
                     translations:
-                      post?.translations && typeof post.translations === "object"
+                      post?.translations &&
+                      typeof post.translations === "object"
                         ? post.translations
                         : null,
                     translationSignature: buildTranslationSignature(
@@ -449,7 +529,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     return () => {
       cancelled = true;
     };
-  }, [slug, i18n.language, t]);
+  }, [slug, i18n.language, pageKey, t]);
 
   const dateOptions = useMemo(() => {
     const unique = Array.from(new Set(agendaItems.map((item) => item.date)));
@@ -551,7 +631,10 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     const dataToSend = Object.fromEntries(formData);
 
     try {
-      const result = await sendContactForm(dataToSend);
+      const result = await sendContactForm({
+        ...dataToSend,
+        lang: i18n.language,
+      });
       alert(result?.message || "Message envoye avec succes !");
       e.target.reset();
     } catch (error) {
@@ -579,7 +662,8 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   if (!page) return <NotFound />;
 
   const seoTitle = page?.title?.rendered || slug;
-  const seoDescription = page?.excerpt?.rendered || page?.content?.rendered || "";
+  const seoDescription =
+    page?.excerpt?.rendered || page?.content?.rendered || "";
   const seoLang = i18n.language;
   const homePath = i18n.language === "en" ? "/home" : "/accueil";
   const getPageName = () => {
@@ -668,24 +752,24 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
       dateCardText: "text-white",
     };
 
-  if (slug === "appel-a-projet" || slug === "call-for-project") {
+  if (pageKey === "call") {
     return <CallForProject page={page} />;
   }
 
-  if (slug === "accueil" || slug === "home") {
+  if (pageKey === "home") {
     return <Home page={page} />;
   }
 
-  if (slug === "jury" || slug === "jury-eng") {
+  if (pageKey === "jury") {
     return <JuryWpage page={page} />;
   }
 
-  const legalVariant = legalVariantBySlug[slug];
+  const legalVariant = legalVariantBySlug[fixedSlug] || legalVariantBySlug[slug];
   if (legalVariant) {
     return <LegalPage page={page} variant={legalVariant} />;
   }
 
-  if (slug === "contact") {
+  if (pageKey === "contact") {
     return (
       <main className={`wp-contact-page relative min-h-screen overflow-hidden bg-gradient-to-b ${contactTheme.page}`}>
         <Seo title={seoTitle} description={seoDescription} lang={seoLang} />
@@ -871,7 +955,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     );
   }
 
-  const isAgenda = slug === "agenda" || slug === "schedule";
+  const isAgenda = pageKey === "agenda";
   const selectedParts = selectedDate ? formatDateParts(selectedDate) : null;
   const genericPageTheme = isLight
     ? {

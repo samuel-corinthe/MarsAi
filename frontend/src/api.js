@@ -208,7 +208,7 @@ export const getPageBySlug = async (slug, lang = "fr") => {
     `${WORDPRESS_V2_URL}/pages?slug=${encodeURIComponent(slug)}&lang=${encodeURIComponent(lang)}`,
   );
   const data = await response.json();
-  return data[0];
+  return Array.isArray(data) ? data[0] : null;
 };
 
 export async function getWpPostsBySlug({
@@ -292,7 +292,13 @@ function truncateText(value = "", max = 180) {
 }
 
 export async function getRecentAgendaEvents({ lang = "fr", limit = 5 } = {}) {
-  const agendaCategoryId = String(lang).toLowerCase() === "en" ? 51 : 14;
+  const categoryMap = {
+    fr: 14,
+    en: 51,
+    ar: 103,
+  };
+  const agendaCategoryId =
+    categoryMap[String(lang).toLowerCase()] || categoryMap.fr;
   const safeLimit = Math.max(1, Math.min(20, Number(limit) || 5));
 
   const posts = await getWpPostsByCategory({
@@ -393,13 +399,19 @@ export async function getMovieById(movieId) {
   return null;
 }
 
-export async function sendContactForm({ name, email, subject, message }) {
+export async function sendContactForm({
+  name,
+  email,
+  subject,
+  message,
+  lang = "fr",
+}) {
   const { payload } = await fetchWith404Fallback(
     ["/api/send-email", "/send-email", "/api/mail/send-email"],
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, subject, message }),
+      body: JSON.stringify({ name, email, subject, message, lang }),
     },
     "Contact API",
   );
@@ -407,7 +419,12 @@ export async function sendContactForm({ name, email, subject, message }) {
   return payload;
 }
 
-export async function subscribeNewsletterForm({ firstName, email, preferences }) {
+export async function subscribeNewsletterForm({
+  firstName,
+  email,
+  preferences,
+  lang = "fr",
+}) {
   const { payload } = await fetchWith404Fallback(
     [
       "/api/subscribe-newsletter",
@@ -417,7 +434,7 @@ export async function subscribeNewsletterForm({ firstName, email, preferences })
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ firstName, email, preferences }),
+      body: JSON.stringify({ firstName, email, preferences, lang }),
     },
     "Newsletter API",
   );
