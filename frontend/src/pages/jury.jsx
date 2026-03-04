@@ -68,6 +68,19 @@ const AR_SLUG_MAP = {
   "سوبرانو": "soprano",
 };
 
+const extractSlugFromHref = (href = "") => {
+  const value = String(href || "").trim();
+  if (!value || typeof window === "undefined") return "";
+
+  try {
+    const pathname = new URL(value, window.location.origin).pathname;
+    const segments = pathname.split("/").filter(Boolean);
+    return String(segments[segments.length - 1] || "").trim();
+  } catch {
+    return "";
+  }
+};
+
 const createSlug = (text, lang = "fr") => {
   let sourceText = text?.toString().toLowerCase().trim() || "";
   if (lang === "ar" && AR_SLUG_MAP[sourceText]) {
@@ -100,19 +113,27 @@ const parseJuryData = (html, lang) => {
   return Array.from(
     new DOMParser().parseFromString(html, "text/html").querySelectorAll("li"),
   )
-    .map((li) => {
+    .map((li, index) => {
       const img = li.querySelector("img");
+      const anchor = li.querySelector("a");
       const strong = li.querySelector("strong") || li.querySelector("b");
-      const name = strong ? strong.textContent : "";
+      const name = strong ? strong.textContent.trim() : "";
+      const role = (li.textContent || "").replace(name, "").trim();
+      const slug =
+        li.getAttribute("data-slug") ||
+        anchor?.getAttribute("data-slug") ||
+        extractSlugFromHref(anchor?.getAttribute("href") || anchor?.href) ||
+        createSlug(name || img?.alt, lang);
 
       return {
-        slug: li.getAttribute("data-slug") || createSlug(name || img?.alt, lang),
+        id: slug || `jury-member-${index + 1}`,
+        slug,
         name,
-        role: (li.textContent || "").replace(name, "").trim(),
+        role,
         imgSrc: img?.src,
       };
     })
-    .filter((item) => item.slug);
+    .filter((item) => item.name || item.role || item.imgSrc);
 };
 
 const articleCache = new Map();
@@ -140,11 +161,28 @@ function GavelIcon({ theme }) {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={`h-7 w-7 ${theme.iconColor}`}
+        className={`h-8 w-8 ${theme.iconColor}`}
       >
-        <path d="m14.5 12.5-8 8a2.119 2.119 0 1 1-3-3l8-8m9.5 3.5 6-6m-14 14 6-6m-5 5 8 8m12 4-8-8" />
+        <rect
+          x="11.25"
+          y="3.5"
+          width="6.5"
+          height="3.5"
+          rx="0.75"
+          transform="rotate(45 14.5 5.25)"
+        />
+        <rect
+          x="8"
+          y="6.75"
+          width="6.5"
+          height="3.5"
+          rx="0.75"
+          transform="rotate(45 11.25 8.5)"
+        />
+        <path d="M11.5 11.5 18 18" />
+        <path d="M8.5 14.5 5 18" />
+        <path d="M3 21h8" />
       </svg>
-      
     </div>
   );
 }
@@ -275,12 +313,13 @@ export default function JuryWpage({ page }) {
             {members.map((member) => {
               const isSelected = selected && !selected.isLoading && selected.slug === member.slug;
               const isDimmed = selected && !isSelected;
+              const canOpen = Boolean(member.slug);
 
               return (
                 <article
-                  key={member.slug}
-                  onClick={() => openArticle(member.slug)}
-                  className={`group flex cursor-pointer flex-col items-center gap-4 rounded-[24px] border p-4 text-center shadow-[0_18px_40px_rgba(0,0,0,0.2)] transition duration-300 sm:flex-row sm:gap-6 sm:rounded-[28px] sm:p-6 sm:text-left ${theme.card} ${isSelected ? theme.cardSelected : ""} ${isDimmed ? theme.cardDim : "opacity-100"}`}
+                  key={member.id}
+                  onClick={canOpen ? () => openArticle(member.slug) : undefined}
+                  className={`group flex flex-col items-center gap-4 rounded-[24px] border p-4 text-center shadow-[0_18px_40px_rgba(0,0,0,0.2)] transition duration-300 sm:flex-row sm:gap-6 sm:rounded-[28px] sm:p-6 sm:text-left ${theme.card} ${canOpen ? "cursor-pointer" : "cursor-default"} ${isSelected ? theme.cardSelected : ""} ${isDimmed ? theme.cardDim : "opacity-100"}`}
                 >
                   <img
                     src={member.imgSrc || "https://via.placeholder.com/150"}

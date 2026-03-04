@@ -218,11 +218,19 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   };
   const legalVariantBySlug = {
     cgv: "cgv",
-    tos: "cgu",
+    tos: "cgv",
+    "cgv-ar": "cgv",
     cgu: "cgu",
-    gcu: "cgv",
+    gcu: "cgu",
+    "cgu-ar": "cgu",
     "mentions-legales": "mentions",
     "legal-notice": "mentions",
+    "إشعار-قانوني": "mentions",
+  };
+  const legalVariantByPageKey = {
+    cgv: "cgv",
+    cgu: "cgu",
+    legal: "mentions",
   };
 
   const findSlugMappingKey = (mapping, value) => {
@@ -236,14 +244,33 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     return match ? match[0] : null;
   };
 
-  const resolvePageKey = (value) =>
-    findSlugMappingKey(wpSlugMapping, value) ||
-    findSlugMappingKey(routeSlugMapping, value) ||
-    (value ? slugAliases[value] || value : null);
+  const resolvePageKey = (value, { preferRoute = false } = {}) => {
+    const normalizedValue = value ? slugAliases[value] || value : null;
+    if (!normalizedValue) return null;
+
+    if (preferRoute) {
+      return (
+        findSlugMappingKey(routeSlugMapping, normalizedValue) ||
+        findSlugMappingKey(wpSlugMapping, normalizedValue) ||
+        normalizedValue
+      );
+    }
+
+    return (
+      findSlugMappingKey(wpSlugMapping, normalizedValue) ||
+      findSlugMappingKey(routeSlugMapping, normalizedValue) ||
+      normalizedValue
+    );
+  };
+
+  const requestedSlug = fixedSlug || routeSlug;
+  const requestedPageKey = isHome
+    ? "home"
+    : resolvePageKey(requestedSlug, { preferRoute: true });
 
   const getActiveSlug = () => {
     const lang = i18n.language || "fr";
-    const pageKey = isHome ? "home" : resolvePageKey(fixedSlug || routeSlug);
+    const pageKey = requestedPageKey;
 
     if (pageKey && wpSlugMapping[pageKey]) {
       return wpSlugMapping[pageKey][lang] || wpSlugMapping[pageKey].fr;
@@ -254,7 +281,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
 
   const getActiveRouteSlug = () => {
     const lang = i18n.language || "fr";
-    const pageKey = isHome ? "home" : resolvePageKey(fixedSlug || routeSlug);
+    const pageKey = requestedPageKey;
 
     if (pageKey && routeSlugMapping[pageKey]) {
       return routeSlugMapping[pageKey][lang] || routeSlugMapping[pageKey].fr;
@@ -265,7 +292,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
 
   const slug = getActiveSlug();
   const routePathSlug = getActiveRouteSlug();
-  const pageKey = resolvePageKey(fixedSlug || routeSlug || slug);
+  const pageKey = requestedPageKey || resolvePageKey(slug);
 
   useEffect(() => {
     if (fixedSlug) return;
@@ -765,7 +792,12 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     return <JuryWpage page={page} />;
   }
 
-  const legalVariant = legalVariantBySlug[fixedSlug] || legalVariantBySlug[slug];
+  const legalVariant =
+    legalVariantByPageKey[pageKey] ||
+    legalVariantBySlug[fixedSlug] ||
+    legalVariantBySlug[routeSlug] ||
+    legalVariantBySlug[slug] ||
+    legalVariantBySlug[routePathSlug];
   if (legalVariant) {
     return <LegalPage page={page} variant={legalVariant} />;
   }

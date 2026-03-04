@@ -203,6 +203,67 @@ async function fetchSameOriginWithFallback(
   );
 }
 
+const REQUEST_CACHE_TTL_MS = 1500;
+
+function createRequestCache(ttlMs = REQUEST_CACHE_TTL_MS) {
+  return {
+    ttlMs,
+    value: undefined,
+    timestamp: 0,
+    promise: null,
+  };
+}
+
+const currentSessionCache = createRequestCache();
+const sitePhaseCache = createRequestCache();
+
+function hasFreshCacheValue(cache) {
+  return cache.timestamp > 0 && (Date.now() - cache.timestamp) < cache.ttlMs;
+}
+
+function writeRequestCache(cache, value) {
+  cache.value = value;
+  cache.timestamp = Date.now();
+}
+
+function clearRequestCache(cache) {
+  cache.value = undefined;
+  cache.timestamp = 0;
+  cache.promise = null;
+}
+
+async function runCachedRequest(cache, requestFactory) {
+  if (cache.promise) {
+    return cache.promise;
+  }
+
+  if (hasFreshCacheValue(cache)) {
+    return cache.value;
+  }
+
+  cache.promise = (async () => {
+    try {
+      const value = await requestFactory();
+      writeRequestCache(cache, value);
+      return value;
+    } catch (error) {
+      clearRequestCache(cache);
+      throw error;
+    } finally {
+      cache.promise = null;
+    }
+  })();
+
+  return cache.promise;
+}
+
+function primeCurrentSessionCache(user) {
+  writeRequestCache(currentSessionCache, {
+    authenticated: true,
+    user: user || null,
+  });
+}
+
 export const getPageBySlug = async (slug, lang = "fr") => {
   const response = await fetch(
     `${WORDPRESS_V2_URL}/pages?slug=${encodeURIComponent(slug)}&lang=${encodeURIComponent(lang)}`,
@@ -443,6 +504,7 @@ export async function subscribeNewsletterForm({
 }
 
 export async function loginWithWordPress({ email, username, password }) {
+  clearRequestCache(currentSessionCache);
   let res;
   try {
     res = await fetch("/api/auth/wordpress/login", {
@@ -474,24 +536,38 @@ export async function loginWithWordPress({ email, username, password }) {
     throw new Error(details);
   }
 
+  if (payload?.user) {
+    primeCurrentSessionCache(payload.user);
+  }
+
   return payload;
 }
 
-export async function getCurrentSessionUser() {
-  const res = await fetch("/api/auth/me", {
-    credentials: "include",
-    cache: "no-store",
-  });
+export async function getCurrentSessionUser({ signal } = {}) {
+  const loadSession = async () => {
+    const res = await fetch("/api/auth/me", {
+      signal,
+      credentials: "include",
+      cache: "no-store",
+    });
 
-  if (!res.ok) {
-    const payload = await res.json().catch(() => ({}));
-    throw new Error(payload?.error || `Auth error ${res.status}`);
+    if (!res.ok) {
+      const payload = await res.json().catch(() => ({}));
+      throw new Error(payload?.error || `Auth error ${res.status}`);
+    }
+
+    return res.json();
+  };
+
+  if (signal) {
+    return loadSession();
   }
 
-  return res.json();
+  return runCachedRequest(currentSessionCache, loadSession);
 }
 
 export async function logoutSession() {
+  clearRequestCache(currentSessionCache);
   const res = await fetch("/api/auth/logout", {
     method: "POST",
     credentials: "include",
@@ -546,6 +622,10 @@ export async function updateCurrentSessionProfile({
     throw new Error(details);
   }
 
+  if (payload?.user) {
+    primeCurrentSessionCache(payload.user);
+  }
+
   return payload;
 }
 
@@ -571,17 +651,25 @@ export async function getAdminDashboardData({ signal } = {}) {
 }
 
 export async function getSitePhaseState({ signal } = {}) {
-  const { payload } = await fetchSameOriginWithFallback(
-    ["/api/site-phase", "/MarsAi/api/site-phase"],
-    {
-      signal,
-      cache: "no-store",
-      credentials: "include",
-    },
-    "Site phase API",
-  );
+  const loadSitePhaseState = async () => {
+    const { payload } = await fetchSameOriginWithFallback(
+      ["/api/site-phase", "/MarsAi/api/site-phase"],
+      {
+        signal,
+        cache: "no-store",
+        credentials: "include",
+      },
+      "Site phase API",
+    );
 
-  return payload;
+    return payload;
+  };
+
+  if (signal) {
+    return loadSitePhaseState();
+  }
+
+  return runCachedRequest(sitePhaseCache, loadSitePhaseState);
 }
 
 export async function updateSitePhaseState({ currentPhase, mode } = {}) {
@@ -599,6 +687,7 @@ export async function updateSitePhaseState({ currentPhase, mode } = {}) {
     "Site phase API",
   );
 
+  clearRequestCache(sitePhaseCache);
   return payload;
 }
 
@@ -644,6 +733,7 @@ export async function patchPhase2Selection(movieId, selected) {
     "Phase 2 selection API",
   );
 
+  clearRequestCache(sitePhaseCache);
   return payload;
 }
 
@@ -657,6 +747,7 @@ export async function validatePhase2Selection() {
     "Phase 2 selection API",
   );
 
+  clearRequestCache(sitePhaseCache);
   return payload;
 }
 
@@ -716,6 +807,7 @@ export async function patchPhase3Selection(movieId, selected) {
     "Phase 3 selection API",
   );
 
+  clearRequestCache(sitePhaseCache);
   return payload;
 }
 
@@ -729,6 +821,7 @@ export async function validatePhase3Selection() {
     "Phase 3 selection API",
   );
 
+  clearRequestCache(sitePhaseCache);
   return payload;
 }
 

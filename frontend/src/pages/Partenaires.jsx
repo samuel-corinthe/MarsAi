@@ -8,6 +8,10 @@ import NotFound from "./NotFound";
 import PageLoader from "../components/ui/PageLoader";
 import { getLocalizedPath, normalizeLanguage } from "../utils/localizedRoutes";
 
+function containsArabicText(value = "") {
+  return /[\u0600-\u06FF]/.test(String(value || ""));
+}
+
 export default function Partenaires() {
   const { t, i18n } = useTranslation();
   const [page, setPage] = useState(null);
@@ -29,14 +33,24 @@ export default function Partenaires() {
             ? [
               { slug: "partners-ar", lang: "ar" },
               { slug: "partners", lang: "ar" },
-              { slug: "partners", lang: "en" },
+              { slug: "partenaires", lang: "ar" },
             ]
             : [{ slug: "partenaires", lang: "fr" }];
         let data = null;
 
         for (const candidate of slugCandidates) {
-          data = await getPageBySlug(candidate.slug, candidate.lang);
-          if (data) break;
+          const candidateData = await getPageBySlug(candidate.slug, candidate.lang);
+          if (!candidateData) continue;
+
+          const candidateLooksArabic =
+            normalizeLanguage(candidateData.lang || candidate.lang) === "ar" ||
+            containsArabicText(candidateData?.title?.rendered) ||
+            containsArabicText(candidateData?.content?.rendered);
+
+          if (currentLanguage !== "ar" || candidateLooksArabic) {
+            data = candidateData;
+            break;
+          }
         }
 
         if (!cancelled) setPage(data);
