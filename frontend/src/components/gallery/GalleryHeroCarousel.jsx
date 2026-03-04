@@ -61,7 +61,7 @@ export default function GalleryHeroCarousel({
         {showTopCarousel && topMovies.length > 0 && (
           <div className="mt-6 md:mt-10">
             <p
-              className={`font-black uppercase tracking-[0.16em] sm:tracking-widest text-[10px] md:text-sm mb-6 ${
+              className={`font-black uppercase tracking-[0.16em] sm:tracking-widest text-[11px] md:text-sm mb-6 ${
                 isLight ? "text-white/90" : "text-slate-300"
               }`}
             >

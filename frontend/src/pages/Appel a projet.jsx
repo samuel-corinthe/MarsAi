@@ -77,7 +77,7 @@ export default function CallForProject({ page }) {
       >
         <div className="site-container space-y-8">
           <section>
-            <p className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] ${theme.kicker}`}>
+            <p className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] ${theme.kicker}`}>
               {t("projects.main_title")}
             </p>
             <h1 className={`mt-4 text-3xl font-black uppercase tracking-tight sm:text-4xl md:text-5xl ${theme.title}`}>
@@ -103,7 +103,10 @@ export default function CallForProject({ page }) {
           <section className={`border-t pt-8 ${theme.divider}`}>
             <div
               className={`site-richtext ${theme.richtext}`}
-              dangerouslySetInnerHTML={{ __html: page?.content?.rendered || "" }}
+              dangerouslySetInnerHTML={{ __html: (page?.content?.rendered || "")
+                .replace(/<h[1-6][^>]*>\s*<\/h[1-6]>/gi, "")
+                .replace(/<video(\s)/gi, '<video aria-hidden="true"$1')
+                .replace(/<audio(\s)/gi, '<audio aria-hidden="true"$1') }}
             />
 
             {isPhase1 && (

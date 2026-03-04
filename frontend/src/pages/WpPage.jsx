@@ -814,7 +814,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
 
         <div className="relative mx-auto max-w-6xl px-4 pb-16 pt-10">
           <div>
-            <p className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] ${contactTheme.badge}`}>
+            <p className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] ${contactTheme.badge}`}>
               {t("contact.badge")}
             </p>
             <div className={`mt-4 h-16 w-16 rounded-full border-4 flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.35)] ${contactTheme.iconBorder}`}>
@@ -850,7 +850,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                 <div className="flex flex-col gap-2">
                   <label
                     htmlFor="name"
-                    className={`text-[10px] font-black uppercase tracking-[0.22em] ${contactTheme.label}`}
+                    className={`text-[11px] font-black uppercase tracking-[0.22em] ${contactTheme.label}`}
                   >
                     {t("contact.form.label_name")}
                   </label>
@@ -868,7 +868,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                 <div className="flex flex-col gap-2">
                   <label
                     htmlFor="email"
-                    className={`text-[10px] font-black uppercase tracking-[0.22em] ${contactTheme.label}`}
+                    className={`text-[11px] font-black uppercase tracking-[0.22em] ${contactTheme.label}`}
                   >
                     {t("contact.form.label_email")}
                   </label>
@@ -887,7 +887,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               <div className="flex flex-col gap-2">
                 <label
                   htmlFor="subject"
-                  className={`text-[10px] font-black uppercase tracking-[0.22em] ${contactTheme.label}`}
+                  className={`text-[11px] font-black uppercase tracking-[0.22em] ${contactTheme.label}`}
                 >
                   {t("contact.form.label_subject")}
                 </label>
@@ -904,7 +904,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               <div className="flex flex-col gap-2">
                 <label
                   htmlFor="message"
-                  className={`text-[10px] font-black uppercase tracking-[0.22em] ${contactTheme.label}`}
+                  className={`text-[11px] font-black uppercase tracking-[0.22em] ${contactTheme.label}`}
                 >
                   {t("contact.form.label_message")}
                 </label>
@@ -960,7 +960,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                     </svg>
                   </div>
                   <div>
-                    <p className={`text-[10px] font-black uppercase tracking-[0.22em] ${contactTheme.infoTitle}`}>
+                    <p className={`text-[11px] font-black uppercase tracking-[0.22em] ${contactTheme.infoTitle}`}>
                       {t("contact.info.location_title")}
                     </p>
                     <p className={`text-sm ${contactTheme.infoText}`}>
@@ -1035,7 +1035,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
         {isAgenda ? (
           <>
             <div className="pt-10 pb-8">
-              <p className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] ${agendaTheme.badge}`}>
+              <p className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] ${agendaTheme.badge}`}>
                 {t("agenda.subtitle")}
               </p>
               <div className="mt-4 flex items-center gap-4">
@@ -1068,7 +1068,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               <div className="mt-2">
                 <button
                   onClick={() => setSelectedArticle(null)}
-                  className={`mb-6 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] transition ${agendaTheme.backBtn}`}
+                  className={`mb-6 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] transition ${agendaTheme.backBtn}`}
                 >
                   <span aria-hidden="true">←</span>
                   {t("agenda.back_to_agenda")}
@@ -1094,7 +1094,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                     }}
                   />
 
-                  <div className="mt-5 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.15em]">
+                  <div className="mt-5 flex flex-wrap items-center gap-2 text-[11px] font-black uppercase tracking-[0.15em]">
                     <span className={`rounded-full border px-3 py-1 ${agendaTheme.pill}`}>
                       {t("agenda.hour_label")}: {selectedArticle.heure}
                     </span>
@@ -1127,7 +1127,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               <>
                 <div className={`mt-4 rounded-[28px] border p-4 sm:p-6 ${agendaTheme.glassCard}`}>
                   {canPaginateDates && (
-                    <div className="mb-4 flex items-center justify-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-100">
+                    <div className="mb-4 flex items-center justify-center gap-3 text-[11px] font-black uppercase tracking-[0.2em] text-cyan-100">
                       <button
                         type="button"
                         onClick={() => setDatePage((prev) => Math.max(0, prev - 1))}
@@ -1171,20 +1171,20 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                                 : agendaTheme.dateDefault
                             }`}
                           >
-                            <p className="text-[9px] font-black uppercase tracking-[0.18em] opacity-80">
+                            <span className="block text-[11px] font-black uppercase tracking-[0.18em] opacity-80">
                               {parts.weekdayShort}
-                            </p>
-                            <p className="mt-0.5 text-[10px] font-black uppercase tracking-[0.18em] opacity-80">
+                            </span>
+                            <span className="mt-0.5 block text-[11px] font-black uppercase tracking-[0.18em] opacity-80">
                               {parts.monthShort}
-                            </p>
-                            <p className="mt-1 text-2xl font-black leading-none">
+                            </span>
+                            <span className="mt-1 block text-2xl font-black leading-none">
                               {parts.day}
-                            </p>
-                            <p className="mt-1 text-[9px] font-black uppercase tracking-[0.12em] opacity-80">
+                            </span>
+                            <span className="mt-1 block text-[11px] font-black uppercase tracking-[0.12em] opacity-80">
                               {hasEvents
                                 ? t("agenda.event_count", { count: eventCount })
                                 : t("agenda.no_events_short")}
-                            </p>
+                            </span>
                           </button>
                         );
                       })
@@ -1199,15 +1199,15 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                 {selectedParts && (
                   <div className="mt-6 flex justify-center">
                     <div className={`rounded-3xl border px-7 py-4 text-center ${agendaTheme.glassCard}`}>
-                      <p className={`text-4xl font-black leading-none ${agendaTheme.dateCardText}`}>
+                      <span className={`block text-4xl font-black leading-none ${agendaTheme.dateCardText}`}>
                         {selectedParts.day}
-                      </p>
-                      <p className={`mt-1 text-xs font-black uppercase tracking-[0.2em] ${agendaTheme.subtitle}`}>
+                      </span>
+                      <span className={`mt-1 block text-xs font-black uppercase tracking-[0.2em] ${agendaTheme.subtitle}`}>
                         {selectedParts.weekday}
-                      </p>
-                      <p className={`mt-1 text-[11px] font-black uppercase tracking-[0.16em] ${agendaTheme.badge.includes("text-sky") ? "text-sky-700" : "text-cyan-200"}`}>
+                      </span>
+                      <span className={`mt-1 block text-[11px] font-black uppercase tracking-[0.16em] ${agendaTheme.badge.includes("text-sky") ? "text-sky-700" : "text-cyan-200"}`}>
                         {selectedParts.monthLong}
-                      </p>
+                      </span>
                     </div>
                   </div>
                 )}
@@ -1228,7 +1228,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                               loading="lazy"
                             />
                           ) : (
-                            <div className={`flex h-full w-full items-center justify-center text-[10px] font-black uppercase tracking-[0.2em] ${agendaTheme.empty}`}>
+                            <div className={`flex h-full w-full items-center justify-center text-[11px] font-black uppercase tracking-[0.2em] ${agendaTheme.empty}`}>
                               {t("agenda.event_badge")}
                             </div>
                           )}
@@ -1239,7 +1239,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                           {ev.subCategories.map((cat) => (
                             <span
                               key={cat.id}
-                              className="rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.1em]"
+                              className="rounded-full border px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.1em]"
                               style={{
                                 color: getCategoryColor(cat.id),
                                 borderColor: getCategoryColor(cat.id),
@@ -1250,7 +1250,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                           ))}
                         </div>
 
-                        <h3
+                        <h2
                           className={`text-lg font-black uppercase tracking-tight ${agendaTheme.cardTitle}`}
                           dangerouslySetInnerHTML={{ __html: ev.titre }}
                         />
@@ -1258,7 +1258,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                           {ev.resume}
                         </p>
 
-                        <div className="mt-4 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-[0.14em]">
+                        <div className="mt-4 flex flex-wrap gap-2 text-[11px] font-black uppercase tracking-[0.14em]">
                           <span className={`rounded-full border px-3 py-1 ${agendaTheme.pill}`}>
                             {t("agenda.hour_label")}: {ev.heure}
                           </span>
@@ -1269,7 +1269,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
 
                         <button
                           onClick={() => setSelectedArticle(ev)}
-                          className={`mt-4 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] transition ${agendaTheme.cta}`}
+                          className={`mt-4 inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] transition ${agendaTheme.cta}`}
                         >
                           <span>{t("agenda.read_article")}</span>
                           <span aria-hidden="true">➙</span>

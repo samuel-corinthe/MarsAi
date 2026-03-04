@@ -294,10 +294,10 @@ export default function Newsletter() {
                     />
                   </div>
 
-                  <div className="space-y-3">
-                    <label className={`mb-3 block text-sm font-medium ${theme.label}`}>
+                  <fieldset className="space-y-3">
+                    <legend className={`mb-3 block text-sm font-medium ${theme.label}`}>
                       {t("newsletter.form.label_preferences")}
-                    </label>
+                    </legend>
                     {["news", "films", "events", "partners"].map((id) => (
                       <label
                         key={id}
@@ -314,7 +314,7 @@ export default function Newsletter() {
                         </span>
                       </label>
                     ))}
-                  </div>
+                  </fieldset>
 
                   <p className={`text-xs leading-relaxed ${theme.helper}`}>
                     {t("newsletter.form.rgpd")}

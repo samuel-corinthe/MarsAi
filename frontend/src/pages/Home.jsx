@@ -336,7 +336,7 @@ export default function Home({ page }) {
           className="relative z-20 flex min-h-screen w-full items-center justify-center px-4 text-center sm:px-6"
         >
           <div className={`group w-full max-w-3xl rounded-[2rem] border px-4 py-8 backdrop-blur-md transition-all duration-500 hover:scale-[1.02] sm:rounded-[2.5rem] sm:px-8 sm:py-10 md:px-14 md:py-14 ${theme.heroCard}`}>
-            <p className={`mb-4 text-[10px] font-black uppercase tracking-[0.22em] sm:text-[11px] sm:tracking-[0.35em] ${theme.heroBadge}`}>
+            <p className={`mb-4 text-[11px] font-black uppercase tracking-[0.22em] sm:text-[11px] sm:tracking-[0.35em] ${theme.heroBadge}`}>
               {heroCtaBadge}
             </p>
             <h2 className={`text-4xl font-black uppercase tracking-tight sm:text-5xl md:text-7xl ${theme.heroTitle}`}>

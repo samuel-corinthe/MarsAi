@@ -291,7 +291,7 @@ export default function JuryWpage({ page }) {
         <div className="relative z-10 mx-auto w-full max-w-6xl">
           <header className="mb-12 text-center sm:mb-14">
             <p
-              className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] ${theme.badge}`}
+              className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] ${theme.badge}`}
             >
               {t("jury.jury_profile_label", "Profil jury")}
             </p>
@@ -323,16 +323,16 @@ export default function JuryWpage({ page }) {
                 >
                   <img
                     src={member.imgSrc || "https://via.placeholder.com/150"}
-                    alt={member.name}
+                    alt=""
                     className="h-20 w-20 shrink-0 rounded-full border-4 border-current/20 object-cover sm:h-24 sm:w-24"
                     loading="lazy"
                   />
 
                   <div className="min-w-0">
-                    <h3 className={`truncate text-lg font-black uppercase tracking-tight sm:text-xl ${theme.name}`}>
+                    <h2 className={`truncate text-lg font-black uppercase tracking-tight sm:text-xl ${theme.name}`}>
                       {member.name}
-                    </h3>
-                    <p className={`mt-1 text-[10px] font-black uppercase tracking-[0.18em] sm:text-xs ${theme.role}`}>
+                    </h2>
+                    <p className={`mt-1 text-[11px] font-black uppercase tracking-[0.18em] sm:text-xs ${theme.role}`}>
                       {member.role}
                     </p>
                   </div>
@@ -367,12 +367,12 @@ export default function JuryWpage({ page }) {
             >
               <div className={`flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-7 sm:py-6 ${theme.modalBorder}`}>
                 <div>
-                  <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${theme.modalLabel}`}>
+                  <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${theme.modalLabel}`}>
                     {selected.isLoading
                       ? t("jury.jury.loading")
                       : t("jury.jury_profile_label", "Profil jury")}
                   </p>
-                  <h2
+                  <h3
                     className={`mt-2 text-xl font-black uppercase tracking-tight sm:text-3xl ${theme.modalTitle}`}
                     dangerouslySetInnerHTML={{ __html: selected.title.rendered }}
                   />
@@ -407,7 +407,7 @@ export default function JuryWpage({ page }) {
                 <button
                   type="button"
                   onClick={() => setSelected(null)}
-                  className={`text-[10px] font-black uppercase tracking-[0.2em] transition hover:opacity-80 ${theme.modalLabel}`}
+                  className={`text-[11px] font-black uppercase tracking-[0.2em] transition hover:opacity-80 ${theme.modalLabel}`}
                 >
                   {t("jury.close_profile", "Fermer le profil")}
                 </button>

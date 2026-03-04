@@ -75,7 +75,7 @@ export default function GalleryFilterModal({
 
         <div className="space-y-8">
           <div>
-            <p className="mb-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+            <p className="mb-3 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
               Trier par
             </p>
             <div className="grid grid-cols-2 gap-2">
@@ -83,7 +83,7 @@ export default function GalleryFilterModal({
                 <button
                   key={option.value}
                   onClick={() => onSortChange(option.value)}
-                  className={`rounded-xl py-3 text-[10px] font-black uppercase tracking-widest transition-colors ${
+                  className={`rounded-xl py-3 text-[11px] font-black uppercase tracking-widest transition-colors ${
                     sortBy === option.value
                       ? isLight
                         ? "bg-[#0b1f46] text-cyan-300"
@@ -101,7 +101,7 @@ export default function GalleryFilterModal({
 
           <div>
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
                 Note (min - max)
               </p>
               <span
@@ -116,7 +116,7 @@ export default function GalleryFilterModal({
               <div>
                 <label
                   htmlFor="rating-min"
-                  className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400"
+                  className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400"
                 >
                   Min
                 </label>
@@ -137,7 +137,7 @@ export default function GalleryFilterModal({
               <div>
                 <label
                   htmlFor="rating-max"
-                  className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-slate-400"
+                  className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400"
                 >
                   Max
                 </label>

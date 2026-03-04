@@ -116,7 +116,7 @@ export default function Partenaires() {
       >
         <div className="site-container">
           <section className="pb-10">
-            <p className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] ${theme.badge}`}>
+            <p className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] ${theme.badge}`}>
               {t("partners.badge", "Partenaires")}
             </p>
             <h1

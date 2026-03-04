@@ -153,7 +153,7 @@ export default function About() {
       >
         <div className="site-container space-y-10">
           <section>
-            <p className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] ${theme.kicker}`}>
+            <p className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] ${theme.kicker}`}>
               marsAI
             </p>
             <h1
@@ -171,7 +171,7 @@ export default function About() {
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
                 to={submitFilmPath}
-                className={`inline-flex rounded-full bg-gradient-to-r px-6 py-3 text-xs font-black uppercase tracking-[0.12em] transition hover:brightness-105 ${theme.primaryBtn}`}
+                className={`inline-flex rounded-full bg-gradient-to-r px-6 py-3 text-sm font-black uppercase tracking-[0.12em] transition hover:brightness-105 ${theme.primaryBtn}`}
               >
                 {t("about.cta_join")}
               </Link>

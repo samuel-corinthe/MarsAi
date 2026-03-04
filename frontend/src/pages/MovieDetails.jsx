@@ -1082,7 +1082,7 @@ const DetailRow = ({ label, value, isStar, last }) => (
   <div
     className={`flex flex-col ${!last ? "border-b border-slate-200 pb-4" : ""}`}
   >
-    <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">
+    <span className="text-[11px] uppercase font-black text-slate-400 tracking-widest mb-1">
       {label}
     </span>
     <span className="font-bold text-blue-900 uppercase flex items-center gap-2">

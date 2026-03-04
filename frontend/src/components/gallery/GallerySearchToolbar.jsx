@@ -135,7 +135,7 @@ export default function GallerySearchToolbar({
           {sortBy !== "default" && (
             <button
               onClick={onResetSort}
-              className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${
+              className={`rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wider ${
                 isLight
                   ? "bg-cyan-100 text-cyan-800 hover:bg-cyan-200"
                 : "bg-blue-50 text-blue-700 hover:bg-blue-100"
@@ -147,7 +147,7 @@ export default function GallerySearchToolbar({
           {(minRating > 0 || maxRating < 5) && (
             <button
               onClick={onResetRating}
-              className="rounded-full bg-amber-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-amber-700 hover:bg-amber-100"
+              className="rounded-full bg-amber-50 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-amber-700 hover:bg-amber-100"
             >
               {t("gallery.rating_chip", { min: minRating, max: maxRating })} x
             </button>

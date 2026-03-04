@@ -148,9 +148,9 @@ export default function Footer() {
 
           {sections.map((section) => (
             <div key={section.title}>
-              <h3 className={`text-xs font-black uppercase tracking-[0.18em] ${sectionTitleClassName}`}>
+              <h2 className={`text-xs font-black uppercase tracking-[0.18em] ${sectionTitleClassName}`}>
                 {section.title}
-              </h3>
+              </h2>
               <ul className="mt-4 space-y-2.5">
                 {section.links.filter(shouldShowLink).map((link) => (
                   <li key={link.path}>
