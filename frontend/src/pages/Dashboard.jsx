@@ -8,6 +8,7 @@ import PageLoader from "../components/ui/PageLoader";
 import { getLocalizedPath } from "../utils/localizedRoutes";
 import {
   autoAssignMovieReviews,
+  buildDeploymentAwareApiPath,
   claimMovieAssignment,
   deleteMyMovieRating,
   getAdminDashboardData,
@@ -79,6 +80,7 @@ export default function Dashboard() {
   const homePath = getLocalizedPath("home", i18n.language);
   const filmsBasePath = getLocalizedPath("films", i18n.language);
   const dashboardStatsPath = "/dashboard/stats";
+  const dashboardMoviesCsvExportPath = buildDeploymentAwareApiPath("/api/export/movies");
   const [adminData, setAdminData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -1502,6 +1504,25 @@ export default function Dashboard() {
                 Voir les statistiques
               </Link>
             </div>
+
+            {canManagePhase && (
+              <div className="glass p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-black uppercase tracking-tight">Export CSV</h3>
+                  <span className="text-xs text-slate-100/80">Admin</span>
+                </div>
+                <p className="text-sm text-slate-200">
+                  Telecharge la liste complete des films en CSV pour traitement externe.
+                </p>
+                <a
+                  className="btn-ghost block w-full rounded-lg border border-white/10 px-4 py-2 text-center"
+                  href={dashboardMoviesCsvExportPath}
+                  download="movies.csv"
+                >
+                  Exporter movies.csv
+                </a>
+              </div>
+            )}
 
             <div className="glass p-5 space-y-3">
               <div className="flex items-center justify-between">

@@ -56,6 +56,24 @@ function appendDeploymentPathCandidates(urls) {
   return extended;
 }
 
+export function buildDeploymentAwareApiPath(path = "/") {
+  const rawPath = String(path || "").trim() || "/";
+  const normalizedPath = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
+
+  if (/^\/MarsAi\//i.test(normalizedPath)) {
+    return normalizedPath;
+  }
+
+  if (typeof window === "undefined") return normalizedPath;
+
+  const pathname = String(window.location?.pathname || "").toLowerCase();
+  if (pathname === "/marsai" || pathname.startsWith("/marsai/")) {
+    return `/MarsAi${normalizedPath}`;
+  }
+
+  return normalizedPath;
+}
+
 function isObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

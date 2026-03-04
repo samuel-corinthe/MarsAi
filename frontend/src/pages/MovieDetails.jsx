@@ -29,6 +29,42 @@ const SOCIAL_LINK_ORDER = [
   { key: "website", label: "Website" },
 ];
 const HERO_PREVIEW_SECONDS = 5;
+const SHARE_PLATFORMS = [
+  {
+    key: "facebook",
+    label: "Facebook",
+    ariaKey: "movie_details.share_facebook_aria",
+    getUrl: (url) => `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+  },
+  {
+    key: "twitter",
+    label: "X",
+    ariaKey: "movie_details.share_twitter_aria",
+    getUrl: (url, title) =>
+      `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`,
+  },
+  {
+    key: "linkedin",
+    label: "LinkedIn",
+    ariaKey: "movie_details.share_linkedin_aria",
+    getUrl: (url) =>
+      `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
+  },
+  {
+    key: "pinterest",
+    label: "Pinterest",
+    ariaKey: "movie_details.share_pinterest_aria",
+    getUrl: (url, title, img) =>
+      `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(url)}&media=${encodeURIComponent(img)}&description=${encodeURIComponent(title)}`,
+  },
+  {
+    key: "whatsapp",
+    label: "WhatsApp",
+    ariaKey: "movie_details.share_whatsapp_aria",
+    getUrl: (url, title) =>
+      `https://wa.me/?text=${encodeURIComponent(`${title} ${url}`)}`,
+  },
+];
 
 function toExternalUrl(value) {
   const raw = String(value || "").trim();
@@ -128,6 +164,25 @@ function toYoutubeEmbedUrl(value) {
   return "";
 }
 
+function toYouTubeWatchUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+
+  if (/youtube\.com\/watch/i.test(raw)) return raw;
+
+  const embedMatch = raw.match(/youtube\.com\/embed\/([^?&/]+)/i);
+  if (embedMatch) {
+    return `https://www.youtube.com/watch?v=${embedMatch[1]}`;
+  }
+
+  const shortMatch = raw.match(/youtu\.be\/([^?&/]+)/i);
+  if (shortMatch) {
+    return `https://www.youtube.com/watch?v=${shortMatch[1]}`;
+  }
+
+  return null;
+}
+
 function toDirectPreviewVideoUrl(...values) {
   for (const value of values) {
     const raw = String(value || "").trim();
@@ -210,6 +265,9 @@ const MovieDetails = () => {
 
   const seoTitle = movie?.title || t("movie_details.not_found");
   const seoDescription = movie?.description || t("movie_details.back_to_gallery");
+  const seoImage = movie?.img || null;
+  const seoUrl = typeof window !== "undefined" ? window.location.href : undefined;
+  const seoVideo = movie?.videoUrl || movie?.rawVideoUrl || movie?.youtubeUrl || null;
 
   useEffect(() => {
     setIsPlayerOpen(false);
@@ -418,6 +476,27 @@ const MovieDetails = () => {
     }
   };
 
+  const handleNativeShare = async () => {
+    const url = toYouTubeWatchUrl(movie?.youtubeUrl) || (typeof window !== "undefined" ? window.location.href : "");
+    const shareData = {
+      title: movie?.title || "",
+      text: movie?.description || movie?.title || "",
+      url,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // Ignore cancelled share attempts.
+      }
+      return;
+    }
+
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent(shareData.title)}&body=${encodeURIComponent(`${shareData.text}\n\n${url}`)}`;
+    window.open(mailtoUrl);
+  };
+
   if (movieLoading) {
     return (
       <>
@@ -485,6 +564,9 @@ const MovieDetails = () => {
     toNonEmptyString(movie.releaseDate, movie.release_date, movie.release_year) || fallbackNa;
   const durationDisplay = toDurationDisplay(movie.duration, fallbackNa);
   const youtubeEmbedUrl = toYoutubeEmbedUrl(movie.youtubeUrl);
+  const shareUrl =
+    toYouTubeWatchUrl(movie.youtubeUrl)
+    || (typeof window !== "undefined" ? window.location.href : "");
   const canWatchMovie = shouldUseYoutubePlayer
     ? Boolean(youtubeEmbedUrl)
     : Boolean(directPlayerVideoUrl);
@@ -526,6 +608,9 @@ const MovieDetails = () => {
       techCard: "bg-white border border-slate-200",
       techTitle: "text-slate-900",
       modalOverlay: "bg-slate-900/70",
+      shareLabel: "text-slate-500",
+      shareChip:
+        "border-slate-300 bg-white/95 text-slate-700 hover:border-sky-400 hover:text-sky-700",
     }
     : {
       page: "bg-blue-950 text-white",
@@ -546,11 +631,21 @@ const MovieDetails = () => {
       techCard: "bg-slate-50 border border-slate-100",
       techTitle: "text-blue-950",
       modalOverlay: "bg-blue-950/95",
+      shareLabel: "text-slate-400",
+      shareChip:
+        "border-white/20 bg-white/10 text-white hover:bg-white hover:text-blue-950",
     };
 
   return (
     <>
-      <Seo title={seoTitle} description={seoDescription} />
+      <Seo
+        title={seoTitle}
+        description={seoDescription}
+        image={seoImage}
+        url={seoUrl}
+        type="video.other"
+        video={seoVideo}
+      />
       <MovieSchema
         title={movie.title}
         description={movie.description || seoDescription}
@@ -670,6 +765,32 @@ const MovieDetails = () => {
                       </svg>
                     </a>
                   )}
+                </div>
+
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-2 md:justify-start">
+                  <span className={`mr-1 text-[10px] font-black uppercase tracking-widest ${theme.shareLabel}`}>
+                    {t("movie_details.share_label")}
+                  </span>
+                  {SHARE_PLATFORMS.map(({ key, label, ariaKey, getUrl }) => (
+                    <a
+                      key={key}
+                      href={getUrl(shareUrl, movie.title, movie.img || "")}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={t(ariaKey)}
+                      className={`inline-flex items-center rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition ${theme.shareChip}`}
+                    >
+                      {label}
+                    </a>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={handleNativeShare}
+                    aria-label={t("movie_details.share_email_aria")}
+                    className={`inline-flex items-center rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition ${theme.shareChip}`}
+                  >
+                    {t("movie_details.share_email_label")}
+                  </button>
                 </div>
               </div>
             </div>

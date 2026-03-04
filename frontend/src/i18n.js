@@ -1270,6 +1270,14 @@ const extraTranslations = {
       close_player: "Fermer",
       unknown_person: "Inconnu",
       download_movie: "Telecharger le film",
+      share_label: "Partager :",
+      share_facebook_aria: "Partager sur Facebook (une nouvelle fenêtre va s'ouvrir)",
+      share_twitter_aria: "Partager sur X / Twitter (une nouvelle fenêtre va s'ouvrir)",
+      share_linkedin_aria: "Partager sur LinkedIn (une nouvelle fenêtre va s'ouvrir)",
+      share_pinterest_aria: "Partager sur Pinterest (une nouvelle fenêtre va s'ouvrir)",
+      share_whatsapp_aria: "Partager via WhatsApp (une nouvelle fenêtre va s'ouvrir)",
+      share_email_label: "Email / Partager via…",
+      share_email_aria: "Partager par email ou via une application (une nouvelle page va s'ouvrir)",
     },
     contact: {
       form: {
@@ -1344,6 +1352,14 @@ const extraTranslations = {
       close_player: "Close",
       unknown_person: "Unknown",
       download_movie: "Download movie",
+      share_label: "Share:",
+      share_facebook_aria: "Share on Facebook (a new window will open)",
+      share_twitter_aria: "Share on X / Twitter (a new window will open)",
+      share_linkedin_aria: "Share on LinkedIn (a new window will open)",
+      share_pinterest_aria: "Share on Pinterest (a new window will open)",
+      share_whatsapp_aria: "Share via WhatsApp (a new window will open)",
+      share_email_label: "Email / Share via…",
+      share_email_aria: "Share via email or another app (a new window will open)",
     },
     contact: {
       form: {
@@ -1418,6 +1434,14 @@ const extraTranslations = {
       close_player: "اغلاق",
       unknown_person: "غير معروف",
       download_movie: "تنزيل الفيلم",
+      share_label: "مشاركة:",
+      share_facebook_aria: "المشاركة على فيسبوك (ستفتح نافذة جديدة)",
+      share_twitter_aria: "المشاركة على إكس / تويتر (ستفتح نافذة جديدة)",
+      share_linkedin_aria: "المشاركة على لينكدإن (ستفتح نافذة جديدة)",
+      share_pinterest_aria: "المشاركة على بنترست (ستفتح نافذة جديدة)",
+      share_whatsapp_aria: "المشاركة عبر واتساب (ستفتح نافذة جديدة)",
+      share_email_label: "البريد / مشاركة عبر…",
+      share_email_aria: "المشاركة عبر البريد الإلكتروني أو تطبيق آخر (ستفتح نافذة جديدة)",
     },
     contact: {
       form: {
