@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import Seo from "../components/Seo";
 import { BreadcrumbSchema } from "../components/Schema";
 import { useTranslation } from "react-i18next";
@@ -13,6 +14,7 @@ export default function Newsletter() {
   const { t, i18n } = useTranslation();
   const { isLight } = useTheme();
   const isArabic = normalizeLanguage(i18n.language) === "ar";
+  const cguPath = getLocalizedPath("cgu", i18n.language);
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -314,12 +316,12 @@ export default function Newsletter() {
 
                   <p className={`text-xs leading-relaxed ${theme.helper}`}>
                     {t("newsletter.form.rgpd")}
-                    <a
-                      href={getLocalizedPath("privacy", i18n.language)}
+                    <Link
+                      to={cguPath}
                       className={`ml-1 ${theme.helperLink}`}
                     >
-                      {t("newsletter.form.privacy_link")}
-                    </a>
+                      {t("nav.terms_gu")}
+                    </Link>
                   </p>
 
                   <button

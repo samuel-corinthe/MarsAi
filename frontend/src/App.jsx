@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import CookieModal from "./components/CookieModal";
-import { normalizeLanguage } from "./utils/localizedRoutes";
 
 const Newsletter = lazy(() => import("./pages/Newsletter"));
 const About = lazy(() => import("./pages/About"));
@@ -21,22 +20,10 @@ export default function App() {
   const location = useLocation();
   const { t, i18n } = useTranslation();
   const hideChrome = location.pathname.startsWith("/dashboard");
-  const routeLanguage = location.pathname === "/ar" || location.pathname.startsWith("/ar/")
-    ? "ar"
-    : location.pathname === "/en" || location.pathname.startsWith("/en/")
-      ? "en"
-      : "fr";
-  const currentLanguage = normalizeLanguage(i18n.language);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname, location.search]);
-
-  useEffect(() => {
-    if (currentLanguage !== routeLanguage) {
-      i18n.changeLanguage(routeLanguage);
-    }
-  }, [currentLanguage, i18n, routeLanguage]);
 
   useEffect(() => {
     if (window.gtag) {

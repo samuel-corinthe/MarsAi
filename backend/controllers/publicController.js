@@ -52,6 +52,7 @@ export async function sendEmail(req, res) {
 export async function subscribeNewsletter(req, res) {
   const { firstName, email, preferences, lang } = req.body || {};
   const safePreferences = Array.isArray(preferences) ? preferences : [];
+  const normalizedLang = String(lang || "fr").split("-")[0];
 
   if (!firstName || !email) {
     return res

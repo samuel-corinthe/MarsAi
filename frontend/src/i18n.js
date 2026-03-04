@@ -413,7 +413,6 @@ i18n.use(initReactI18next).init({
             submit: "S'inscrire à la newsletter",
             loading: "Inscription en cours...",
             rgpd: "En vous inscrivant, vous acceptez de recevoir des emails de marsAI Festival. Vous pouvez vous désabonner à tout moment.",
-            privacy_link: "Politique de confidentialité",
             success_title: "Inscription confirmée !",
             success_msg:
               "Bienvenue dans la communauté marsAI ! Vous recevrez bientôt votre première newsletter.",
