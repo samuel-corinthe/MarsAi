@@ -78,6 +78,7 @@ export default function Dashboard() {
       : (key, defaultValue) => defaultValue ?? key;
   const homePath = getLocalizedPath("home", i18n.language);
   const filmsBasePath = getLocalizedPath("films", i18n.language);
+  const dashboardStatsPath = "/dashboard/stats";
   const [adminData, setAdminData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -928,6 +929,10 @@ export default function Dashboard() {
               <span className="w-2 h-2 rounded-full bg-emerald-300" />
               Home
             </Link>
+            <Link to={dashboardStatsPath} className="flex items-center gap-2 px-4 py-2">
+              <span className="w-2 h-2 rounded-full bg-cyan-300" />
+              Stats festival
+            </Link>
             {filteredNavItems.map((item) => (
               <button
                 key={item.href}
@@ -943,6 +948,12 @@ export default function Dashboard() {
         <header id="admin-top" className="glass p-6 flex flex-col gap-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
               <h1 className="dash-title text-white">Bienvenue, {profilePreview.name}</h1>
+            <Link
+              to={dashboardStatsPath}
+              className="btn-ghost rounded-full px-4 py-2 border border-white/10"
+            >
+              Voir les stats
+            </Link>
             <button
               className="btn-ghost rounded-full px-4 py-2 border border-white/10 disabled:opacity-60"
               onClick={handleLogout}
@@ -1478,6 +1489,19 @@ export default function Dashboard() {
               )}
             </div>
             )}
+
+            <div className="glass p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-black uppercase tracking-tight">Stats festival</h3>
+                <span className="text-xs text-slate-100/80">Lecture seule</span>
+              </div>
+              <p className="text-sm text-slate-200">
+                Consultez la synthese du festival sans quitter votre session admin.
+              </p>
+              <Link className="btn-primary w-full rounded-lg text-center" to={dashboardStatsPath}>
+                Voir les statistiques
+              </Link>
+            </div>
 
             <div className="glass p-5 space-y-3">
               <div className="flex items-center justify-between">

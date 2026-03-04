@@ -64,6 +64,11 @@ const ROUTE_PATHS = {
     en: "/newsletter",
     ar: "/ar/newsletter",
   },
+  stats: {
+    fr: "/statistiques",
+    en: "/stats",
+    ar: "/ar/stats",
+  },
   privacy: {
     fr: "/privacy",
     en: "/privacy",
@@ -101,6 +106,8 @@ const PATH_ROUTE_KEYS = {
   "/legal-notice": "legal",
   "/contact": "contact",
   "/newsletter": "newsletter",
+  "/statistiques": "stats",
+  "/stats": "stats",
   "/privacy": "privacy",
 };
 

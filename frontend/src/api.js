@@ -390,6 +390,19 @@ export async function getRecentAgendaEvents({ lang = "fr", limit = 5 } = {}) {
   });
 }
 
+export async function getPublicStats({ signal } = {}) {
+  const { payload } = await fetchWith404Fallback(
+    ["/api/stats", "/MarsAi/api/stats"],
+    {
+      cache: "no-store",
+      signal,
+    },
+    "Stats API",
+  );
+
+  return payload?.stats || null;
+}
+
 export async function getMoviesPaginated({
   page,
   pageSize,
