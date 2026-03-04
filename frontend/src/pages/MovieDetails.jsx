@@ -778,18 +778,20 @@ const MovieDetails = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={t(ariaKey)}
-                      className={`inline-flex items-center rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition ${theme.shareChip}`}
+                      title={label}
+                      className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${theme.shareChip}`}
                     >
-                      {label}
+                      <SocialIcon network={key} className="h-5 w-5" />
                     </a>
                   ))}
                   <button
                     type="button"
                     onClick={handleNativeShare}
                     aria-label={t("movie_details.share_email_aria")}
-                    className={`inline-flex items-center rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition ${theme.shareChip}`}
+                    title={t("movie_details.share_email_label")}
+                    className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${theme.shareChip}`}
                   >
-                    {t("movie_details.share_email_label")}
+                    <SocialIcon network="share" className="h-5 w-5" />
                   </button>
                 </div>
               </div>
