@@ -14,7 +14,6 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const Gallery = lazy(() => import("./pages/Gallery"));
 const MovieDetails = lazy(() => import("./pages/MovieDetails"));
 const DashboardEntry = lazy(() => import("./pages/DashboardEntry"));
-const StatsPage = lazy(() => import("./pages/StatsPage"));
 const TestCountdown = lazy(() => import("./pages/TestCountdown"));
 
 export default function App() {
@@ -76,10 +75,10 @@ export default function App() {
             <Route path="/dashboard" element={<DashboardEntry />} />
             <Route path="/dashboard/stats" element={<DashboardEntry />} />
             <Route path="/dashboard/statistiques" element={<DashboardEntry />} />
-            <Route path="/statistiques" element={<StatsPage />} />
-            <Route path="/stats" element={<StatsPage />} />
-            <Route path="/en/stats" element={<Navigate to="/stats" replace />} />
-            <Route path="/ar/stats" element={<StatsPage />} />
+            <Route path="/statistiques" element={<Navigate to="/dashboard/stats" replace />} />
+            <Route path="/stats" element={<Navigate to="/dashboard/stats" replace />} />
+            <Route path="/en/stats" element={<Navigate to="/dashboard/stats" replace />} />
+            <Route path="/ar/stats" element={<Navigate to="/dashboard/stats" replace />} />
             <Route path="/testcountdown" element={<TestCountdown />} />
             <Route
               path="/en/call-for-project"

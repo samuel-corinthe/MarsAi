@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
 import PageLoader from "../components/ui/PageLoader";
 import { getPublicStats } from "../api";
-import { getLocalizedPath, normalizeLanguage } from "../utils/localizedRoutes";
+import { normalizeLanguage } from "../utils/localizedRoutes";
 
 const COPY = {
   fr: {
@@ -470,16 +470,14 @@ export default function StatsPage({ dashboardMode = false }) {
     };
   }, [content.errorBody]);
 
-  const homePath = getLocalizedPath("home", language);
-  const publicStatsPath = getLocalizedPath("stats", language);
-  const backPath = dashboardMode ? "/dashboard" : homePath;
-  const backLabel = dashboardMode ? content.backDashboard : content.backHome;
-  const pageTitle = dashboardMode ? content.seoTitleDashboard : content.seoTitlePublic;
+  const backPath = "/dashboard";
+  const backLabel = content.backDashboard;
+  const pageTitle = content.seoTitleDashboard;
 
   if (loading) {
     return (
       <>
-        <Seo title={`${pageTitle} - MarsAI`} description={content.seoDescription} noIndex={dashboardMode} />
+        <Seo title={`${pageTitle} - MarsAI`} description={content.seoDescription} noIndex />
         <div className={dashboardMode ? "dash-page" : "site-page"} dir={dir}>
           <PageLoader message={content.loading} />
         </div>
@@ -494,7 +492,7 @@ export default function StatsPage({ dashboardMode = false }) {
 
     return (
       <>
-        <Seo title={`${pageTitle} - MarsAI`} description={content.seoDescription} noIndex={dashboardMode} />
+        <Seo title={`${pageTitle} - MarsAI`} description={content.seoDescription} noIndex />
         <main className={wrapperClass} dir={dir}>
           <div className={containerClass}>
             <div className={panelClass}>
@@ -509,11 +507,6 @@ export default function StatsPage({ dashboardMode = false }) {
                 >
                   {backLabel}
                 </Link>
-                {!dashboardMode ? (
-                  <Link className="site-btn-primary" to="/dashboard">
-                    {content.openDashboard}
-                  </Link>
-                ) : null}
               </div>
             </div>
           </div>
@@ -546,7 +539,7 @@ export default function StatsPage({ dashboardMode = false }) {
 
   return (
     <>
-      <Seo title={`${pageTitle} - MarsAI`} description={content.seoDescription} noIndex={dashboardMode} />
+      <Seo title={`${pageTitle} - MarsAI`} description={content.seoDescription} noIndex />
 
       {countriesOpen && countries.length > 0 ? (
         <CountriesModal
@@ -582,15 +575,6 @@ export default function StatsPage({ dashboardMode = false }) {
                 >
                   {backLabel}
                 </Link>
-                {dashboardMode ? (
-                  <Link className="btn-primary rounded-full px-4 py-2" to={publicStatsPath}>
-                    {content.openPublic}
-                  </Link>
-                ) : (
-                  <Link className="site-btn-primary" to="/dashboard">
-                    {content.openDashboard}
-                  </Link>
-                )}
               </div>
             </div>
           </header>
