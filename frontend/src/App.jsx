@@ -20,7 +20,6 @@ export default function App() {
   const location = useLocation();
   const { t, i18n } = useTranslation();
   const hideChrome = location.pathname.startsWith("/dashboard");
-  const { i18n } = useTranslation();
 
   useEffect(() => {
     document.documentElement.lang = i18n.language;
