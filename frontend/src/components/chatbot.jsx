@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useTheme } from "../context/ThemeContext";
 
 const UI_COPY = {
   fr: {
@@ -33,19 +34,19 @@ const UI_COPY = {
     reset: "Reset",
   },
   ar: {
-    title: "MarsAI FAQ",
-    subtitle: "Quick help",
-    thinking: "Thinking...",
-    genericError: "Temporary technical issue. Please try again in a moment.",
-    close: "Close faq",
-    open: "Open faq",
-    welcomeTitle: "Frequently asked questions",
-    welcomeText: "Choose a topic, then a question.",
-    suggestionsTitle: "Related questions",
-    categoriesTitle: "Topics",
-    questionsTitle: "Suggested questions",
-    noQuestionLeft: "All questions in this topic have already been viewed.",
-    reset: "Reset",
+    title: "الأسئلة الشائعة MarsAI",
+    subtitle: "مساعدة سريعة",
+    thinking: "جارٍ التفكير...",
+    genericError: "مشكلة تقنية مؤقتة. حاول مرة أخرى بعد لحظات.",
+    close: "إغلاق الأسئلة الشائعة",
+    open: "فتح الأسئلة الشائعة",
+    welcomeTitle: "الأسئلة المتكررة",
+    welcomeText: "اختر موضوعا ثم سؤالا.",
+    suggestionsTitle: "أسئلة مرتبطة",
+    categoriesTitle: "المواضيع",
+    questionsTitle: "الأسئلة المقترحة",
+    noQuestionLeft: "تمت مراجعة كل أسئلة هذا الموضوع.",
+    reset: "إعادة التهيئة",
   },
 };
 
@@ -129,38 +130,38 @@ const FORCED_FLOWS = {
   ar: [
     {
       id: "practical",
-      label: "Practical",
+      label: "معلومات عملية",
       questions: [
-        "What are the session hours?",
-        "Where does the event take place?",
-        "What is the dress code?",
+        "ما هي مواعيد الجلسات؟",
+        "أين يقام الحدث؟",
+        "ما هو اللباس المطلوب؟",
       ],
     },
     {
       id: "access",
-      label: "Access",
+      label: "الدخول",
       questions: [
-        "How can I get an invitation?",
-        "Do I need to present an ID?",
-        "Can I come with a guest?",
+        "كيف يمكنني الحصول على دعوة؟",
+        "هل يجب تقديم بطاقة هوية؟",
+        "هل يمكنني الحضور مع مرافق؟",
       ],
     },
     {
       id: "inclusion",
-      label: "Audience",
+      label: "الجمهور",
       questions: [
-        "Who is the target audience?",
-        "Are children allowed?",
-        "Is accessibility for people with reduced mobility provided?",
+        "من هو الجمهور المستهدف؟",
+        "هل يسمح للأطفال بالدخول؟",
+        "هل تتوفر إمكانية الوصول لذوي الحركة المحدودة؟",
       ],
     },
     {
       id: "projects",
-      label: "Films",
+      label: "الأفلام",
       questions: [
-        "Can I submit an AI-generated film?",
-        "How can I become a partner or sponsor?",
-        "Are there technical workshops?",
+        "هل يمكنني إرسال فيلم مولد بالذكاء الاصطناعي؟",
+        "كيف أصبح شريكا أو راعيا؟",
+        "هل توجد ورش تقنية؟",
       ],
     },
   ],
@@ -187,9 +188,52 @@ function normalizeQuestionKey(value = "") {
 
 export default function FaqChatbot() {
   const { i18n } = useTranslation();
+  const { isLight } = useTheme();
   const language = normalizeUiLanguage(i18n.language);
   const ui = UI_COPY[language];
   const isRtl = language === "ar";
+  const theme = useMemo(
+    () => (isLight
+      ? {
+        panel: "border-slate-200/90 bg-white/95 shadow-[0_18px_45px_rgba(15,23,42,0.18)]",
+        header: "border-slate-200/90 bg-gradient-to-r from-white to-slate-50 text-slate-900",
+        subtitle: "text-cyan-700/90",
+        closeButton: "text-slate-600 hover:bg-slate-100",
+        body: "bg-gradient-to-b from-slate-50 to-white text-slate-900",
+        metaLabel: "text-cyan-700/90",
+        categoryActive: "border-cyan-400 bg-cyan-100 text-cyan-900",
+        categoryIdle: "border-slate-300 bg-white text-slate-700 hover:border-cyan-400/70 hover:text-cyan-800",
+        chip: "border-cyan-400/70 text-cyan-900 bg-cyan-100/85 hover:bg-cyan-100",
+        noQuestion: "text-slate-500",
+        userBubble: "bg-cyan-600 text-white rounded-tr-none",
+        botBubble: "bg-white text-slate-800 border border-slate-200 rounded-tl-none",
+        suggestionLabel: "text-slate-500",
+        footer: "border-slate-200/90 bg-white",
+        reset: "text-slate-500 hover:text-cyan-700",
+        toggleOpen: "bg-white text-cyan-700 border border-slate-200 shadow-[0_12px_24px_rgba(15,23,42,0.18)]",
+        toggleClosed: "bg-cyan-500 text-slate-950 hover:scale-110 active:scale-95 shadow-[0_14px_30px_rgba(6,182,212,0.35)]",
+      }
+      : {
+        panel: "border-slate-700 bg-[#0b1220]/95 shadow-2xl",
+        header: "border-slate-700/80 bg-gradient-to-r from-slate-900/90 to-slate-800/90 text-slate-100",
+        subtitle: "text-cyan-300/90",
+        closeButton: "text-slate-200 hover:bg-slate-700",
+        body: "bg-[#0f172a] text-slate-100",
+        metaLabel: "text-cyan-300/90",
+        categoryActive: "border-cyan-400 bg-cyan-400/20 text-cyan-200",
+        categoryIdle: "border-slate-600 bg-slate-800/70 text-slate-200 hover:border-cyan-400/70 hover:text-cyan-200",
+        chip: "border-cyan-500/40 text-cyan-100 bg-cyan-500/10 hover:bg-cyan-500/20",
+        noQuestion: "text-slate-400",
+        userBubble: "bg-cyan-500 text-slate-950 rounded-tr-none",
+        botBubble: "bg-slate-800 text-slate-100 border border-slate-700 rounded-tl-none",
+        suggestionLabel: "text-slate-400",
+        footer: "border-slate-700/80 bg-[#0b1220]",
+        reset: "text-slate-400 hover:text-cyan-300",
+        toggleOpen: "bg-slate-900 text-cyan-300 border border-slate-700",
+        toggleClosed: "bg-cyan-500 text-slate-950 hover:scale-110 active:scale-95",
+      }),
+    [isLight],
+  );
 
   const [messages, setMessages] = useState([]);
   const [askedQuestions, setAskedQuestions] = useState([]);
@@ -306,7 +350,7 @@ export default function FaqChatbot() {
 
   const renderPicker = () => (
     <div className="space-y-2">
-      <p className="text-[10px] text-cyan-300/90 uppercase tracking-[0.2em]">{ui.categoriesTitle}</p>
+      <p className={`text-[10px] uppercase tracking-[0.2em] ${theme.metaLabel}`}>{ui.categoriesTitle}</p>
       <div className="flex flex-wrap gap-2">
         {flows.map((flow) => (
           <button
@@ -316,17 +360,17 @@ export default function FaqChatbot() {
             onClick={() => setActiveCategoryId(flow.id)}
             className={`text-xs rounded-full px-3 py-1 border transition disabled:opacity-50 ${
               flow.id === activeCategory?.id
-                ? "border-cyan-400 bg-cyan-400/20 text-cyan-200"
-                : "border-slate-600 bg-slate-800/70 text-slate-200 hover:border-cyan-400/70 hover:text-cyan-200"
+                ? theme.categoryActive
+                : theme.categoryIdle
             }`}
           >
             {flow.label}
           </button>
         ))}
       </div>
-      <p className="text-[10px] text-cyan-300/90 uppercase tracking-[0.2em]">{ui.questionsTitle}</p>
+      <p className={`text-[10px] uppercase tracking-[0.2em] ${theme.metaLabel}`}>{ui.questionsTitle}</p>
       {availableCategoryQuestions.length === 0 ? (
-        <p className="text-xs text-slate-400">{ui.noQuestionLeft}</p>
+        <p className={`text-xs ${theme.noQuestion}`}>{ui.noQuestionLeft}</p>
       ) : (
         <div className="flex flex-wrap gap-2">
           {availableCategoryQuestions.map((question) => (
@@ -335,7 +379,7 @@ export default function FaqChatbot() {
               type="button"
               disabled={isLoading}
               onClick={() => askQuestion(question)}
-              className="text-xs border border-cyan-500/40 text-cyan-100 bg-cyan-500/10 rounded-full px-3 py-1 hover:bg-cyan-500/20 transition disabled:opacity-50"
+              className={`text-xs border rounded-full px-3 py-1 transition disabled:opacity-50 ${theme.chip}`}
             >
               {question}
             </button>
@@ -346,9 +390,11 @@ export default function FaqChatbot() {
   );
 
   return (
-    <div className="fixed bottom-6 right-6 z-[70] font-sans">
+    <div className={`fixed bottom-6 z-[70] font-sans ${isRtl ? "left-6" : "right-6"}`}>
       <div
-        className={`rounded-2xl shadow-2xl border border-slate-700 bg-[#0b1220]/95 backdrop-blur-lg transition-all duration-300 origin-bottom-right ${
+        className={`rounded-2xl border backdrop-blur-lg transition-all duration-300 ${
+          isRtl ? "origin-bottom-left" : "origin-bottom-right"
+        } ${theme.panel} ${
           isOpen
             ? "w-80 h-[500px] md:w-96 opacity-100 scale-100"
             : "w-0 h-0 opacity-0 scale-0 invisible"
@@ -357,28 +403,28 @@ export default function FaqChatbot() {
       >
         {isOpen && (
           <div className="flex flex-col h-full overflow-hidden">
-            <div className="p-4 border-b border-slate-700/80 bg-gradient-to-r from-slate-900/90 to-slate-800/90 text-slate-100 flex justify-between items-center">
+            <div className={`p-4 border-b flex justify-between items-center ${theme.header}`}>
               <div>
                 <h3 className="font-bold text-lg tracking-tight">{ui.title}</h3>
-                <p className="text-[10px] text-cyan-300/90 uppercase tracking-[0.2em]">{ui.subtitle}</p>
+                <p className={`text-[10px] uppercase tracking-[0.2em] ${theme.subtitle}`}>{ui.subtitle}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
                 aria-label={ui.close}
-                className="hover:bg-slate-700 rounded-full w-8 h-8 flex items-center justify-center transition"
+                className={`rounded-full w-8 h-8 flex items-center justify-center transition ${theme.closeButton}`}
               >
                 <span aria-hidden="true">x</span>
               </button>
             </div>
 
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#0f172a] text-slate-100">
+            <div ref={scrollRef} className={`flex-1 overflow-y-auto p-4 space-y-4 ${theme.body}`}>
               {messages.length === 0 ? (
                 <div className="text-center py-4 space-y-3">
-                  <div className="text-3xl text-cyan-300">?</div>
-                  <p className="font-semibold text-slate-100">{ui.welcomeTitle}</p>
-                  <p className="text-xs text-slate-300">{ui.welcomeText}</p>
-                  <div className="text-left mt-2">{renderPicker()}</div>
+                  <div className={`text-3xl ${theme.metaLabel}`}>?</div>
+                  <p className="font-semibold">{ui.welcomeTitle}</p>
+                  <p className={`text-xs ${theme.noQuestion}`}>{ui.welcomeText}</p>
+                  <div className={`mt-2 ${isRtl ? "text-right" : "text-left"}`}>{renderPicker()}</div>
                 </div>
               ) : (
                 messages.map((message) => (
@@ -389,8 +435,8 @@ export default function FaqChatbot() {
                       <div
                         className={`px-4 py-2 rounded-2xl text-sm max-w-[90%] shadow-sm whitespace-pre-line ${
                           message.role === "user"
-                            ? "bg-cyan-500 text-slate-950 rounded-tr-none"
-                            : "bg-slate-800 text-slate-100 border border-slate-700 rounded-tl-none"
+                            ? theme.userBubble
+                            : theme.botBubble
                         }`}
                       >
                         {message.text}
@@ -401,7 +447,7 @@ export default function FaqChatbot() {
                       && Array.isArray(message.suggestions)
                       && message.suggestions.length > 0 && (
                         <div className="pl-1 pr-1">
-                          <p className="text-[11px] text-slate-400 mb-1">{ui.suggestionsTitle}</p>
+                          <p className={`text-[11px] mb-1 ${theme.suggestionLabel}`}>{ui.suggestionsTitle}</p>
                           <div className="flex flex-wrap gap-2">
                             {message.suggestions.map((suggestion) => (
                               <button
@@ -409,7 +455,7 @@ export default function FaqChatbot() {
                                 type="button"
                                 disabled={isLoading}
                                 onClick={() => askQuestion(suggestion)}
-                                className="text-xs border border-cyan-500/40 text-cyan-100 bg-cyan-500/10 rounded-full px-3 py-1 hover:bg-cyan-500/20 transition disabled:opacity-50"
+                                className={`text-xs border rounded-full px-3 py-1 transition disabled:opacity-50 ${theme.chip}`}
                               >
                                 {suggestion}
                               </button>
@@ -422,13 +468,13 @@ export default function FaqChatbot() {
               )}
             </div>
 
-            <div className="p-3 border-t border-slate-700/80 bg-[#0b1220] space-y-2">
+            <div className={`p-3 border-t space-y-2 ${theme.footer}`}>
               {messages.length > 0 && renderPicker()}
               {messages.length > 0 && (
                 <button
                   type="button"
                   onClick={resetConversation}
-                  className="w-full text-[10px] text-slate-400 hover:text-cyan-300 uppercase tracking-[0.2em] transition"
+                  className={`w-full text-[10px] uppercase tracking-[0.2em] transition ${theme.reset}`}
                 >
                   {ui.reset}
                 </button>
@@ -442,10 +488,10 @@ export default function FaqChatbot() {
         type="button"
         onClick={() => setIsOpen((value) => !value)}
         aria-label={isOpen ? ui.close : ui.open}
-        className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl ${
+        className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
           isOpen
-            ? "bg-slate-900 text-cyan-300 rotate-90 border border-slate-700"
-            : "bg-cyan-500 text-slate-950 hover:scale-110 active:scale-95"
+            ? `${theme.toggleOpen} rotate-90`
+            : theme.toggleClosed
         }`}
       >
         {isOpen ? (
