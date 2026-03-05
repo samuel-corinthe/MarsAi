@@ -15,6 +15,7 @@ const Gallery = lazy(() => import("./pages/Gallery"));
 const MovieDetails = lazy(() => import("./pages/MovieDetails"));
 const DashboardEntry = lazy(() => import("./pages/DashboardEntry"));
 const TestCountdown = lazy(() => import("./pages/TestCountdown"));
+import FaqChatbot from "./components/chatbot";
 
 export default function App() {
   const location = useLocation();
@@ -123,6 +124,7 @@ export default function App() {
       </div>
       {!hideChrome && <CookieModal />}
       {!hideChrome && <Footer />}
+      {!hideChrome && <FaqChatbot />}
     </div>
   );
 }

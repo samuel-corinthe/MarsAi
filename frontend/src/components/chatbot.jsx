@@ -1,0 +1,469 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+const UI_COPY = {
+  fr: {
+    title: "FAQ MarsAI",
+    subtitle: "Assistance rapide",
+    thinking: "Je reflechis...",
+    genericError: "Probleme technique temporaire. Reessaie dans un instant.",
+    close: "Fermer la faq",
+    open: "Ouvrir la faq",
+    welcomeTitle: "Questions frequentes",
+    welcomeText: "Choisis un theme puis une question.",
+    suggestionsTitle: "Questions proches",
+    categoriesTitle: "Themes",
+    questionsTitle: "Questions proposees",
+    noQuestionLeft: "Toutes les questions de ce theme ont ete consultees.",
+    reset: "Reinitialiser",
+  },
+  en: {
+    title: "MarsAI FAQ",
+    subtitle: "Quick help",
+    thinking: "Thinking...",
+    genericError: "Temporary technical issue. Please try again in a moment.",
+    close: "Close faq",
+    open: "Open faq",
+    welcomeTitle: "Frequently asked questions",
+    welcomeText: "Choose a topic, then a question.",
+    suggestionsTitle: "Related questions",
+    categoriesTitle: "Topics",
+    questionsTitle: "Suggested questions",
+    noQuestionLeft: "All questions in this topic have already been viewed.",
+    reset: "Reset",
+  },
+  ar: {
+    title: "MarsAI FAQ",
+    subtitle: "Quick help",
+    thinking: "Thinking...",
+    genericError: "Temporary technical issue. Please try again in a moment.",
+    close: "Close faq",
+    open: "Open faq",
+    welcomeTitle: "Frequently asked questions",
+    welcomeText: "Choose a topic, then a question.",
+    suggestionsTitle: "Related questions",
+    categoriesTitle: "Topics",
+    questionsTitle: "Suggested questions",
+    noQuestionLeft: "All questions in this topic have already been viewed.",
+    reset: "Reset",
+  },
+};
+
+const FORCED_FLOWS = {
+  fr: [
+    {
+      id: "practical",
+      label: "Infos pratiques",
+      questions: [
+        "Quels sont les horaires des sessions ?",
+        "Ou se deroule l'evenement ?",
+        "Quel est le dress code ?",
+      ],
+    },
+    {
+      id: "access",
+      label: "Acces",
+      questions: [
+        "Comment obtenir une invitation ?",
+        "Faut-il presenter une piece d'identite ?",
+        "Puis-je venir accompagne ?",
+      ],
+    },
+    {
+      id: "inclusion",
+      label: "Public",
+      questions: [
+        "Quel est le public vise ?",
+        "Les enfants sont-ils admis ?",
+        "L'accessibilite PMR est-elle assuree ?",
+      ],
+    },
+    {
+      id: "projects",
+      label: "Films",
+      questions: [
+        "Puis-je soumettre un film genere par IA ?",
+        "Comment devenir partenaire ou sponsor ?",
+        "Y a-t-il des ateliers techniques ?",
+      ],
+    },
+  ],
+  en: [
+    {
+      id: "practical",
+      label: "Practical",
+      questions: [
+        "What are the session hours?",
+        "Where does the event take place?",
+        "What is the dress code?",
+      ],
+    },
+    {
+      id: "access",
+      label: "Access",
+      questions: [
+        "How can I get an invitation?",
+        "Do I need to present an ID?",
+        "Can I come with a guest?",
+      ],
+    },
+    {
+      id: "inclusion",
+      label: "Audience",
+      questions: [
+        "Who is the target audience?",
+        "Are children allowed?",
+        "Is accessibility for people with reduced mobility provided?",
+      ],
+    },
+    {
+      id: "projects",
+      label: "Films",
+      questions: [
+        "Can I submit an AI-generated film?",
+        "How can I become a partner or sponsor?",
+        "Are there technical workshops?",
+      ],
+    },
+  ],
+  ar: [
+    {
+      id: "practical",
+      label: "Practical",
+      questions: [
+        "What are the session hours?",
+        "Where does the event take place?",
+        "What is the dress code?",
+      ],
+    },
+    {
+      id: "access",
+      label: "Access",
+      questions: [
+        "How can I get an invitation?",
+        "Do I need to present an ID?",
+        "Can I come with a guest?",
+      ],
+    },
+    {
+      id: "inclusion",
+      label: "Audience",
+      questions: [
+        "Who is the target audience?",
+        "Are children allowed?",
+        "Is accessibility for people with reduced mobility provided?",
+      ],
+    },
+    {
+      id: "projects",
+      label: "Films",
+      questions: [
+        "Can I submit an AI-generated film?",
+        "How can I become a partner or sponsor?",
+        "Are there technical workshops?",
+      ],
+    },
+  ],
+};
+
+function normalizeUiLanguage(rawLanguage = "fr") {
+  const language = String(rawLanguage || "fr").toLowerCase().split("-")[0];
+  if (language === "en" || language === "ar") return language;
+  return "fr";
+}
+
+function getDefaultCategoryId(flows) {
+  return Array.isArray(flows) && flows.length > 0 ? flows[0].id : "";
+}
+
+function normalizeQuestionKey(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export default function FaqChatbot() {
+  const { i18n } = useTranslation();
+  const language = normalizeUiLanguage(i18n.language);
+  const ui = UI_COPY[language];
+  const isRtl = language === "ar";
+
+  const [messages, setMessages] = useState([]);
+  const [askedQuestions, setAskedQuestions] = useState([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef(null);
+
+  const askedQuestionSet = useMemo(
+    () => new Set(askedQuestions.map((item) => normalizeQuestionKey(item))),
+    [askedQuestions],
+  );
+
+  const flows = useMemo(() => FORCED_FLOWS[language] || FORCED_FLOWS.fr, [language]);
+  const [activeCategoryId, setActiveCategoryId] = useState(getDefaultCategoryId(flows));
+
+  const activeCategory = useMemo(() => {
+    if (!Array.isArray(flows) || flows.length === 0) return null;
+    return flows.find((item) => item.id === activeCategoryId) || flows[0];
+  }, [flows, activeCategoryId]);
+
+  const availableCategoryQuestions = useMemo(() => {
+    const questions = activeCategory?.questions || [];
+    return questions.filter(
+      (question) => !askedQuestionSet.has(normalizeQuestionKey(question)),
+    );
+  }, [activeCategory, askedQuestionSet]);
+
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages, isLoading, activeCategoryId]);
+
+  useEffect(() => {
+    const fallback = getDefaultCategoryId(flows);
+    if (!activeCategoryId || !flows.some((item) => item.id === activeCategoryId)) {
+      setActiveCategoryId(fallback);
+    }
+  }, [flows, activeCategoryId]);
+
+  const markQuestionAsAsked = (question) => {
+    const normalized = normalizeQuestionKey(question);
+    if (!normalized) return;
+    setAskedQuestions((prev) => {
+      if (prev.some((item) => normalizeQuestionKey(item) === normalized)) {
+        return prev;
+      }
+      return [...prev, question];
+    });
+  };
+
+  const askQuestion = async (question) => {
+    const candidate = String(question || "").trim();
+    if (!candidate || isLoading) return;
+
+    const currentAsked = new Set(askedQuestionSet);
+    currentAsked.add(normalizeQuestionKey(candidate));
+    markQuestionAsAsked(candidate);
+
+    const typingId = `typing_${Date.now()}`;
+    setIsLoading(true);
+    setMessages((prev) => [
+      ...prev,
+      { id: `user_${Date.now()}`, role: "user", text: candidate },
+      { id: typingId, role: "bot", text: ui.thinking, suggestions: [], loading: true },
+    ]);
+
+    try {
+      const response = await fetch("/api/chatbot/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: candidate, language }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      const reply = String(data?.reply || "").trim() || ui.genericError;
+      const suggestions = Array.isArray(data?.suggestions)
+        ? data.suggestions
+            .filter((item) => typeof item === "string" && item.trim())
+            .filter(
+              (item) => !currentAsked.has(normalizeQuestionKey(item)),
+            )
+        : [];
+
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === typingId
+            ? { ...message, text: reply, loading: false, suggestions }
+            : message,
+        ),
+      );
+    } catch (error) {
+      console.error("[FAQ] UI error:", error);
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === typingId
+            ? { ...message, text: ui.genericError, loading: false, suggestions: [] }
+            : message,
+        ),
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetConversation = () => {
+    setMessages([]);
+    setAskedQuestions([]);
+    setActiveCategoryId(getDefaultCategoryId(flows));
+  };
+
+  const renderPicker = () => (
+    <div className="space-y-2">
+      <p className="text-[10px] text-cyan-300/90 uppercase tracking-[0.2em]">{ui.categoriesTitle}</p>
+      <div className="flex flex-wrap gap-2">
+        {flows.map((flow) => (
+          <button
+            key={flow.id}
+            type="button"
+            disabled={isLoading}
+            onClick={() => setActiveCategoryId(flow.id)}
+            className={`text-xs rounded-full px-3 py-1 border transition disabled:opacity-50 ${
+              flow.id === activeCategory?.id
+                ? "border-cyan-400 bg-cyan-400/20 text-cyan-200"
+                : "border-slate-600 bg-slate-800/70 text-slate-200 hover:border-cyan-400/70 hover:text-cyan-200"
+            }`}
+          >
+            {flow.label}
+          </button>
+        ))}
+      </div>
+      <p className="text-[10px] text-cyan-300/90 uppercase tracking-[0.2em]">{ui.questionsTitle}</p>
+      {availableCategoryQuestions.length === 0 ? (
+        <p className="text-xs text-slate-400">{ui.noQuestionLeft}</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {availableCategoryQuestions.map((question) => (
+            <button
+              key={`${activeCategory?.id || "default"}_${question}`}
+              type="button"
+              disabled={isLoading}
+              onClick={() => askQuestion(question)}
+              className="text-xs border border-cyan-500/40 text-cyan-100 bg-cyan-500/10 rounded-full px-3 py-1 hover:bg-cyan-500/20 transition disabled:opacity-50"
+            >
+              {question}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="fixed bottom-6 right-6 z-[70] font-sans">
+      <div
+        className={`rounded-2xl shadow-2xl border border-slate-700 bg-[#0b1220]/95 backdrop-blur-lg transition-all duration-300 origin-bottom-right ${
+          isOpen
+            ? "w-80 h-[500px] md:w-96 opacity-100 scale-100"
+            : "w-0 h-0 opacity-0 scale-0 invisible"
+        }`}
+        dir={isRtl ? "rtl" : "ltr"}
+      >
+        {isOpen && (
+          <div className="flex flex-col h-full overflow-hidden">
+            <div className="p-4 border-b border-slate-700/80 bg-gradient-to-r from-slate-900/90 to-slate-800/90 text-slate-100 flex justify-between items-center">
+              <div>
+                <h3 className="font-bold text-lg tracking-tight">{ui.title}</h3>
+                <p className="text-[10px] text-cyan-300/90 uppercase tracking-[0.2em]">{ui.subtitle}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                aria-label={ui.close}
+                className="hover:bg-slate-700 rounded-full w-8 h-8 flex items-center justify-center transition"
+              >
+                <span aria-hidden="true">x</span>
+              </button>
+            </div>
+
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#0f172a] text-slate-100">
+              {messages.length === 0 ? (
+                <div className="text-center py-4 space-y-3">
+                  <div className="text-3xl text-cyan-300">?</div>
+                  <p className="font-semibold text-slate-100">{ui.welcomeTitle}</p>
+                  <p className="text-xs text-slate-300">{ui.welcomeText}</p>
+                  <div className="text-left mt-2">{renderPicker()}</div>
+                </div>
+              ) : (
+                messages.map((message) => (
+                  <div key={message.id} className="flex flex-col space-y-1">
+                    <div
+                      className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`px-4 py-2 rounded-2xl text-sm max-w-[90%] shadow-sm whitespace-pre-line ${
+                          message.role === "user"
+                            ? "bg-cyan-500 text-slate-950 rounded-tr-none"
+                            : "bg-slate-800 text-slate-100 border border-slate-700 rounded-tl-none"
+                        }`}
+                      >
+                        {message.text}
+                      </div>
+                    </div>
+
+                    {message.role === "bot"
+                      && Array.isArray(message.suggestions)
+                      && message.suggestions.length > 0 && (
+                        <div className="pl-1 pr-1">
+                          <p className="text-[11px] text-slate-400 mb-1">{ui.suggestionsTitle}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {message.suggestions.map((suggestion) => (
+                              <button
+                                key={`${message.id}_${suggestion}`}
+                                type="button"
+                                disabled={isLoading}
+                                onClick={() => askQuestion(suggestion)}
+                                className="text-xs border border-cyan-500/40 text-cyan-100 bg-cyan-500/10 rounded-full px-3 py-1 hover:bg-cyan-500/20 transition disabled:opacity-50"
+                              >
+                                {suggestion}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="p-3 border-t border-slate-700/80 bg-[#0b1220] space-y-2">
+              {messages.length > 0 && renderPicker()}
+              {messages.length > 0 && (
+                <button
+                  type="button"
+                  onClick={resetConversation}
+                  className="w-full text-[10px] text-slate-400 hover:text-cyan-300 uppercase tracking-[0.2em] transition"
+                >
+                  {ui.reset}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setIsOpen((value) => !value)}
+        aria-label={isOpen ? ui.close : ui.open}
+        className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 shadow-xl ${
+          isOpen
+            ? "bg-slate-900 text-cyan-300 rotate-90 border border-slate-700"
+            : "bg-cyan-500 text-slate-950 hover:scale-110 active:scale-95"
+        }`}
+      >
+        {isOpen ? (
+          <span className="text-2xl" aria-hidden="true">
+            x
+          </span>
+        ) : (
+          <div className="relative">
+            <span className="text-3xl" aria-hidden="true">
+              ?
+            </span>
+            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-500 opacity-70" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-pink-500" />
+            </span>
+          </div>
+        )}
+      </button>
+    </div>
+  );
+}
