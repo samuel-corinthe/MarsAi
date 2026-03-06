@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
 import { useTheme } from "../context/ThemeContext";
-import { getWpPostsBySlug } from "../api";
+import { getWpPostById, getWpPostsBySearch, getWpPostsBySlug } from "../api";
 
 const THEMES = {
   dark: {
@@ -65,7 +65,133 @@ const THEMES = {
 
 const AR_SLUG_MAP = {
   soprano: "soprano",
-  "سوبرانو": "soprano",
+  // "???????" stored as escapes to avoid source-encoding issues.
+  "\u0633\u0648\u0628\u0631\u0627\u0646\u0648": "soprano",
+  // Keep legacy mojibake forms seen in some imported WP content.
+  "Ø³ÙˆØ¨Ø±Ø§Ù†Ùˆ": "soprano",
+};
+
+const FORCED_JURY_POST_IDS = {
+  ar: {
+    soprano: 421,
+  },
+};
+
+const toUnique = (values = []) => [...new Set(values.filter(Boolean))];
+
+const normalizeLookupValue = (value = "") =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+const getMappedSlug = (value = "") => {
+  const normalized = normalizeLookupValue(value);
+  return AR_SLUG_MAP[normalized] || "";
+};
+
+const findMappedSlugInText = (value = "") => {
+  const normalized = normalizeLookupValue(value);
+  if (!normalized) return "";
+
+  if (AR_SLUG_MAP[normalized]) return AR_SLUG_MAP[normalized];
+
+  for (const [key, mapped] of Object.entries(AR_SLUG_MAP)) {
+    const safeKey = normalizeLookupValue(key);
+    if (safeKey && normalized.includes(safeKey)) return mapped;
+  }
+
+  return "";
+};
+
+const normalizeLangCode = (value = "fr") => {
+  const lang = String(value || "").toLowerCase();
+  if (lang.startsWith("ar")) return "ar";
+  if (lang.startsWith("en")) return "en";
+  return "fr";
+};
+
+const buildLangCandidates = (lang = "fr") => {
+  const primary = normalizeLangCode(lang);
+  if (primary === "ar") return ["fr", "en", "ar"];
+  if (primary === "en") return ["en", "fr", "ar"];
+  return ["fr", "en", "ar"];
+};
+
+const normalizeSlugValue = (value = "") => {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  const withoutParams = raw.split(/[?#]/)[0].replace(/\/+$/, "");
+  const segment = withoutParams.split("/").filter(Boolean).pop() || withoutParams;
+  try {
+    return decodeURIComponent(segment).trim();
+  } catch {
+    return segment.trim();
+  }
+};
+
+const DISPLAY_NAME_MAP = {
+  soprano: "Soprano",
+};
+
+const ARABIC_NAME_MAP = {
+  soprano: "\u0633\u0648\u0628\u0631\u0627\u0646\u0648",
+};
+
+const toDisplayNameFromSlug = (value = "") => {
+  const slug = normalizeSlugValue(value).replace(/-(ar|eng)$/i, "");
+  if (!slug) return "";
+  const mapped = DISPLAY_NAME_MAP[slug.toLowerCase()];
+  if (mapped) return mapped;
+
+  return slug
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((part) => {
+      if (!/[a-z]/i.test(part)) return part;
+      return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+    })
+    .join(" ");
+};
+
+const toArabicNameFromSlug = (value = "") => {
+  const slug = normalizeSlugValue(value).replace(/-(ar|eng)$/i, "").toLowerCase();
+  if (!slug) return "";
+  return ARABIC_NAME_MAP[slug] || "";
+};
+
+const hasArabicChars = (value = "") => /[\u0600-\u06FF]/.test(String(value || ""));
+
+const getForcedJuryPostId = ({ lang = "fr", slug = "", name = "" } = {}) => {
+  const safeLang = normalizeLangCode(lang);
+  const byLang = FORCED_JURY_POST_IDS[safeLang];
+  if (!byLang) return 0;
+
+  const baseSlug = normalizeSlugValue(slug).replace(/-(ar|eng)$/i, "").toLowerCase();
+  const mappedFromName = normalizeSlugValue(getMappedSlug(name)).replace(/-(ar|eng)$/i, "").toLowerCase();
+
+  const id = Number(byLang[baseSlug] || byLang[mappedFromName] || 0);
+  return Number.isFinite(id) && id > 0 ? id : 0;
+};
+
+const buildSlugCandidates = (rawSlug = "", lang = "fr") => {
+  const slug = normalizeSlugValue(rawSlug);
+  if (!slug) return [];
+
+  const normalizedLang = normalizeLangCode(lang);
+  const baseNoSuffix = slug.replace(/-(ar|eng)$/i, "");
+  const mapped = getMappedSlug(slug) || getMappedSlug(baseNoSuffix);
+  const candidates = [slug, baseNoSuffix, mapped];
+
+  if (normalizedLang.startsWith("ar")) {
+    candidates.push(`${baseNoSuffix}-ar`);
+  } else if (normalizedLang.startsWith("en")) {
+    candidates.push(`${baseNoSuffix}-eng`);
+  }
+
+  return toUnique(candidates.map((value) => normalizeSlugValue(value)));
 };
 
 const extractSlugFromHref = (href = "") => {
@@ -75,7 +201,7 @@ const extractSlugFromHref = (href = "") => {
   try {
     const pathname = new URL(value, window.location.origin).pathname;
     const segments = pathname.split("/").filter(Boolean);
-    return String(segments[segments.length - 1] || "").trim();
+    return normalizeSlugValue(String(segments[segments.length - 1] || ""));
   } catch {
     return "";
   }
@@ -83,8 +209,9 @@ const extractSlugFromHref = (href = "") => {
 
 const createSlug = (text, lang = "fr") => {
   let sourceText = text?.toString().toLowerCase().trim() || "";
-  if (lang === "ar" && AR_SLUG_MAP[sourceText]) {
-    sourceText = AR_SLUG_MAP[sourceText];
+  if (lang === "ar") {
+    const mapped = getMappedSlug(sourceText);
+    if (mapped) sourceText = mapped;
   }
 
   const baseSlug =
@@ -94,7 +221,7 @@ const createSlug = (text, lang = "fr") => {
       .replace(/[\u0300-\u036f]/g, "")
       .trim()
       .replace(/\s+/g, "-")
-      .replace(/[^\w-]+/g, "")
+      .replace(/[^\p{L}\p{N}_-]+/gu, "")
       .replace(/--+/g, "-") || "";
 
   if (lang === "en" && baseSlug) {
@@ -117,18 +244,49 @@ const parseJuryData = (html, lang) => {
       const img = li.querySelector("img");
       const anchor = li.querySelector("a");
       const strong = li.querySelector("strong") || li.querySelector("b");
-      const name = strong ? strong.textContent.trim() : "";
-      const role = (li.textContent || "").replace(name, "").trim();
-      const slug =
+      const strongName = strong?.textContent?.trim() || "";
+      const anchorName = anchor?.textContent?.trim() || "";
+      const imgAlt = img?.alt?.trim() || "";
+      const name = strongName || anchorName || imgAlt;
+      const rawText = (li.textContent || "").trim();
+      const hintText = [
+        name,
+        rawText,
+        li.getAttribute("data-slug"),
+        li.getAttribute("data-member-slug"),
+        anchor?.getAttribute("data-slug"),
+        anchor?.getAttribute("data-member-slug"),
+        anchor?.getAttribute("href"),
+        imgAlt,
+        img?.src,
+      ]
+        .filter(Boolean)
+        .join(" ");
+      const mappedFromText = findMappedSlugInText(hintText);
+      const slug = normalizeSlugValue(
         li.getAttribute("data-slug") ||
-        anchor?.getAttribute("data-slug") ||
-        extractSlugFromHref(anchor?.getAttribute("href") || anchor?.href) ||
-        createSlug(name || img?.alt, lang);
+          li.getAttribute("data-member-slug") ||
+          anchor?.getAttribute("data-slug") ||
+          anchor?.getAttribute("data-member-slug") ||
+          extractSlugFromHref(anchor?.getAttribute("href") || anchor?.href) ||
+          mappedFromText ||
+          getMappedSlug(name) ||
+          createSlug(name || imgAlt, lang),
+      );
+      const isArabicUi = normalizeLangCode(lang) === "ar";
+      const mappedSlugForName = getMappedSlug(name) || mappedFromText;
+      const arabicDisplayName =
+        (hasArabicChars(name) ? name : "") ||
+        toArabicNameFromSlug(slug) ||
+        toArabicNameFromSlug(mappedSlugForName);
+      const displayName =
+        (isArabicUi ? arabicDisplayName : "") || name || toDisplayNameFromSlug(slug);
+      const role = rawText.replace(displayName || name, "").trim();
 
       return {
         id: slug || `jury-member-${index + 1}`,
         slug,
-        name,
+        name: displayName,
         role,
         imgSrc: img?.src,
       };
@@ -190,7 +348,7 @@ function GavelIcon({ theme }) {
 export default function JuryWpage({ page }) {
   const { t, i18n } = useTranslation();
   const { themeMode } = useTheme();
-  const isArabic = i18n.language === "ar";
+  const isArabic = String(i18n.language || "").toLowerCase().startsWith("ar");
 
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -218,19 +376,71 @@ export default function JuryWpage({ page }) {
   const theme = themeMode === "light" ? THEMES.light : THEMES.dark;
 
   const openArticle = useCallback(
-    async (slug) => {
-      if (!slug) return;
+    async (member) => {
+      const memberSlug = normalizeSlugValue(member?.slug || "");
+      const memberRole = String(member?.role || "").trim();
+      const mappedFromMember = findMappedSlugInText(
+        `${member?.name || ""} ${memberRole} ${memberSlug}`,
+      );
+      const effectiveSlug = memberSlug || mappedFromMember;
+      const memberName = String(member?.name || toDisplayNameFromSlug(effectiveSlug) || "").trim();
+      const memberSearch = memberName || memberRole || toDisplayNameFromSlug(effectiveSlug);
+      if (!effectiveSlug && !memberSearch) return;
 
-      const cacheKey = `${slug}_${i18n.language}`;
-      if (articleCache.has(cacheKey)) {
+      const derivedSlug =
+        effectiveSlug || getMappedSlug(memberSearch) || findMappedSlugInText(memberSearch) || createSlug(memberSearch, i18n.language);
+      const slugCandidates = derivedSlug ? buildSlugCandidates(derivedSlug, i18n.language) : [];
+      const langCandidates = buildLangCandidates(i18n.language);
+      const uiLang = normalizeLangCode(i18n.language);
+      const postFields = "id,title,content,excerpt,slug,translations,lang";
+      const forcedPostId = getForcedJuryPostId({
+        lang: uiLang,
+        slug: derivedSlug,
+        name: memberSearch,
+      });
+      const forcedCacheKey = forcedPostId ? `forced_${forcedPostId}_${uiLang}` : "";
+
+      const resolveArticleForUiLang = async (article, sourceLang) => {
+        if (!article || typeof article !== "object") return null;
+        if (uiLang !== "ar") return article;
+        if (normalizeLangCode(sourceLang) === "ar") return article;
+
+        const translatedId = Number(article?.translations?.ar || 0);
+        if (!Number.isFinite(translatedId) || translatedId <= 0) return article;
+
+        try {
+          const translated = await getWpPostById({
+            id: translatedId,
+            lang: "ar",
+            fields: postFields,
+            signal: abortRef.current.signal,
+          });
+          return translated || article;
+        } catch {
+          return article;
+        }
+      };
+
+      if (forcedCacheKey && articleCache.has(forcedCacheKey)) {
         setLoading(false);
-        setSelected(articleCache.get(cacheKey));
+        setSelected(articleCache.get(forcedCacheKey));
         return;
+      }
+
+      for (const candidate of slugCandidates) {
+        for (const requestLang of langCandidates) {
+          const cacheKey = `${candidate}_${requestLang}`;
+          if (articleCache.has(cacheKey)) {
+            setLoading(false);
+            setSelected(articleCache.get(cacheKey));
+            return;
+          }
+        }
       }
 
       setLoading(true);
       setSelected({
-        slug,
+        slug: derivedSlug || memberSearch,
         title: { rendered: t("jury.loading") },
         content: { rendered: "" },
         isLoading: true,
@@ -240,24 +450,104 @@ export default function JuryWpage({ page }) {
       abortRef.current = new AbortController();
 
       try {
-        const data = await getWpPostsBySlug({
-          slug,
-          lang: i18n.language,
-          fields: "id,title,content,excerpt,slug",
-          signal: abortRef.current.signal,
-        });
+        if (forcedPostId > 0) {
+          try {
+            const forcedArticle = await getWpPostById({
+              id: forcedPostId,
+              lang: uiLang,
+              fields: postFields,
+              signal: abortRef.current.signal,
+            });
 
-        if (data && data.length > 0) {
-          articleCache.set(cacheKey, data[0]);
-          setSelected(data[0]);
-          return;
+            if (forcedArticle) {
+              articleCache.set(forcedCacheKey, forcedArticle);
+              buildSlugCandidates(forcedArticle.slug || derivedSlug, uiLang).forEach((variant) => {
+                articleCache.set(`${variant}_${uiLang}`, forcedArticle);
+              });
+              setSelected(forcedArticle);
+              return;
+            }
+          } catch (requestError) {
+            if (requestError?.name === "AbortError") throw requestError;
+          }
         }
 
-        setSelected(null);
+        for (const requestLang of langCandidates) {
+          for (const candidate of slugCandidates) {
+            let data = [];
+            try {
+              data = await getWpPostsBySlug({
+                slug: candidate,
+                lang: requestLang,
+                fields: postFields,
+                signal: abortRef.current.signal,
+              });
+            } catch (requestError) {
+              if (requestError?.name === "AbortError") throw requestError;
+              continue;
+            }
+
+            if (data && data.length > 0) {
+              const resolved = await resolveArticleForUiLang(data[0], requestLang);
+              buildSlugCandidates((resolved && resolved.slug) || candidate, requestLang).forEach((variant) => {
+                articleCache.set(`${variant}_${requestLang}`, resolved);
+                articleCache.set(`${variant}_${normalizeLangCode(i18n.language)}`, resolved);
+              });
+              setSelected(resolved);
+              return;
+            }
+          }
+        }
+
+        // Fallback: search by displayed member name if slug lookup fails.
+        if (memberSearch) {
+          for (const requestLang of langCandidates) {
+            let searchResults = [];
+            try {
+              searchResults = await getWpPostsBySearch({
+                query: memberSearch,
+                lang: requestLang,
+                fields: postFields,
+                signal: abortRef.current.signal,
+              });
+            } catch (requestError) {
+              if (requestError?.name === "AbortError") throw requestError;
+              continue;
+            }
+
+            if (Array.isArray(searchResults) && searchResults.length > 0) {
+              const resolved = await resolveArticleForUiLang(searchResults[0], requestLang);
+              buildSlugCandidates(
+                (resolved && resolved.slug) || derivedSlug || createSlug(memberSearch, requestLang),
+                requestLang,
+              ).forEach((variant) => {
+                articleCache.set(`${variant}_${requestLang}`, resolved);
+                articleCache.set(`${variant}_${normalizeLangCode(i18n.language)}`, resolved);
+              });
+              setSelected(resolved);
+              return;
+            }
+          }
+        }
+
+        // Keep modal open with a controlled fallback message instead of closing instantly.
+        setSelected({
+          slug: derivedSlug || memberSearch,
+          title: { rendered: memberName || memberSearch || t("jury.jury_profile_label", "Profil jury") },
+          content: {
+            rendered: `<p>${t("common.load_page_error", "Impossible de charger la page pour le moment.")}</p>`,
+          },
+        });
       } catch (error) {
         if (error?.name !== "AbortError") {
           console.error(error);
-          setSelected(null);
+          setSelected({
+            slug: derivedSlug || memberSearch,
+            title: { rendered: memberName || memberSearch || t("jury.jury_profile_label", "Profil jury") },
+            content: {
+              rendered: `<p>${t("common.load_page_error", "Impossible de charger la page pour le moment.")}</p>`,
+            },
+          });
         }
       } finally {
         setLoading(false);
@@ -313,12 +603,12 @@ export default function JuryWpage({ page }) {
             {members.map((member) => {
               const isSelected = selected && !selected.isLoading && selected.slug === member.slug;
               const isDimmed = selected && !isSelected;
-              const canOpen = Boolean(member.slug);
+              const canOpen = Boolean(member.slug || member.name || member.role);
 
               return (
                 <article
                   key={member.id}
-                  onClick={canOpen ? () => openArticle(member.slug) : undefined}
+                  onClick={canOpen ? () => openArticle(member) : undefined}
                   className={`group flex flex-col items-center gap-4 rounded-[24px] border p-4 text-center shadow-[0_18px_40px_rgba(0,0,0,0.2)] transition duration-300 sm:flex-row sm:gap-6 sm:rounded-[28px] sm:p-6 sm:text-left ${theme.card} ${canOpen ? "cursor-pointer" : "cursor-default"} ${isSelected ? theme.cardSelected : ""} ${isDimmed ? theme.cardDim : "opacity-100"}`}
                 >
                   <img
@@ -369,7 +659,7 @@ export default function JuryWpage({ page }) {
                 <div>
                   <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${theme.modalLabel}`}>
                     {selected.isLoading
-                      ? t("jury.jury.loading")
+                      ? t("jury.loading")
                       : t("jury.jury_profile_label", "Profil jury")}
                   </p>
                   <h3
@@ -419,3 +709,4 @@ export default function JuryWpage({ page }) {
     </>
   );
 }
+

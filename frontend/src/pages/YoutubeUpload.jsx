@@ -471,7 +471,7 @@ export default function YoutubeUpload() {
         const touchedKeys = LIVE_VALIDATION_FIELDS.filter((field) => touchedFields[field]);
         if (touchedKeys.length === 0) return;
 
-        const liveValidation = validateForm(buildValidationPayload());
+        const liveValidation = validateForm(buildValidationPayload(), t);
         setErrors((prev) => {
             const next = { ...prev };
             touchedKeys.forEach((field) => {
@@ -479,7 +479,7 @@ export default function YoutubeUpload() {
             });
             return next;
         });
-    }, [touchedFields, buildValidationPayload]);
+    }, [touchedFields, buildValidationPayload, t]);
 
     const getCastFieldError = (member, field) => {
         const name = String(member?.name || '').trim();
@@ -511,7 +511,7 @@ export default function YoutubeUpload() {
     const validateStep = (stepNumber) => {
         if (stepNumber === 1 || stepNumber === 2) {
             const stepFields = STEP_FIELDS[stepNumber] || [];
-            const validation = validateForm(buildValidationPayload());
+            const validation = validateForm(buildValidationPayload(), t);
             const nextStepErrors = {};
             let hasError = false;
 
@@ -585,8 +585,8 @@ export default function YoutubeUpload() {
             setStatus({ type: '', message: '' });
             setErrors(prev => ({ ...prev, file: '' }));
 
-            const metadata = await getVideoMetadata(selectedFile);
-            const validation = validateVideoFrontend(metadata);
+            const metadata = await getVideoMetadata(selectedFile, t);
+            const validation = validateVideoFrontend(metadata, t);
 
             if (!validation.isValid) {
                 setFile(null);
@@ -673,7 +673,7 @@ export default function YoutubeUpload() {
         setYoutubeStatus(null);
         setYoutubeStatusError('');
 
-        const validation = validateForm(buildValidationPayload());
+        const validation = validateForm(buildValidationPayload(), t);
 
         if (!validation.isValid) {
             markAllFieldsTouched();
@@ -705,6 +705,7 @@ export default function YoutubeUpload() {
         formData.append('description', validation.cleanedData.description);
         formData.append('countryAlpha2', validation.cleanedData.countryAlpha2);
         formData.append('language', validation.cleanedData.language);
+        formData.append('lang', i18n.language);
         formData.append('aiTools', validation.cleanedData.aiTools);
         if (validation.cleanedData.bio) formData.append('bio', validation.cleanedData.bio);
         if (validation.cleanedData.socialWebsite) formData.append('socialWebsite', validation.cleanedData.socialWebsite);
@@ -730,6 +731,9 @@ export default function YoutubeUpload() {
             const responsePayload = await postYoutubeUpload(
                 formData,
                 (progressEvent) => {
+                    if (!progressEvent || typeof progressEvent.total !== 'number' || progressEvent.total <= 0) {
+                        return;
+                    }
                     const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                     setProgress(percent);
                 },
@@ -787,9 +791,13 @@ export default function YoutubeUpload() {
 
         } catch (err) {
             console.error(err);
+            const timeoutMessage = err?.code === 'ECONNABORTED'
+                ? t('upload.errors.timeout', 'Le delai de traitement est depasse. Veuillez reessayer.')
+                : null;
+            const backendMessage = err?.response?.data?.error || err?.response?.data?.details || '';
             setStatus({
                 type: 'error',
-                message: err.response?.data?.error || t('upload.errors.upload_failed')
+                message: timeoutMessage || backendMessage || t('upload.errors.upload_failed')
             });
         } finally {
             setUploading(false);
@@ -1566,7 +1574,7 @@ export default function YoutubeUpload() {
                         />
                         {isPosterProcessing && (
                             <p className="text-slate-600 text-sm" aria-live="polite">
-                                Traitement de l image en cours...
+                                {t('upload.form.poster_processing')}
                             </p>
                         )}
                         {posterPreview && (
@@ -1684,7 +1692,7 @@ export default function YoutubeUpload() {
                                 />
                                 {file && (
                                     <p className="text-slate-700 font-medium" aria-live="polite">
-                                        ðŸ“ {file.name}
+                                        vidéo {file.name}
                                     </p>
                                 )}
                                 <p id="video-requirements" className="text-xs text-slate-500 text-center">
@@ -1861,7 +1869,7 @@ export default function YoutubeUpload() {
                             {!file
                                 ? t('upload.sr.need_file')
                                 : isPosterProcessing
-                                    ? 'Traitement de l image en cours, veuillez patienter'
+                                    ? t('upload.sr.poster_processing')
                                     : isValidating
                                         ? t('upload.sr.validating')
                                         : t('upload.sr.uploading')}

@@ -14,8 +14,14 @@ export default function CallForProject({ page }) {
   const [phaseLoaded, setPhaseLoaded] = useState(false);
   const [phaseLoadError, setPhaseLoadError] = useState("");
   const isArabic = normalizeLanguage(i18n.language) === "ar";
+  const isEnglish = normalizeLanguage(i18n.language) === "en";
 
   const uploadPath = getLocalizedPath("submitFilm", i18n.language);
+  const submitFilmLabel = isArabic
+    ? "ارسل فيلمك"
+    : isEnglish
+      ? "Submit your film"
+      : "Deposer un film";
 
   useEffect(() => {
     let cancelled = false;
@@ -38,8 +44,6 @@ export default function CallForProject({ page }) {
     };
   }, [t]);
 
-  const currentPhaseKey = String(sitePhase?.currentPhase || "phase_1").toLowerCase();
-  const isPhase1 = phaseLoaded && Boolean(sitePhase) && currentPhaseKey === "phase_1";
   const seoTitle = page?.title?.rendered || "Appel a projet";
   const seoDescription = page?.excerpt?.rendered || page?.content?.rendered || "";
   const theme = isLight
@@ -109,22 +113,12 @@ export default function CallForProject({ page }) {
                 .replace(/<audio(\s)/gi, '<audio aria-hidden="true"$1') }}
             />
 
-            {isPhase1 && (
-              <div className={`mt-8 rounded-2xl border p-5 ${theme.infoBox}`}>
-                <p className={`text-xs font-black uppercase tracking-[0.2em] ${theme.infoKicker}`}>
-                  {t("projects.open_badge")}
-                </p>
-                <p className={`mt-2 text-sm ${theme.infoText}`}>
-                  {t("projects.open_text")}
-                </p>
-                <Link
-                  to={uploadPath}
-                  className={`mt-4 inline-flex rounded-full bg-gradient-to-r px-6 py-3 text-xs font-black uppercase tracking-[0.12em] transition hover:brightness-105 ${theme.cta}`}
-                >
-                  {t("nav.submitFilm")}
-                </Link>
-              </div>
-            )}
+            <Link
+              to={uploadPath}
+              className={`mt-8 inline-flex rounded-full bg-gradient-to-r px-6 py-3 text-xs font-black uppercase tracking-[0.12em] transition hover:brightness-105 ${theme.cta}`}
+            >
+              {submitFilmLabel}
+            </Link>
           </section>
         </div>
       </main>

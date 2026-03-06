@@ -166,7 +166,12 @@ export async function validateEmailAddress(email) {
   });
 }
 
-// send a contact notification; lang may be "fr" or "ar" (defaults to fr)
+function resolveMailLanguage(lang = "fr") {
+  const normalized = String(lang || "fr").split("-")[0].toLowerCase();
+  return normalized === "fr" ? "fr" : "en";
+}
+
+// send a contact notification; lang may be "fr" or "en" (defaults to fr)
 export async function sendContactMail({
   name,
   email,
@@ -177,17 +182,17 @@ export async function sendContactMail({
   assertMailConfig();
   const senderAddress = getSenderAddress();
 
-  // pick template based on language
-  const normalized = String(lang || "fr").split("-")[0];
+  // FR keeps French template, all other languages use English.
+  const normalized = resolveMailLanguage(lang);
 
   const templates = {
     fr: {
       subject: `${subject}`,
       text: `Nouveau message recu de : ${name} (${email})\n\nSujet: ${subject}\n\nMessage :\n${message}`,
     },
-    ar: {
+    en: {
       subject: `${subject}`,
-      text: `تم استلام رسالة جديدة من : ${name} (${email})\n\nالموضوع: ${subject}\n\nالرسالة:\n${message}`,
+      text: `New message received from: ${name} (${email})\n\nSubject: ${subject}\n\nMessage:\n${message}`,
     },
   };
 
@@ -214,13 +219,13 @@ export async function sendContactMail({
 
   await createSmtpTransporter().sendMail(mailOptions);
 }
-
 export async function sendUploadSuccessMail({
   toEmail,
   firstName,
   lastName,
   movieTitle,
   videoUrl,
+  lang = "fr",
 }) {
   assertMailConfig();
   const senderAddress = getSenderAddress();
@@ -236,36 +241,59 @@ export async function sendUploadSuccessMail({
   const nameParts = [firstName, lastName]
     .map((part) => String(part || "").trim())
     .filter(Boolean);
+  const mailLang = resolveMailLanguage(lang);
   const recipientName = nameParts.length ? nameParts.join(" ") : "participant";
-  const safeMovieTitle = String(movieTitle || "votre film").trim();
+
+  const safeMovieTitle = String(movieTitle || (mailLang === "fr" ? "votre film" : "your film")).trim();
   const safeVideoUrl = String(videoUrl || "").trim();
   const recipientNameHtml = escapeHtml(recipientName);
   const safeMovieTitleHtml = escapeHtml(safeMovieTitle);
   const safeVideoUrlHtml = escapeHtml(safeVideoUrl);
 
-  const subject = "Upload MarsAI recu avec succes";
+  const templates = {
+    fr: {
+      subject: "Upload MarsAI recu avec succes",
+      greeting: `Bonjour ${recipientName},`,
+      body: `Votre upload pour "${safeMovieTitle}" a bien ete recu et envoye sur YouTube.`,
+      linkLabel: "Lien video",
+      review: "Le film est maintenant en cours de verification par l'equipe.",
+      thanks: "Merci,",
+    },
+    en: {
+      subject: "MarsAI upload received successfully",
+      greeting: `Hello ${recipientName},`,
+      body: `Your upload for "${safeMovieTitle}" has been received and sent to YouTube.`,
+      linkLabel: "Video link",
+      review: "The film is now under review by the team.",
+      thanks: "Thank you,",
+    },
+  };
+
+  const copy = templates[mailLang] || templates.fr;
+  const subject = copy.subject;
+
   const textContent = [
-    `Bonjour ${recipientName},`,
+    copy.greeting,
     "",
-    `Votre upload pour "${safeMovieTitle}" a bien ete recu et envoye sur YouTube.`,
-    safeVideoUrl ? `Lien video: ${safeVideoUrl}` : "",
+    copy.body,
+    safeVideoUrl ? `${copy.linkLabel}: ${safeVideoUrl}` : "",
     "",
-    "Le film est maintenant en cours de verification par l'equipe.",
+    copy.review,
     "",
-    "Merci,",
+    copy.thanks,
     "marsAI Festival",
   ]
     .filter(Boolean)
     .join("\n");
 
   const htmlContent = [
-    `<p>Bonjour ${recipientNameHtml},</p>`,
-    `<p>Votre upload pour <strong>${safeMovieTitleHtml}</strong> a bien ete recu et envoye sur YouTube.</p>`,
+    `<p>${escapeHtml(copy.greeting)}</p>`,
+    `<p>${escapeHtml(copy.body).replace(escapeHtml(safeMovieTitle), `<strong>${safeMovieTitleHtml}</strong>`)}</p>`,
     safeVideoUrl
-      ? `<p>Lien video: <a href="${safeVideoUrlHtml}" target="_blank" rel="noopener noreferrer">${safeVideoUrlHtml}</a></p>`
+      ? `<p>${escapeHtml(copy.linkLabel)}: <a href="${safeVideoUrlHtml}" target="_blank" rel="noopener noreferrer">${safeVideoUrlHtml}</a></p>`
       : "",
-    "<p>Le film est maintenant en cours de verification par l'equipe.</p>",
-    "<p>Merci,<br/>marsAI Festival</p>",
+    `<p>${escapeHtml(copy.review)}</p>`,
+    `<p>${escapeHtml(copy.thanks)}<br/>marsAI Festival</p>`,
   ]
     .filter(Boolean)
     .join("");
@@ -299,7 +327,6 @@ export async function sendUploadSuccessMail({
     htmlContent,
   });
 }
-
 export async function createOrUpdateBrevoContact({
   firstName,
   email,
@@ -331,7 +358,7 @@ export async function sendNewsletterWelcomeMail({
 }) {
   assertMailConfig();
   const senderAddress = getSenderAddress();
-  const normalized = String(lang || "fr").split("-")[0];
+  const normalized = resolveMailLanguage(lang);
   const prefs = safePreferences.join(", ");
 
   const templates = {
@@ -342,12 +369,12 @@ export async function sendNewsletterWelcomeMail({
            <p>Merci de rejoindre la communaute <strong>marsAI</strong>.</p>
            <p>Tes preferences : ${prefs}</p>`,
     },
-    ar: {
-      subject: `مرحباً بك   ${firstName} !`,
-      text: `مرحباً ${firstName} !\nشكراً لانضمامك إلى مجتمع marsAI.\nتفضيلاتك: ${prefs}`,
-      html: `<h1>مرحباً ${firstName} !</h1>
-           <p>شكراً لانضمامك إلى مجتمع <strong>marsAI</strong>.</p>
-           <p>تفضيلاتك: ${prefs}</p>`,
+    en: {
+      subject: `Welcome aboard, ${firstName}!`,
+      text: `Welcome ${firstName}!\nThanks for joining the marsAI community.\nYour preferences: ${prefs}`,
+      html: `<h1>Welcome ${firstName}!</h1>
+           <p>Thanks for joining the <strong>marsAI</strong> community.</p>
+           <p>Your preferences: ${prefs}</p>`,
     },
   };
 

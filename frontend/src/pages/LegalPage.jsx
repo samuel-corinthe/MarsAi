@@ -67,43 +67,96 @@ const VARIANTS = {
   },
 };
 
+const normalizeText = (value = "") => String(value || "").replace(/\s+/g, " ").trim();
+
+const isNumericToken = (value = "") => {
+  const text = normalizeText(value);
+  if (!text) return true;
+  return /^[\d\u0660-\u0669\u06F0-\u06F9().\-:،\s]+$/.test(text);
+};
+
+const sanitizeSectionTitle = (rawTitle = "", fallback = "Section") => {
+  let title = normalizeText(rawTitle);
+  if (!title) return fallback;
+
+  // Fix patterns like "(Cookies)6. ..." then strip duplicate numeric prefixes.
+  title = title.replace(/^\s*\(([^)]+)\)\s*[\d\u0660-\u0669\u06F0-\u06F9]+\s*[.)\-:،]?\s*/u, "($1) ");
+  title = title.replace(/^\s*([\d\u0660-\u0669\u06F0-\u06F9]+)\s+\1\s*[.)\-:،]?\s*/u, "");
+  title = title.replace(/^\s*[\d\u0660-\u0669\u06F0-\u06F9]+\s*[.)\-:،]?\s*/u, "");
+
+  return normalizeText(title) || fallback;
+};
+
+const nodeToHtml = (node) => {
+  if (!node) return "";
+  if (node.nodeType === 3) {
+    const text = normalizeText(node.textContent || "");
+    return text ? `<p>${text}</p>` : "";
+  }
+  if (node.nodeType === 1) {
+    return node.outerHTML || "";
+  }
+  return "";
+};
+
 const parseSections = (html) => {
-  if (!html) return [];
+  if (!html || typeof window === "undefined") return [];
 
   const doc = new DOMParser().parseFromString(html, "text/html");
   const nodes = Array.from(doc.body.childNodes).filter((node) => {
-    if (node.nodeType === 3) {
-      return node.textContent && node.textContent.trim().length > 0;
-    }
-    return true;
+    if (node.nodeType === 3) return normalizeText(node.textContent || "").length > 0;
+    if (node.nodeType === 1) return true;
+    return false;
   });
+
+  const hasHeadings = nodes.some(
+    (node) => node.nodeType === 1 && /^h[1-6]$/i.test(node.tagName || ""),
+  );
 
   const sections = [];
   let current = null;
 
-  nodes.forEach((node) => {
-    if (node.nodeType === 1 && node.tagName.toLowerCase() === "h2") {
-      if (current) sections.push(current);
-      current = { title: node.textContent.trim(), content: "" };
-      return;
+  const closeCurrentSection = () => {
+    if (!current) return;
+    if (normalizeText(current.title) || normalizeText(current.content)) {
+      sections.push(current);
     }
+    current = null;
+  };
 
+  const ensureCurrentSection = (title = "Introduction") => {
     if (!current) {
-      current = { title: "Introduction", content: "" };
+      current = { title: sanitizeSectionTitle(title, title), content: "" };
     }
+  };
 
-    if (node.nodeType === 3) {
-      const text = node.textContent.trim();
-      if (text) current.content += `<p>${text}</p>`;
+  nodes.forEach((node) => {
+    const isHeading = node.nodeType === 1 && /^h[1-6]$/i.test(node.tagName || "");
+    if (isHeading) {
+      closeCurrentSection();
+      current = {
+        title: sanitizeSectionTitle(node.textContent || "", "Section"),
+        content: "",
+      };
       return;
     }
 
-    if (node.outerHTML) {
-      current.content += node.outerHTML;
+    const nodeText = normalizeText(node.textContent || "");
+    if (!nodeText) return;
+
+    // Remove orphan numbering blocks that create duplicates like "1" + "1. Title".
+    if (isNumericToken(nodeText)) return;
+
+    if (!hasHeadings) {
+      ensureCurrentSection("Introduction");
+    } else {
+      ensureCurrentSection("Introduction");
     }
+
+    current.content += nodeToHtml(node);
   });
 
-  if (current) sections.push(current);
+  closeCurrentSection();
   return sections;
 };
 
@@ -310,6 +363,18 @@ export default function LegalPage({ page, variant = "cgv" }) {
             position: absolute;
             left: 0;
             color: var(--accent-color, ${theme.bulletColorFallback});
+          }
+          [dir="rtl"] .legal-content ul {
+            margin-right: 1.2rem;
+            margin-left: 0;
+          }
+          [dir="rtl"] .legal-content li {
+            padding-right: 1.15rem;
+            padding-left: 0;
+          }
+          [dir="rtl"] .legal-content li::before {
+            right: 0;
+            left: auto;
           }
           .legal-content a {
             color: ${theme.linkColor};

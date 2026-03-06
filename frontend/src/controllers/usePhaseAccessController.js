@@ -1,6 +1,23 @@
 import { useEffect, useState } from "react";
 import { getCurrentSessionUser, getSitePhaseState } from "../api";
 
+const PHASE_ACCESS_TIMEOUT_MS = 8000;
+
+function withTimeout(promise, timeoutMs, errorMessage) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(errorMessage)), timeoutMs);
+    Promise.resolve(promise)
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
+
 export default function usePhaseAccessController({ refreshKey } = {}) {
   const [loading, setLoading] = useState(true);
   const [phaseKey, setPhaseKey] = useState("phase_1");
@@ -19,8 +36,16 @@ export default function usePhaseAccessController({ refreshKey } = {}) {
 
       try {
         const [sitePhase, sessionPayload] = await Promise.all([
-          getSitePhaseState(),
-          getCurrentSessionUser().catch(() => null),
+          withTimeout(
+            getSitePhaseState(),
+            PHASE_ACCESS_TIMEOUT_MS,
+            "Phase API timeout",
+          ),
+          withTimeout(
+            getCurrentSessionUser().catch(() => null),
+            PHASE_ACCESS_TIMEOUT_MS,
+            "Session API timeout",
+          ).catch(() => null),
         ]);
         if (cancelled) return;
 

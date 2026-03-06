@@ -5,8 +5,6 @@ import oauth2Client from "../utils/YT-client.js";
 import { analyzeVideo } from "../utils/VideoAnalyser.js";
 import { validateVideoData } from "../utils/VideoValidator.js";
 import { sendUploadSuccessMail } from "../services/messagingService.js";
-import { getSessionFromRequest } from "../services/authService.js";
-import { getSitePhaseState } from "../services/sitePhaseService.js";
 import {
   isObjectStorageConfigured,
   getObjectStorageMissingEnv,
@@ -23,6 +21,27 @@ import { fetchYoutubeStatus, mapYoutubeStatus } from "../services/youtubeStatusS
 
 const MAX_SRT_SIZE_BYTES = 1024 * 1024;
 const DEFAULT_POSTER_SEED = "marsai";
+const ANALYZE_VIDEO_TIMEOUT_MS = Number(process.env.ANALYZE_VIDEO_TIMEOUT_MS || 45_000);
+const YOUTUBE_UPLOAD_TIMEOUT_MS = Number(process.env.YOUTUBE_UPLOAD_TIMEOUT_MS || 480_000);
+const MAIL_SEND_TIMEOUT_MS = Number(process.env.MAIL_SEND_TIMEOUT_MS || 10_000);
+
+function withTimeout(promise, timeoutMs, timeoutMessage) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(timeoutMessage));
+    }, timeoutMs);
+
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
 
 function cleanupFile(filePath) {
   if (!filePath) return;
@@ -187,32 +206,6 @@ export async function submitYoutubeUpload(req, res) {
     });
   }
 
-  try {
-    const sitePhaseState = await getSitePhaseState();
-    const phaseKey = String(sitePhaseState?.currentPhase || "phase_1").toLowerCase();
-    if (phaseKey === "phase_2" || phaseKey === "phase_3") {
-      const session = getSessionFromRequest(req);
-      const role = String(session?.role || "").toLowerCase();
-      const hasAdminSession = role === "admin" || role === "superadmin";
-      if (!hasAdminSession) {
-        cleanupFile(videoFile.path);
-        cleanupFile(subtitleFile?.path);
-        cleanupFile(posterFile?.path);
-        return res.status(403).json({
-          error: "Uploads visiteurs desactives pendant les phases 2 et 3.",
-        });
-      }
-    }
-  } catch (phaseError) {
-    cleanupFile(videoFile.path);
-    cleanupFile(subtitleFile?.path);
-    cleanupFile(posterFile?.path);
-    return res.status(500).json({
-      error: "Impossible de verifier la phase du site avant upload.",
-      details: phaseError.message,
-    });
-  }
-
   if (subtitleFile) {
     const srtValidation = validateSrtContent(subtitleFile.path);
     if (!srtValidation.valid) {
@@ -224,7 +217,11 @@ export async function submitYoutubeUpload(req, res) {
   }
 
   try {
-    const metadata = await analyzeVideo(videoFile.path);
+    const metadata = await withTimeout(
+      analyzeVideo(videoFile.path),
+      ANALYZE_VIDEO_TIMEOUT_MS,
+      "Analyse video trop longue. Veuillez reessayer.",
+    );
     const validation = validateVideoData(metadata);
 
     if (!validation.isValid) {
@@ -242,21 +239,25 @@ export async function submitYoutubeUpload(req, res) {
     }
 
     const youtube = google.youtube({ version: "v3", auth: oauth2Client });
-    const uploadResponse = await youtube.videos.insert({
-      part: "snippet,status",
-      requestBody: {
-        snippet: {
-          title: title || "Upload MarsAI",
-          description: youtubeDescription,
+    const uploadResponse = await withTimeout(
+      youtube.videos.insert({
+        part: "snippet,status",
+        requestBody: {
+          snippet: {
+            title: title || "Upload MarsAI",
+            description: youtubeDescription,
+          },
+          status: {
+            privacyStatus: "private",
+          },
         },
-        status: {
-          privacyStatus: "private",
+        media: {
+          body: fs.createReadStream(videoFile.path),
         },
-      },
-      media: {
-        body: fs.createReadStream(videoFile.path),
-      },
-    });
+      }),
+      YOUTUBE_UPLOAD_TIMEOUT_MS,
+      "Upload vers YouTube trop long. Verifiez la connexion et reessayez.",
+    );
 
     const youtubeId = String(uploadResponse?.data?.id || "").trim();
     if (!youtubeId) {
@@ -345,13 +346,18 @@ export async function submitYoutubeUpload(req, res) {
     let confirmationEmailSent = false;
     let confirmationEmailError = "";
     try {
-      await sendUploadSuccessMail({
-        toEmail: String(req.body?.email || "").trim(),
-        firstName: String(req.body?.firstName || "").trim(),
-        lastName: String(req.body?.lastName || "").trim(),
-        movieTitle: title || "Sans titre",
-        videoUrl: youtubeUrl,
-      });
+      await withTimeout(
+        sendUploadSuccessMail({
+          toEmail: String(req.body?.email || "").trim(),
+          firstName: String(req.body?.firstName || "").trim(),
+          lastName: String(req.body?.lastName || "").trim(),
+          movieTitle: title || "Sans titre",
+          videoUrl: youtubeUrl,
+          lang: String(req.body?.lang || "fr").trim(),
+        }),
+        MAIL_SEND_TIMEOUT_MS,
+        "Envoi email de confirmation trop long",
+      );
       confirmationEmailSent = true;
     } catch (mailError) {
       confirmationEmailError = String(mailError?.message || "Echec envoi confirmation email");

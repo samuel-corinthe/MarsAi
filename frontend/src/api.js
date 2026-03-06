@@ -314,6 +314,57 @@ export async function getWpPostsBySlug({
   return Array.isArray(data) ? data : [];
 }
 
+export async function getWpPostsBySearch({
+  query,
+  lang = "fr",
+  perPage = 10,
+  fields = "id,title,content,excerpt,slug",
+  signal,
+} = {}) {
+  const safeQuery = String(query || "").trim();
+  if (!safeQuery) return [];
+
+  const response = await fetch(
+    `${WORDPRESS_V2_URL}/posts?search=${encodeURIComponent(safeQuery)}&per_page=${encodeURIComponent(perPage)}&_fields=${encodeURIComponent(fields)}&lang=${encodeURIComponent(lang)}`,
+    {
+      cache: "no-store",
+      signal,
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`WP posts by search error ${response.status}`);
+  }
+
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
+}
+
+export async function getWpPostById({
+  id,
+  lang = "fr",
+  fields = "id,title,content,excerpt,slug",
+  signal,
+} = {}) {
+  const safeId = Number(id);
+  if (!Number.isFinite(safeId) || safeId <= 0) return null;
+
+  const response = await fetch(
+    `${WORDPRESS_V2_URL}/posts/${encodeURIComponent(safeId)}?_fields=${encodeURIComponent(fields)}&lang=${encodeURIComponent(lang)}`,
+    {
+      cache: "no-store",
+      signal,
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`WP post by id error ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data && typeof data === "object" ? data : null;
+}
+
 export async function getWpPostsByCategory({
   categoryId,
   lang = "fr",
