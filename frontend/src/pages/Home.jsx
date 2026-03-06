@@ -481,7 +481,7 @@ export default function Home({ page }) {
                     {event.excerpt}
                   </p>
                   <Link
-                    to={agendaPath}
+                    to={event.id ? `${agendaPath}?article=${encodeURIComponent(String(event.id))}` : agendaPath}
                     className={`inline-block mt-6 text-[11px] font-black uppercase tracking-widest transition-colors border-b-2 pb-1 w-fit ${theme.newsLink}`}
                   >
                       {t("agenda.read_article", "Lire l'article")}

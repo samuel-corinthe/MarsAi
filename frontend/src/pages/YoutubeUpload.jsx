@@ -83,7 +83,7 @@ function canvasToBlob(canvas, type, quality) {
     return new Promise((resolve, reject) => {
         canvas.toBlob((blob) => {
             if (!blob) {
-                reject(new Error('Impossible de traiter l image.'));
+                reject(new Error('Unable to process the image.'));
                 return;
             }
             resolve(blob);
@@ -101,7 +101,7 @@ function loadImageFromFile(file) {
         };
         image.onerror = () => {
             URL.revokeObjectURL(tempUrl);
-            reject(new Error('Image invalide'));
+            reject(new Error('Invalid image.'));
         };
         image.src = tempUrl;
     });
@@ -490,19 +490,19 @@ export default function YoutubeUpload() {
         if (!hasAnyContent) return '';
 
         if (field === 'name') {
-            if (!name) return t('upload.errors.cast_name_required', 'Nom obligatoire');
-            if (name.length > 120) return t('upload.errors.cast_name_too_long', 'Nom trop long (max 120 caracteres)');
+            if (!name) return t('upload.errors.cast_name_required', 'Name is required');
+            if (name.length > 120) return t('upload.errors.cast_name_too_long', 'Name is too long (max 120 characters)');
             return '';
         }
 
         if (field === 'role') {
-            if (!role) return t('upload.errors.cast_role_required', 'Role obligatoire');
-            if (role.length > 120) return t('upload.errors.cast_role_too_long', 'Role trop long (max 120 caracteres)');
+            if (!role) return t('upload.errors.cast_role_required', 'Role is required');
+            if (role.length > 120) return t('upload.errors.cast_role_too_long', 'Role is too long (max 120 characters)');
             return '';
         }
 
         if (field === 'avatarUrl' && avatarUrl && !CAST_AVATAR_URL_PATTERN.test(avatarUrl)) {
-            return t('upload.errors.cast_avatar_invalid', 'URL avatar invalide (https:// obligatoire)');
+            return t('upload.errors.cast_avatar_invalid', 'Invalid avatar URL (https:// required)');
         }
 
         return '';
@@ -792,7 +792,7 @@ export default function YoutubeUpload() {
         } catch (err) {
             console.error(err);
             const timeoutMessage = err?.code === 'ECONNABORTED'
-                ? t('upload.errors.timeout', 'Le delai de traitement est depasse. Veuillez reessayer.')
+                ? t('upload.errors.timeout', 'Processing timeout exceeded. Please try again.')
                 : null;
             const backendMessage = err?.response?.data?.error || err?.response?.data?.details || '';
             setStatus({
@@ -875,9 +875,9 @@ export default function YoutubeUpload() {
         currentStepFields.includes(field) && String(message || '').trim().length > 0
     ));
     const uploadSteps = [
-        { id: 1, badge: t('upload.form.part_1_badge', 'Partie 1/3'), title: t('upload.form.part_1_title', 'Informations participant') },
-        { id: 2, badge: t('upload.form.part_2_badge', 'Partie 2/3'), title: t('upload.form.part_2_title', 'Informations film') },
-        { id: 3, badge: t('upload.form.part_3_badge', 'Partie 3/3'), title: t('upload.form.part_3_title', 'Fichiers et verification') },
+        { id: 1, badge: t('upload.form.part_1_badge', 'Part 1/3'), title: t('upload.form.part_1_title', 'Participant information') },
+        { id: 2, badge: t('upload.form.part_2_badge', 'Part 2/3'), title: t('upload.form.part_2_title', 'Movie information') },
+        { id: 3, badge: t('upload.form.part_3_badge', 'Part 3/3'), title: t('upload.form.part_3_title', 'Files and verification') },
     ];
     const stepProgressPercent = Math.round(((currentStep - 1) / Math.max(1, uploadSteps.length - 1)) * 100);
     const shellClass = isLight
@@ -950,7 +950,7 @@ export default function YoutubeUpload() {
                                         key={step.id}
                                         type="button"
                                         onClick={() => handleStepSelect(step.id)}
-                                        aria-label={`${t('upload.form.step_label', 'Partie')} ${step.id}`}
+                                        aria-label={`${t('upload.form.step_label', 'Part')} ${step.id}`}
                                         aria-current={isCurrent ? 'step' : undefined}
                                         disabled={uploading || isValidating || isPosterProcessing}
                                         className={`inline-flex h-10 w-10 items-center justify-center rounded-full border text-sm font-black transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
@@ -971,10 +971,10 @@ export default function YoutubeUpload() {
                     <section className={`rounded-xl border border-slate-200 p-4 md:p-5 space-y-6 ${currentStep === 1 ? '' : 'hidden'}`}>
                         <div className="space-y-1">
                             <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
-                                {t('upload.form.part_1_badge', 'Partie 1/3')}
+                                {t('upload.form.part_1_badge', 'Part 1/3')}
                             </p>
                             <h2 className="text-base font-semibold text-slate-900">
-                                {t('upload.form.part_1_title', 'Informations participant')}
+                                {t('upload.form.part_1_title', 'Participant information')}
                             </h2>
                         </div>
                     {/* Email */}
@@ -1145,10 +1145,10 @@ export default function YoutubeUpload() {
                     <section className={`rounded-xl border border-slate-200 p-4 md:p-5 space-y-6 ${currentStep === 2 ? '' : 'hidden'}`}>
                         <div className="space-y-1">
                             <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
-                                {t('upload.form.part_2_badge', 'Partie 2/3')}
+                                {t('upload.form.part_2_badge', 'Part 2/3')}
                             </p>
                             <h2 className="text-base font-semibold text-slate-900">
-                                {t('upload.form.part_2_title', 'Informations film')}
+                                {t('upload.form.part_2_title', 'Movie information')}
                             </h2>
                         </div>
 
@@ -1544,7 +1544,7 @@ export default function YoutubeUpload() {
                             {t('upload.form.casting_hint')}
                         </span>
                         <span className="text-xs text-slate-500 block">
-                            {t('upload.form.cast_role_required_hint', 'Si vous ajoutez un membre, le role est obligatoire.')}
+                            {t('upload.form.cast_role_required_hint', 'If you add a cast member, role is required.')}
                         </span>
                     </div>
 
@@ -1553,10 +1553,10 @@ export default function YoutubeUpload() {
                     <section className={`rounded-xl border border-slate-200 p-4 md:p-5 space-y-6 ${currentStep === 3 ? '' : 'hidden'}`}>
                         <div className="space-y-1">
                             <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">
-                                {t('upload.form.part_3_badge', 'Partie 3/3')}
+                                {t('upload.form.part_3_badge', 'Part 3/3')}
                             </p>
                             <h2 className="text-base font-semibold text-slate-900">
-                                {t('upload.form.part_3_title', 'Fichiers et verification')}
+                                {t('upload.form.part_3_title', 'Files and verification')}
                             </h2>
                         </div>
 
@@ -1591,7 +1591,7 @@ export default function YoutubeUpload() {
                             {t('upload.form.poster_hint')}
                         </span>
                         <span className="text-xs text-slate-500 block">
-                            {t('upload.form.poster_auto_crop_hint', 'Recadrage automatique au format 2:3 avant envoi.')}
+                            {t('upload.form.poster_auto_crop_hint', 'Automatic crop to 2:3 before upload.')}
                         </span>
                     </div>
 
@@ -1817,7 +1817,7 @@ export default function YoutubeUpload() {
                     {errorSummaryEntries.length > 0 && (
                         <div className="rounded-lg border border-red-200 bg-red-50 p-4" role="alert" aria-live="polite">
                             <p className="text-sm font-semibold text-red-700">
-                                {t('upload.errors.summary_title', 'Veuillez corriger les champs suivants :')}
+                                {t('upload.errors.summary_title', 'Please fix the following fields:')}
                             </p>
                             <ul className="mt-2 list-disc pl-5 space-y-1 text-sm text-red-700">
                                 {errorSummaryEntries.map(([field, message]) => (
@@ -1836,7 +1836,7 @@ export default function YoutubeUpload() {
                             disabled={currentStep === 1 || uploading || isValidating || isPosterProcessing}
                             className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {t('upload.form.step_back', 'Precedent')}
+                            {t('upload.form.step_back', 'Back')}
                         </button>
 
                         {currentStep < 3 ? (
@@ -1845,7 +1845,7 @@ export default function YoutubeUpload() {
                                 onClick={handleNextStep}
                                 className="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition-colors"
                             >
-                                {t('upload.form.step_next', 'Suivant')}
+                                {t('upload.form.step_next', 'Next')}
                             </button>
                         ) : (
                             <button

@@ -19,6 +19,7 @@ import { useTheme } from "../context/ThemeContext";
 import {
   buildLocalizedSlugPath,
   getLocalizedPath,
+  normalizeLanguage,
 } from "../utils/localizedRoutes";
 
 const normalizeAgendaTagKey = (value = "") =>
@@ -114,25 +115,132 @@ const buildTranslationSignature = (translations) => {
   return ids.length ? ids.join("-") : "";
 };
 
+const toTranslationIdSet = (article) => {
+  const ids = new Set();
+  const articleId = Number(article?.id);
+  if (Number.isFinite(articleId) && articleId > 0) ids.add(articleId);
+
+  const translations = article?.translations;
+  if (translations && typeof translations === "object") {
+    Object.values(translations).forEach((value) => {
+      const id = Number(value);
+      if (Number.isFinite(id) && id > 0) ids.add(id);
+    });
+  }
+
+  return ids;
+};
+
+const buildAgendaArticleQueryValue = (article) => {
+  const signature = String(article?.translationSignature || "").trim();
+  if (signature) return `sig:${signature}`;
+
+  const ids = Array.from(toTranslationIdSet(article)).sort((a, b) => a - b);
+  if (ids.length) return `id:${ids[0]}`;
+
+  const slug = String(article?.slug || "").trim();
+  if (slug) return `slug:${slug}`;
+  return "";
+};
+
+const matchesAgendaArticleQuery = (article, rawQueryValue) => {
+  const queryValue = String(rawQueryValue || "").trim();
+  if (!queryValue) return false;
+
+  const signature = String(article?.translationSignature || "").trim();
+  const ids = Array.from(toTranslationIdSet(article)).map((id) => String(id));
+  const slug = String(article?.slug || "").trim();
+
+  if (queryValue.startsWith("sig:")) {
+    const expected = queryValue.slice(4).trim();
+    return Boolean(signature) && signature === expected;
+  }
+  if (queryValue.startsWith("id:")) {
+    const expected = queryValue.slice(3).trim();
+    return ids.includes(expected);
+  }
+  if (queryValue.startsWith("slug:")) {
+    const expected = queryValue.slice(5).trim();
+    return Boolean(slug) && slug === expected;
+  }
+
+  // Backward-compatible legacy format: plain id or slug.
+  return ids.includes(queryValue) || (Boolean(slug) && slug === queryValue) || (Boolean(signature) && signature === queryValue);
+};
+
+const matchesAgendaArticleStartsAt = (article, rawStartsAt) => {
+  const toMinuteKey = (value = "") => {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    const match = raw.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/);
+    return match ? `${match[1]}T${match[2]}:${match[3]}` : raw.slice(0, 16);
+  };
+
+  const targetMinute = toMinuteKey(rawStartsAt);
+  if (!targetMinute) return false;
+
+  const articleMinute = toMinuteKey(
+    String(article?.startMinuteKey || article?.startsAt || ""),
+  );
+  return articleMinute === targetMinute;
+};
+
+const findPreferredLanguageItem = (items, targetLanguage, predicate) => {
+  if (!Array.isArray(items) || items.length === 0 || typeof predicate !== "function") {
+    return null;
+  }
+
+  const normalizedTargetLanguage = normalizeLanguage(targetLanguage);
+  const matchInTargetLanguage = items.find(
+    (item) =>
+      normalizeLanguage(item?.language || "") === normalizedTargetLanguage &&
+      predicate(item),
+  );
+  if (matchInTargetLanguage) return matchInTargetLanguage;
+
+  return items.find((item) => predicate(item)) || null;
+};
+
 const findMatchingAgendaArticle = (previousArticle, items, targetLanguage) => {
   if (!previousArticle || !Array.isArray(items) || items.length === 0)
     return null;
+  const normalizedTargetLanguage = normalizeLanguage(targetLanguage);
+  const previousIds = toTranslationIdSet(previousArticle);
 
   const previousTranslations = previousArticle.translations;
   if (
     previousTranslations &&
     typeof previousTranslations === "object" &&
-    previousTranslations[targetLanguage]
+    previousTranslations[normalizedTargetLanguage]
   ) {
-    const targetId = Number(previousTranslations[targetLanguage]);
-    const matchByTranslatedId = items.find(
+    const targetId = Number(previousTranslations[normalizedTargetLanguage]);
+    const matchByTranslatedId = findPreferredLanguageItem(
+      items,
+      normalizedTargetLanguage,
       (item) => Number(item.id) === targetId,
     );
     if (matchByTranslatedId) return matchByTranslatedId;
   }
 
+  if (previousIds.size > 0) {
+    const matchBySharedTranslationId = findPreferredLanguageItem(
+      items,
+      normalizedTargetLanguage,
+      (item) => {
+        const itemIds = toTranslationIdSet(item);
+        for (const id of previousIds) {
+          if (itemIds.has(id)) return true;
+        }
+        return false;
+      },
+    );
+    if (matchBySharedTranslationId) return matchBySharedTranslationId;
+  }
+
   if (previousArticle.translationSignature) {
-    const matchBySignature = items.find(
+    const matchBySignature = findPreferredLanguageItem(
+      items,
+      normalizedTargetLanguage,
       (item) =>
         item.translationSignature &&
         item.translationSignature === previousArticle.translationSignature,
@@ -141,17 +249,47 @@ const findMatchingAgendaArticle = (previousArticle, items, targetLanguage) => {
   }
 
   if (previousArticle.slug) {
-    const matchBySlug = items.find(
+    const matchBySlug = findPreferredLanguageItem(
+      items,
+      normalizedTargetLanguage,
       (item) => item.slug === previousArticle.slug,
     );
     if (matchBySlug) return matchBySlug;
   }
 
-  if (previousArticle.date && previousArticle.heure) {
-    const matchByDateHour = items.find(
+  if (previousArticle.startsAt || previousArticle.startMinuteKey) {
+    const previousMinuteKey = String(
+      previousArticle.startMinuteKey || previousArticle.startsAt || "",
+    )
+      .trim()
+      .slice(0, 16);
+    const matchByStartMinute = previousMinuteKey
+      ? findPreferredLanguageItem(
+        items,
+        normalizedTargetLanguage,
+        (item) =>
+          String(item.startMinuteKey || item.startsAt || "").trim().slice(0, 16) ===
+          previousMinuteKey,
+      )
+      : null;
+    if (matchByStartMinute) return matchByStartMinute;
+
+    const matchByStartDateTime = findPreferredLanguageItem(
+      items,
+      normalizedTargetLanguage,
       (item) =>
-        item.date === previousArticle.date &&
-        item.heure === previousArticle.heure,
+        String(item.startsAt || "") === String(previousArticle.startsAt || ""),
+    );
+    if (matchByStartDateTime) return matchByStartDateTime;
+  }
+
+  if (previousArticle.date && previousArticle.heure) {
+    const matchByDateHour = findPreferredLanguageItem(
+      items,
+      normalizedTargetLanguage,
+      (item) =>
+        String(item.date || "") === String(previousArticle.date || "") &&
+        String(item.heure || "") === String(previousArticle.heure || ""),
     );
     if (matchByDateHour) return matchByDateHour;
   }
@@ -160,19 +298,14 @@ const findMatchingAgendaArticle = (previousArticle, items, targetLanguage) => {
     stripHtml(previousArticle.titleText || previousArticle.titre || ""),
   );
   if (previousTitleKey) {
-    const matchByTitle = items.find(
+    const matchByTitle = findPreferredLanguageItem(
+      items,
+      normalizedTargetLanguage,
       (item) =>
         normalizeAgendaTagKey(stripHtml(item.titleText || item.titre || "")) ===
         previousTitleKey,
     );
     if (matchByTitle) return matchByTitle;
-  }
-
-  if (previousArticle.date) {
-    const matchByDate = items.find(
-      (item) => item.date === previousArticle.date,
-    );
-    if (matchByDate) return matchByDate;
   }
 
   return null;
@@ -184,6 +317,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   const { isLight } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const currentLanguage = normalizeLanguage(i18n.language);
 
   const routeSlugMapping = {
     agenda: { fr: "agenda", en: "schedule", ar: "schedule" },
@@ -269,7 +403,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     : resolvePageKey(requestedSlug, { preferRoute: true });
 
   const getActiveSlug = () => {
-    const lang = i18n.language || "fr";
+    const lang = currentLanguage || "fr";
     const pageKey = requestedPageKey;
 
     if (pageKey && wpSlugMapping[pageKey]) {
@@ -280,7 +414,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   };
 
   const getActiveRouteSlug = () => {
-    const lang = i18n.language || "fr";
+    const lang = currentLanguage || "fr";
     const pageKey = requestedPageKey;
 
     if (pageKey && routeSlugMapping[pageKey]) {
@@ -297,14 +431,14 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   useEffect(() => {
     if (fixedSlug) return;
     const targetPath = isHome
-      ? getLocalizedPath("home", i18n.language)
-      : buildLocalizedSlugPath(routePathSlug, i18n.language);
+      ? getLocalizedPath("home", currentLanguage)
+      : buildLocalizedSlugPath(routePathSlug, currentLanguage);
     if (location.pathname !== targetPath && (routeSlug || isHome)) {
       navigate(targetPath, { replace: true });
     }
   }, [
     fixedSlug,
-    i18n.language,
+    currentLanguage,
     isHome,
     location.pathname,
     navigate,
@@ -324,6 +458,14 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedArticle, setSelectedArticle] = useState(null);
   const isCallForProjectRoute = slug === "appel-a-projet" || slug === "call-for-project";
+  const requestedAgendaArticle = useMemo(() => {
+    const value = new URLSearchParams(location.search).get("article");
+    return String(value || "").trim();
+  }, [location.search]);
+  const requestedAgendaStartsAt = useMemo(() => {
+    const value = new URLSearchParams(location.search).get("articleAt");
+    return String(value || "").trim();
+  }, [location.search]);
 
   const getCategoryColor = (catId) => {
     const colors = {
@@ -399,9 +541,9 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   const formatDateParts = (dateStr) => {
     const d = parseDate(dateStr);
     const locale =
-      i18n.language === "fr"
+      currentLanguage === "fr"
         ? "fr-FR"
-        : i18n.language === "ar"
+        : currentLanguage === "ar"
           ? "ar"
           : "en-GB";
     const monthShort = d
@@ -454,8 +596,8 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
             ? [...new Set([slug, "برنامج", "schedule-ar", "agenda", "schedule"])]
           : [slug];
         const languageCandidates = isCallForProjectPage
-          ? [...new Set([i18n.language, "en", "fr"])]
-          : [i18n.language];
+          ? [...new Set([currentLanguage, "en", "fr"])]
+          : [currentLanguage];
         let pageData = null;
 
         for (const candidate of slugCandidates) {
@@ -476,12 +618,12 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
             en: 51,
             ar: 103,
           };
-          const agendaCategoryId = categoryMap[i18n.language] || categoryMap.fr;
+          const agendaCategoryId = categoryMap[currentLanguage] || categoryMap.fr;
           if (pageKey === "agenda") {
             try {
               const allPosts = await getWpPostsByCategory({
                 categoryId: agendaCategoryId,
-                lang: i18n.language,
+                lang: currentLanguage,
                 perPage: 100,
                 order: "asc",
                 orderBy: "date",
@@ -489,9 +631,9 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
               });
               if (allPosts && Array.isArray(allPosts)) {
                 const timeLocale =
-                  i18n.language === "fr"
+                  currentLanguage === "fr"
                     ? "fr-FR"
-                    : i18n.language === "ar"
+                    : currentLanguage === "ar"
                       ? "ar"
                       : "en-GB";
                 const formattedEvents = allPosts.map((post) => {
@@ -520,8 +662,10 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                     translationSignature: buildTranslationSignature(
                       post?.translations,
                     ),
-                    language: String(post.lang || i18n.language || ""),
+                    language: String(post.lang || currentLanguage || ""),
                     date: dateOnly,
+                    startsAt: String(post.date || ""),
+                    startMinuteKey: String(post.date || "").trim().slice(0, 16),
                     titre: post.title.rendered,
                     titleText: stripHtml(post.title.rendered || ""),
                     contenu: post.content.rendered,
@@ -554,7 +698,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     return () => {
       cancelled = true;
     };
-  }, [slug, i18n.language, pageKey, t]);
+  }, [slug, i18n.language, currentLanguage, pageKey, t]);
 
   const dateOptions = useMemo(() => {
     const unique = Array.from(new Set(agendaItems.map((item) => item.date)));
@@ -623,20 +767,106 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   const activeEvents = agendaItems.filter((item) => item.date === selectedDate);
 
   useEffect(() => {
+    if (pageKey !== "agenda") return;
+    if (loading) return;
+    if (!requestedAgendaArticle && !requestedAgendaStartsAt) return;
+    if (!agendaItems.length) return;
+
+    const matchedByQuery = findPreferredLanguageItem(
+      agendaItems,
+      currentLanguage,
+      (item) => matchesAgendaArticleQuery(item, requestedAgendaArticle),
+    );
+    const matchedByStartsAt = matchedByQuery
+      ? null
+      : findPreferredLanguageItem(
+        agendaItems,
+        currentLanguage,
+        (item) => matchesAgendaArticleStartsAt(item, requestedAgendaStartsAt),
+      );
+    const matchedArticle = matchedByQuery || matchedByStartsAt;
+
+    if (!matchedArticle) return;
+    if (
+      !selectedArticle ||
+      String(selectedArticle.id || "") !== String(matchedArticle.id || "") ||
+      String(selectedArticle.slug || "") !== String(matchedArticle.slug || "")
+    ) {
+      setSelectedArticle(matchedArticle);
+    }
+  }, [
+    agendaItems,
+    loading,
+    pageKey,
+    currentLanguage,
+    requestedAgendaArticle,
+    requestedAgendaStartsAt,
+    selectedArticle,
+  ]);
+
+  useEffect(() => {
+    if (pageKey !== "agenda") return;
+    if (!selectedArticle) return;
+
+    const articleQueryValue = buildAgendaArticleQueryValue(selectedArticle);
+    const articleStartsAt = String(
+      selectedArticle?.startMinuteKey || selectedArticle?.startsAt || "",
+    )
+      .trim()
+      .slice(0, 16);
+
+    const params = new URLSearchParams(location.search);
+    let changed = false;
+
+    if (articleQueryValue) {
+      if (params.get("article") !== articleQueryValue) {
+        params.set("article", articleQueryValue);
+        changed = true;
+      }
+    } else if (params.has("article")) {
+      params.delete("article");
+      changed = true;
+    }
+
+    if (articleStartsAt) {
+      if (params.get("articleAt") !== articleStartsAt) {
+        params.set("articleAt", articleStartsAt);
+        changed = true;
+      }
+    } else if (params.has("articleAt")) {
+      params.delete("articleAt");
+      changed = true;
+    }
+
+    if (!changed) return;
+
+    const nextSearch = params.toString();
+    const nextUrl = `${location.pathname}${nextSearch ? `?${nextSearch}` : ""}${location.hash || ""}`;
+    navigate(nextUrl, { replace: true });
+  }, [
+    location.hash,
+    location.pathname,
+    location.search,
+    navigate,
+    pageKey,
+    selectedArticle,
+  ]);
+
+  useEffect(() => {
     if (!selectedArticle) return;
     if (loading) return;
-    if (!agendaItems.length) {
-      setSelectedArticle(null);
-      return;
-    }
+    if (!agendaItems.length) return;
 
     const mapped = findMatchingAgendaArticle(
       selectedArticle,
       agendaItems,
-      i18n.language,
+      currentLanguage,
     );
     if (!mapped) {
-      setSelectedArticle(null);
+      const selectedLanguage = normalizeLanguage(selectedArticle.language || "");
+      if (selectedLanguage && selectedLanguage !== currentLanguage) {
+        setSelectedArticle(null);
+      }
       return;
     }
 
@@ -646,7 +876,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
     ) {
       setSelectedArticle(mapped);
     }
-  }, [agendaItems, i18n.language, loading, selectedArticle]);
+  }, [agendaItems, currentLanguage, loading, selectedArticle]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1067,7 +1297,18 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
             {selectedArticle ? (
               <div className="mt-2">
                 <button
-                  onClick={() => setSelectedArticle(null)}
+                  onClick={() => {
+                    setSelectedArticle(null);
+                    const params = new URLSearchParams(location.search);
+                    if (!params.has("article") && !params.has("articleAt")) return;
+                    params.delete("article");
+                    params.delete("articleAt");
+                    const nextSearch = params.toString();
+                    navigate(
+                      `${currentPagePath}${nextSearch ? `?${nextSearch}` : ""}`,
+                      { replace: true },
+                    );
+                  }}
                   className={`mb-6 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] transition ${agendaTheme.backBtn}`}
                 >
                   <span aria-hidden="true">←</span>

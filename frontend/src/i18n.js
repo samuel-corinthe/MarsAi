@@ -1383,6 +1383,58 @@ const extraTranslations = {
       admin_no_data: "No admin data available.",
       no_phase_config: "No phase configured.",
     },
+    upload: {
+      form: {
+        step_label: "Part",
+      },
+      errors: {
+        timeout: "Processing timeout exceeded. Please try again.",
+      },
+      validation: {
+        required: "This field is required.",
+        no_emoji: "Emojis are not allowed in this field.",
+        email_required: "Email is required.",
+        email_invalid: "Please enter a valid email address (e.g. name@domain.com).",
+        first_name_required: "First name is required.",
+        first_name_invalid:
+          "First name must contain between 1 and 50 characters (letters, hyphens and apostrophes only).",
+        last_name_required: "Last name is required.",
+        last_name_invalid:
+          "Last name must contain between 1 and 50 characters (letters, hyphens and apostrophes only).",
+        age_required: "Age is required.",
+        age_number: "Age must be a valid number.",
+        age_min: "You must be at least 18 years old to participate.",
+        title_required: "Title is required.",
+        title_invalid:
+          "Title must contain between 2 and 100 characters (letters, numbers and basic punctuation).",
+        description_invalid: "Description must not exceed 250 characters.",
+        country_required: "Country code is required.",
+        country_invalid:
+          "Invalid country code (2 uppercase letters, e.g. FR).",
+        language_required: "Movie language is required.",
+        language_invalid: "Movie language must contain between 2 and 50 characters.",
+        ai_tools_required: "AI tools are required.",
+        ai_tools_one_required: "At least one AI tool is required.",
+        ai_tools_max: "No more than 5 AI tools are allowed.",
+        ai_tools_invalid:
+          "AI tools format is invalid (max 5 tools, separated by commas).",
+        bio_invalid: "Bio must not exceed 500 characters.",
+        url_invalid: "Invalid URL (must start with https://).",
+        cast_max: "Maximum 10 cast members.",
+        cast_member_required: "Each cast member must have a name and a role.",
+        cast_too_long: "Cast name/role is too long (max 120 characters).",
+        cast_avatar_invalid:
+          "Invalid cast avatar URL (https:// required).",
+        video_unreadable:
+          "Unable to read the video file. The video format must be valid (mp4).",
+        video_file_too_large:
+          "The file is too large ({{current}} MB). Maximum: {{max}} MB.",
+        video_mp4_only: "Only MP4 format is allowed.",
+        video_duration_range:
+          "Video duration ({{duration}}s) must be between {{min}}s and {{max}}s.",
+        video_ratio_16_9: "Video aspect ratio must be 16:9.",
+      },
+    },
   },
   ar: {
     nav: {

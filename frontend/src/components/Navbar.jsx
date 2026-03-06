@@ -66,8 +66,10 @@ export default function Navbar() {
     i18n.changeLanguage(nextLanguage);
     const currentPath = normalizePath(location.pathname);
     const nextPath = getEquivalentLocalizedPath(currentPath, nextLanguage);
-    if (nextPath !== currentPath) {
-      navigate(nextPath, { replace: true });
+    const currentUrl = `${currentPath}${location.search || ""}${location.hash || ""}`;
+    const nextUrl = `${nextPath}${location.search || ""}${location.hash || ""}`;
+    if (nextUrl !== currentUrl) {
+      navigate(nextUrl, { replace: true });
     }
     setMobileMenuOpen(false);
     setUtilityMenuOpen(false);
