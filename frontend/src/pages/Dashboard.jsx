@@ -3,7 +3,6 @@ import Seo from "../components/Seo";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import FilmRow from "../components/dashboard/FilmRow";
-import ProgressBar from "../components/dashboard/ProgressBar";
 import PageLoader from "../components/ui/PageLoader";
 import { getLocalizedPath } from "../utils/localizedRoutes";
 import {
@@ -38,8 +37,8 @@ const DEFAULT_ASSIGNMENT_META = {
 const DASHBOARD_SECTION_IDS = ["admin-top", "profile", "films"];
 const SITE_PHASE_KEYS = ["phase_1", "phase_2", "phase_3"];
 const SITE_PHASE_LABELS = {
-  phase_1: "Phase 1 - Depot",
-  phase_2: "Phase 2 - Selection",
+  phase_1: "Phase 1 - Dépôt",
+  phase_2: "Phase 2 - Sélection",
   phase_3: "Phase 3 - Annonce",
 };
 
@@ -104,6 +103,8 @@ export default function Dashboard() {
   const [assignmentBusyMovieId, setAssignmentBusyMovieId] = useState(null);
   const [assignmentInfoError, setAssignmentInfoError] = useState("");
   const [assignmentInfoSuccess, setAssignmentInfoSuccess] = useState("");
+  const [phaseChangeError, setPhaseChangeError] = useState("");
+  const [phaseChangeSuccess, setPhaseChangeSuccess] = useState("");
   const [distributionBusy, setDistributionBusy] = useState(false);
   const [ratingModalFilm, setRatingModalFilm] = useState(null);
   const [ratingModalScore, setRatingModalScore] = useState(0);
@@ -346,19 +347,25 @@ export default function Dashboard() {
   const phase2SelectionCount = Number(phase2SelectionState.selectedCount || 0);
   const isSelectionForPhase2 = activeSitePhaseKey === "phase_1";
   const isSelectionForPhase3 = activeSitePhaseKey === "phase_2";
+  const selectionCounterTarget = isSelectionForPhase3 ? 5 : 50;
   const phase2SelectionMinRequired = isSelectionForPhase3
     ? 5
     : Number(phase2SelectionState.minRequired || 50);
+  const selectionCounterSelected = Math.max(
+    0,
+    Math.min(selectionCounterTarget, Number(phase2SelectionCount || 0)),
+  );
+  const selectionCounterDeselected = Math.max(0, selectionCounterTarget - selectionCounterSelected);
   const hasEnoughPhase2Selection = phase2SelectionCount >= phase2SelectionMinRequired;
   const canManageSelectionForCurrentPhase =
     canManagePhase && (isSelectionForPhase2 || isSelectionForPhase3);
   const phase3EligibilityEnforced = phase3EligibilityLoaded && phase3EligibleMovieIds.size >= 50;
   const selectionCardTitle = isSelectionForPhase2
-    ? "Preselection phase 2"
-    : "Selection jury phase 3";
+    ? "Présélection phase 2"
+    : "Sélection jury phase 3";
   const selectionAddLabel = isSelectionForPhase2
-    ? "Selectionner pour phase 2"
-    : "Selectionner pour phase 3";
+    ? "Sélectionner pour phase 2"
+    : "Sélectionner pour phase 3";
   const selectionRemoveLabel = isSelectionForPhase2
     ? "Retirer de la phase 2"
     : "Retirer de la phase 3";
@@ -367,8 +374,8 @@ export default function Dashboard() {
     ? "Valider les 50 films"
     : "Valider les 5 films";
   const selectionValidatedLabel = isSelectionForPhase2
-    ? "Selection phase 2 validee"
-    : "Selection phase 3 validee";
+    ? "Sélection phase 2 validée"
+    : "Sélection phase 3 validée";
   const selectionConditionsLabel = isSelectionForPhase2 ? "Conditions phase 2" : "Conditions phase 3";
   const selectionDeadlineLabel = isSelectionForPhase2 ? "Date de fin phase 1" : "Date de fin phase 2";
   const selectionDeadlineIso = isSelectionForPhase2 ? sitePhase?.phase1EndsAt : sitePhase?.phase2EndsAt;
@@ -397,11 +404,13 @@ export default function Dashboard() {
   const handleNav = (href) => {
     if (!isDashboardSection(href)) return;
     setActiveNav(href);
-    const el = document.getElementById(href);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
+  const isOverviewView = activeNav === "admin-top";
+  const isProfileView = activeNav === "profile";
+  const isFilmsView = activeNav === "films";
 
   const assignmentPolicy = assignmentMeta.policy || adminData.assignmentPolicy || {
     minReviewers: 3,
@@ -447,18 +456,6 @@ export default function Dashboard() {
 
   const viewedAssignedCount = assignedFilms.filter(isFilmViewedByMe).length;
   const remainingAssignedCount = Math.max(0, assignedFilms.length - viewedAssignedCount);
-  const ratedAssignedCount = assignedFilms.filter((film) => {
-    const rating = Number(film.myRating);
-    return Number.isFinite(rating) && rating >= 1 && rating <= 5;
-  }).length;
-  const commentedAssignedCount = assignedFilms.filter(
-    (film) => String(film.myComment || "").trim().length > 0,
-  ).length;
-  const assignedTotal = Math.max(0, assignedFilms.length);
-  const notesProgressValue = assignedTotal > 0 ? (ratedAssignedCount / assignedTotal) * 100 : 0;
-  const commentsProgressValue =
-    assignedTotal > 0 ? (commentedAssignedCount / assignedTotal) * 100 : 0;
-  const viewingProgressValue = assignedTotal > 0 ? (viewedAssignedCount / assignedTotal) * 100 : 0;
 
   const normalizedSearchQuery = String(searchQuery || "").toLowerCase().trim();
   const filteredFilms = assignedFilms
@@ -537,31 +534,6 @@ export default function Dashboard() {
       setProfileSaving(false);
     }
   };
-  const handleAddSelection = () => {
-    setAdminData((prev) => {
-      if (!prev) return prev;
-      const quota = prev.adminKpis?.quota ?? 0;
-      const nextSelected = Math.min((prev.adminKpis?.selected ?? 0) + 1, quota);
-      const nextAdminKpis = {
-        ...prev.adminKpis,
-        selected: nextSelected,
-        remaining: Math.max(0, (prev.adminKpis?.remaining ?? 0) - 1),
-        noted: (prev.adminKpis?.noted ?? 0) + 1,
-      };
-      const nextPhaseTimeline = (prev.phaseTimeline ?? []).map((phase, idx) => {
-        if (idx !== safePhaseIndex) return phase;
-        const phaseQuota = phase.quota ?? quota;
-        const nextPhaseSelected = Math.min((phase.selected ?? 0) + 1, phaseQuota);
-        return { ...phase, selected: nextPhaseSelected };
-      });
-      return {
-        ...prev,
-        adminKpis: nextAdminKpis,
-        phaseTimeline: nextPhaseTimeline,
-      };
-    });
-  };
-
   const handleLogout = async () => {
     setLogoutError("");
     setLogoutPending(true);
@@ -664,6 +636,8 @@ export default function Dashboard() {
 
     setAssignmentInfoError("");
     setAssignmentInfoSuccess("");
+    setPhaseChangeError("");
+    setPhaseChangeSuccess("");
     setSitePhaseBusy(true);
 
     try {
@@ -677,9 +651,13 @@ export default function Dashboard() {
       const pruneSuffix = deletedMovies > 0
         ? ` ${deletedMovies} film(s) hors selection phase 2 supprime(s).`
         : "";
-      setAssignmentInfoSuccess(`Phase active: ${SITE_PHASE_LABELS[phaseKey]}.${pruneSuffix}`);
+      const phaseSuccessMessage = `Phase active: ${SITE_PHASE_LABELS[phaseKey]}.${pruneSuffix}`;
+      setAssignmentInfoSuccess(phaseSuccessMessage);
+      setPhaseChangeSuccess(phaseSuccessMessage);
     } catch (error) {
-      setAssignmentInfoError(error?.message || "Impossible de mettre a jour la phase.");
+      const phaseErrorMessage = error?.message || "Impossible de mettre a jour la phase.";
+      setAssignmentInfoError(phaseErrorMessage);
+      setPhaseChangeError(phaseErrorMessage);
     } finally {
       setSitePhaseBusy(false);
     }
@@ -895,7 +873,7 @@ export default function Dashboard() {
         `Auto-répartition terminée : ${result?.createdAssignments || 0} assignations créées.`,
       );
     } catch (error) {
-      setAssignmentInfoError(error?.message || "Impossible de lancer l’auto-répartition.");
+      setAssignmentInfoError(error?.message || "Impossible de lancer l'auto-répartition.");
     } finally {
       setDistributionBusy(false);
     }
@@ -952,7 +930,7 @@ export default function Dashboard() {
               <h1 className="dash-title text-white">Bienvenue, {profilePreview.name}</h1>
             <Link
               to={dashboardStatsPath}
-              className="btn-ghost rounded-full px-4 py-2 border border-white/10"
+              className="btn-primary rounded-full px-4 py-2"
             >
               Voir les stats
             </Link>
@@ -971,6 +949,7 @@ export default function Dashboard() {
         </header>
 
         {/* Profil admin + phase en cours */}
+        {isProfileView && (
         <section id="profile" className="grid grid-cols-1 xl:grid-cols-3 gap-5">
           <div className="glass-strong p-6 space-y-4 xl:col-span-2">
             <div className="flex items-center justify-between gap-3">
@@ -1123,63 +1102,63 @@ export default function Dashboard() {
                 );
               })}
             </div>
+            {phaseChangeError && (
+              <p className="rounded-xl border border-rose-300/50 bg-rose-500/20 px-3 py-2 text-sm font-semibold text-rose-900">
+                {phaseChangeError}
+              </p>
+            )}
+            {phaseChangeSuccess && (
+              <p className="rounded-xl border border-emerald-300/50 bg-emerald-500/20 px-3 py-2 text-sm font-semibold text-emerald-100">
+                {phaseChangeSuccess}
+              </p>
+            )}
             {!canManagePhase && (
               <p className="text-xs text-amber-200/90">Connexion admin requise pour changer de phase.</p>
             )}
           </div>
         </section>
+        )}
         {/* Admin area */}
+        {(isOverviewView || isFilmsView) && (
         <section id="films" className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-          <div className="xl:col-span-8 glass p-6 space-y-6">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+          {isFilmsView && (
+          <div className="xl:col-span-12 glass p-6 space-y-6">
+            <div className="space-y-2">
               <div>
-                <h2 className="text-2xl font-black uppercase tracking-tight">Vision rapide</h2>
+                <h2 className="text-2xl font-black uppercase tracking-tight">Visionnage de film</h2>
                 <p className="text-xs text-slate-200/85">
-                  Charge perso : {assignmentMeta.myPendingMinutes} min en attente - {assignedFilms.length} films assignés - Règle {assignmentPolicy.minReviewers}-{assignmentPolicy.maxReviewers} évaluateurs / film
+                  Charge perso : {assignmentMeta.myPendingMinutes} min en attente
+                </p>
+                <p className="text-xs text-slate-300/80">
+                  {assignedFilms.length} films assignés - Règle {assignmentPolicy.minReviewers}-{assignmentPolicy.maxReviewers} évaluateurs / film
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {isSuperAdmin && (
-                  <>
-                    <button
-                      className="btn-ghost rounded-full px-4 py-2 border border-white/10 disabled:opacity-60"
-                      onClick={handleAutoAssign}
-                      disabled={distributionBusy}
-                    >
-                      {distributionBusy ? "Traitement..." : "Auto-répartir"}
-                    </button>
-                    <button
-                      className="btn-ghost rounded-full px-4 py-2 border border-white/10 disabled:opacity-60"
-                      onClick={handleRebalance}
-                      disabled={distributionBusy}
-                    >
-                      {distributionBusy ? "Traitement..." : "Rééquilibrer"}
-                    </button>
-                  </>
-                )}
-                <button
-                  className="btn-primary rounded-full px-4 py-2"
-                  disabled={adminKpis.selected >= adminKpis.quota}
-                  onClick={handleAddSelection}
-                  style={{
-                    opacity: adminKpis.selected >= adminKpis.quota ? 0.6 : 1,
-                    cursor: adminKpis.selected >= adminKpis.quota ? "not-allowed" : "pointer",
-                  }}
-                >
-                  Ajouter à la sélection ({adminKpis.selected}/{adminKpis.quota})
-                </button>
-              </div>
+              {isSuperAdmin && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <button
+                    className="btn-ghost rounded-lg border border-white/10 px-4 py-2 disabled:opacity-60"
+                    onClick={handleAutoAssign}
+                    disabled={distributionBusy}
+                  >
+                    {distributionBusy ? "Traitement..." : "Auto-repartir"}
+                  </button>
+                  <button
+                    className="btn-ghost rounded-lg border border-white/10 px-4 py-2 disabled:opacity-60"
+                    onClick={handleRebalance}
+                    disabled={distributionBusy}
+                  >
+                    {distributionBusy ? "Traitement..." : "Reequilibrer"}
+                  </button>
+                </div>
+              )}
+              {assignmentInfoError && <p className="text-sm text-rose-200">{assignmentInfoError}</p>}
+              {assignmentInfoSuccess && (
+                <p className="text-sm text-emerald-200">{assignmentInfoSuccess}</p>
+              )}
             </div>
-            {assignmentInfoError && <p className="text-sm text-rose-200">{assignmentInfoError}</p>}
-            {assignmentInfoSuccess && (
-              <p className="text-sm text-emerald-200">{assignmentInfoSuccess}</p>
-            )}
-
-
-          
             <div className="stat-card glass-strong p-5 space-y-4">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="text-lg font-black uppercase tracking-tight text-white">Vision synthèse</h3>
+                <h3 className="text-lg font-black uppercase tracking-tight text-white">Synthèse</h3>
                 <span className="text-xs text-slate-100/80">
                   {viewedAssignedCount}/{assignedFilms.length} traités
                 </span>
@@ -1194,9 +1173,14 @@ export default function Dashboard() {
                   <div className="kpi-value">{remainingAssignedCount}</div>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                  <div className="kpi-label text-slate-100">Sélection officielle</div>
+                  <div className="kpi-label text-slate-100">
+                    {selectionCounterTarget === 5 ? "Sélection 5 films" : "Sélection 50 films"}
+                  </div>
                   <div className="kpi-value">
-                    {adminKpis.selected}/{adminKpis.quota}
+                    {selectionCounterSelected}/{selectionCounterTarget}
+                  </div>
+                  <div className="mt-1 text-[11px] text-slate-200/85">
+                    Sélectionnés: {selectionCounterSelected} • Non sélectionnés: {selectionCounterDeselected}
                   </div>
                 </div>
               </div>
@@ -1206,10 +1190,34 @@ export default function Dashboard() {
               <div className="kpi-trend text-cyan-200">Quota cible {quotaTarget}</div>
             </div>
 
-            {/* Filters */}
+            {isOverviewView && (
+              <div className="list-card space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-black uppercase tracking-tight text-white">Vue d&apos;ensemble</h3>
+                    <p className="text-sm text-slate-200/85">
+                      Phase active: {activeSitePhaseLabel} - mode {sitePhase?.mode === "timer" ? "timer" : "manuel"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-primary rounded-lg px-4 py-2"
+                    onClick={() => handleNav("films")}
+                  >
+                    Ouvrir les films assignés
+                  </button>
+                </div>
+                <div className="text-xs text-slate-300/80">
+                  Utilise l&apos;onglet Films pour noter, filtrer et gérer la liste complète.
+                </div>
+              </div>
+            )}
+
+            {isFilmsView && (
+            <>
             <div className="space-y-3">
               {showFilmFiltersCard ? (
-                <div className="list-card space-y-4">
+                <div className="list-card space-y-4 transition-all duration-200">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300/90">
                       Recherche et tri
@@ -1303,18 +1311,21 @@ export default function Dashboard() {
                   )}
                 </div>
               ) : (
-                <button
-                  type="button"
-                  className="rounded-full bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-100 hover:bg-white/20"
-                  onClick={() => setShowFilmFiltersCard(true)}
-                >
-                  Afficher la barre de tri
-                </button>
+                <div className="list-card flex items-center justify-between gap-3 transition-all duration-200">
+                  <p className="text-xs text-slate-300/85">Filtres masqués pour alléger la vue.</p>
+                  <button
+                    type="button"
+                    className="rounded-full bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-100 hover:bg-white/20"
+                    onClick={() => setShowFilmFiltersCard(true)}
+                  >
+                    Afficher la barre de tri
+                  </button>
+                </div>
               )}
             </div>
 
             {/* Film list */}
-            <div className="list-card space-y-3" data-testid="films-list">
+            <div className="list-card space-y-3 transition-all duration-200" data-testid="films-list">
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300/80">
                 <span>
                   Films assignés affichés : {visibleFilms.length}/{filteredFilms.length} (total assigné : {assignedFilms.length})
@@ -1388,10 +1399,73 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
+            </>
+            )}
           </div>
+          )}
 
           {/* Admin side widgets */}
-          <div className="xl:col-span-4 space-y-4">
+          {isOverviewView && (
+          <div className="xl:col-span-12 space-y-4">
+            <div className="glass p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-black uppercase tracking-tight text-white">Dépôt et phase active</h3>
+                <span className="text-xs text-slate-100/80">{activeSitePhaseLabel}</span>
+              </div>
+              <p className="text-xs text-slate-200/85">
+                {currentPhase.description}
+              </p>
+              <div className="text-xs text-slate-100/85">
+                Selection : {currentPhase.selected}/{quotaTarget} Films deposes : {currentPhase.submitted}
+              </div>
+              <div className="bar-track h-2">
+                <div
+                  className="bar-fill"
+                  style={{
+                    width: `${selectionProgress}%`,
+                    background: "linear-gradient(90deg,#25d0ff,#f2438b)",
+                  }}
+                />
+              </div>
+              {showPhaseCountdown ? (
+                <div className="text-xs text-slate-100/85">
+                  {phaseCountdownMeta?.label}: {remainingDays}j {String(remainingHours).padStart(2, "0")}h{" "}
+                  {String(remainingMinutes).padStart(2, "0")}m {String(remainingSeconds).padStart(2, "0")}s
+                </div>
+              ) : (
+                <div className="text-xs text-slate-100/85">Pas de decompte actif</div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {SITE_PHASE_KEYS.map((phaseKey) => {
+                  const isActivePhase = activeSitePhaseKey === phaseKey;
+                  return (
+                    <button
+                      key={`overview-phase-${phaseKey}`}
+                      className={
+                        isActivePhase
+                          ? "btn-primary px-4 py-2 rounded-lg"
+                          : "btn-ghost px-4 py-2 rounded-lg border border-white/10"
+                      }
+                      disabled={!canManagePhase || sitePhaseBusy || isActivePhase}
+                      onClick={() => handleSetSitePhase(phaseKey)}
+                    >
+                      {SITE_PHASE_LABELS[phaseKey]}
+                    </button>
+                  );
+                })}
+              </div>
+              {phaseChangeError && (
+                <p className="rounded-xl border border-rose-300/50 bg-rose-500/20 px-3 py-2 text-sm font-semibold text-rose-900">
+                  {phaseChangeError}
+                </p>
+              )}
+              {phaseChangeSuccess && (
+                <p className="rounded-xl border border-emerald-300/50 bg-emerald-500/20 px-3 py-2 text-sm font-semibold text-emerald-100">
+                  {phaseChangeSuccess}
+                </p>
+              )}
+            </div>
+
             {showSelectionCard && (
             <div className="glass p-5 space-y-4">
               <div className="flex items-center justify-between gap-3">
@@ -1492,61 +1566,47 @@ export default function Dashboard() {
             </div>
             )}
 
-            <div className="glass p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-black uppercase tracking-tight">Stats festival</h3>
-                <span className="text-xs text-slate-100/80">Lecture seule</span>
-              </div>
-              <p className="text-sm text-slate-200">
-                Consultez la synthese du festival sans quitter votre session admin.
-              </p>
-              <Link className="btn-primary w-full rounded-lg text-center" to={dashboardStatsPath}>
-                Voir les statistiques
-              </Link>
-            </div>
-
-            {canManagePhase && (
+            <div className="space-y-4">
               <div className="glass p-5 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-black uppercase tracking-tight">Export CSV</h3>
-                  <span className="text-xs text-slate-100/80">Admin</span>
+                  <h3 className="font-black uppercase tracking-tight">Stats festival</h3>
+                  <span className="text-xs text-slate-100/80">Lecture seule</span>
                 </div>
                 <p className="text-sm text-slate-200">
-                  Telecharge la liste complete des films en CSV pour traitement externe.
+                  Consultez la synthese du festival sans quitter votre session admin.
                 </p>
-                <a
-                  className="btn-ghost block w-full rounded-lg border border-white/10 px-4 py-2 text-center"
-                  href={dashboardMoviesCsvExportPath}
-                  download="movies.csv"
+                <Link
+                  className="btn-primary block w-full rounded-lg px-4 py-2 text-center"
+                  to={dashboardStatsPath}
                 >
-                  Exporter movies.csv
-                </a>
+                  Voir les statistiques
+                </Link>
               </div>
-            )}
 
-            <div className="glass p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-black uppercase tracking-tight">Vos indicateurs</h3>
-                <span className="text-xs text-slate-100/80">Basé sur vos actions réelles</span>
-              </div>
-              <ProgressBar
-                label={`Notes déposées (${ratedAssignedCount}/${assignedTotal})`}
-                value={notesProgressValue}
-                color="linear-gradient(90deg,#25d0ff,#f6c452)"
-              />
-              <ProgressBar
-                label={`Commentaires (${commentedAssignedCount}/${assignedTotal})`}
-                value={commentsProgressValue}
-                color="linear-gradient(90deg,#f2438b,#25d0ff)"
-              />
-              <ProgressBar
-                label={`Visionnage valide (${viewedAssignedCount}/${assignedTotal})`}
-                value={viewingProgressValue}
-                color="linear-gradient(90deg,#f6c452,#f2438b)"
-              />
+              {canManagePhase && (
+                <div className="glass p-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-black uppercase tracking-tight">Export CSV</h3>
+                    <span className="text-xs text-slate-100/80">Admin</span>
+                  </div>
+                  <p className="text-sm text-slate-200">
+                    Telecharge la liste complete des films en CSV pour traitement externe.
+                  </p>
+                  <a
+                    className="btn-ghost block w-full rounded-lg border border-white/10 px-4 py-2 text-center"
+                    href={dashboardMoviesCsvExportPath}
+                    download="movies.csv"
+                  >
+                    Exporter movies.csv
+                  </a>
+                </div>
+              )}
+
             </div>
           </div>
+          )}
         </section>
+        )}
         {/* Bottom nav mobile */}
         <div className="bottom-nav">
           <button
@@ -1559,14 +1619,15 @@ export default function Dashboard() {
             className={activeNav === "admin-top" ? "active" : ""}
             onClick={() => handleNav("admin-top")}
           >
-            Admin
+            Aperçu
           </button>
           <button
             className={activeNav === "films" ? "active" : ""}
             onClick={() => handleNav("films")}
           >
             Films
-          </button>
+          </button>
+
           <button onClick={() => (window.location.href = homePath)}>Home</button>
         </div>
 

@@ -7,7 +7,6 @@ import { validateAltchaMiddleware } from "../utils/AltchaValidator.js";
 import { validateEmail } from "../utils/EmailValidator.js";
 import { validateFileMagicBytes } from "../utils/FileTypeValidator.js";
 import { validateHoneypot } from "../utils/HoneypotValidator.js";
-import { cleanMetadataMiddleware } from "../utils/MetadataCleaner.js";
 import {
   getUploadCountries,
   getYoutubeUploadStatus,
@@ -111,7 +110,6 @@ router.post(
   validateFormData,
   validateEmail,
   emailLimiter,
-  cleanMetadataMiddleware,
   submitYoutubeUpload,
 );
 

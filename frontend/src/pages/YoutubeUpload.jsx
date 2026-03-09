@@ -232,6 +232,21 @@ function isTerminalYoutubeStatus(status) {
     );
 }
 
+function formatUploadElapsed(seconds) {
+    const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+    const mins = Math.floor(safeSeconds / 60);
+    const secs = safeSeconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+function estimateUploadPayloadSize({ videoFile, posterFile, subtitleFile }) {
+    const videoSize = Number(videoFile?.size) || 0;
+    const posterSize = Number(posterFile?.size) || 0;
+    const subtitleSize = Number(subtitleFile?.size) || 0;
+    const multipartOverheadBytes = 128 * 1024;
+    return Math.max(1, videoSize + posterSize + subtitleSize + multipartOverheadBytes);
+}
+
 export default function YoutubeUpload() {
     const { t, i18n } = useTranslation();
     const { isLight } = useTheme();
@@ -244,6 +259,8 @@ export default function YoutubeUpload() {
     const [age, setAge] = useState('');
     const [uploading, setUploading] = useState(false);
     const [progress, setProgress] = useState(0);
+    const [uploadStartedAt, setUploadStartedAt] = useState(0);
+    const [uploadElapsedSeconds, setUploadElapsedSeconds] = useState(0);
     const [status, setStatus] = useState({ type: '', message: '' });
     const [isValidating, setIsValidating] = useState(false);
     const [errors, setErrors] = useState({});
@@ -279,6 +296,20 @@ export default function YoutubeUpload() {
     const statusRef = useRef(null);
     const youtubeStatusPollRef = useRef(null);
     const youtubeStatusPollCountRef = useRef(0);
+
+    useEffect(() => {
+        if (!uploading || uploadStartedAt <= 0 || progress >= 100) return undefined;
+
+        const updateElapsedTime = () => {
+            const elapsed = Math.max(0, Math.floor((Date.now() - uploadStartedAt) / 1000));
+            setUploadElapsedSeconds(elapsed);
+        };
+
+        updateElapsedTime();
+        const intervalId = setInterval(updateElapsedTime, 1000);
+
+        return () => clearInterval(intervalId);
+    }, [progress, uploadStartedAt, uploading]);
 
     useEffect(() => {
         const loadChallenge = async () => {
@@ -723,21 +754,41 @@ export default function YoutubeUpload() {
         if (honeypotFieldName) {
             formData.append(honeypotFieldName, honeypotValue);
         }
+        const estimatedUploadTotalBytes = estimateUploadPayloadSize({
+            videoFile: file,
+            posterFile,
+            subtitleFile,
+        });
 
         try {
             setUploading(true);
+            setProgress(0);
+            setUploadStartedAt(Date.now());
+            setUploadElapsedSeconds(0);
             setStatus({ type: '', message: '' });
 
             const responsePayload = await postYoutubeUpload(
                 formData,
                 (progressEvent) => {
-                    if (!progressEvent || typeof progressEvent.total !== 'number' || progressEvent.total <= 0) {
+                    const loadedBytes = Number(progressEvent?.loaded) || 0;
+                    if (loadedBytes <= 0) {
                         return;
                     }
-                    const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    const eventTotalBytes = Number(progressEvent?.total);
+                    const hasReliableTotal = Number.isFinite(eventTotalBytes) && eventTotalBytes > 0;
+                    const effectiveTotalBytes = hasReliableTotal ? eventTotalBytes : estimatedUploadTotalBytes;
+                    if (!Number.isFinite(effectiveTotalBytes) || effectiveTotalBytes <= 0) {
+                        return;
+                    }
+                    const isTransferCompleted = hasReliableTotal && loadedBytes >= eventTotalBytes;
+                    if (isTransferCompleted) {
+                        setUploadStartedAt((prev) => (prev > 0 ? 0 : prev));
+                    }
+                    const percent = Math.max(0, Math.min(99, Math.round((loadedBytes * 100) / effectiveTotalBytes)));
                     setProgress(percent);
                 },
             );
+            setProgress(100);
             const confirmationEmailSent = responsePayload?.confirmationEmailSent !== false;
             const confirmationEmailError = String(responsePayload?.confirmationEmailError || '').trim();
             const uploadedVideoId = String(responsePayload.videoId || '').trim();
@@ -802,6 +853,8 @@ export default function YoutubeUpload() {
         } finally {
             setUploading(false);
             setProgress(0);
+            setUploadStartedAt(0);
+            setUploadElapsedSeconds(0);
         }
     };
 
@@ -874,11 +927,15 @@ export default function YoutubeUpload() {
     const errorSummaryEntries = Object.entries(errors).filter(([field, message]) => (
         currentStepFields.includes(field) && String(message || '').trim().length > 0
     ));
+    const uploadElapsedLabel = formatUploadElapsed(uploadElapsedSeconds);
     const uploadSteps = [
         { id: 1, badge: t('upload.form.part_1_badge', 'Part 1/3'), title: t('upload.form.part_1_title', 'Participant information') },
         { id: 2, badge: t('upload.form.part_2_badge', 'Part 2/3'), title: t('upload.form.part_2_title', 'Movie information') },
         { id: 3, badge: t('upload.form.part_3_badge', 'Part 3/3'), title: t('upload.form.part_3_title', 'Files and verification') },
     ];
+    const resolvedYoutubeVideoId = String(youtubeStatus?.youtubeVideoId || '').trim();
+    const trackingReferenceId = String(youtubeStatus?.trackingId || youtubeVideoId || '').trim();
+    const showTrackingReference = Boolean(trackingReferenceId);
     const stepProgressPercent = Math.round(((currentStep - 1) / Math.max(1, uploadSteps.length - 1)) * 100);
     const shellClass = isLight
         ? 'border-slate-200/90 bg-white/95 text-slate-900 shadow-[0_20px_55px_rgba(15,23,42,0.14)]'
@@ -1758,6 +1815,11 @@ export default function YoutubeUpload() {
                             <p className="text-sm font-medium text-slate-600 text-center" aria-live="polite">
                                 {t('upload.progress.uploading_with_progress', { progress })}
                             </p>
+                            {progress < 100 && (
+                                <p className="text-xs text-slate-500 text-center" aria-live="polite">
+                                    {t('upload.progress.elapsed_label', { time: uploadElapsedLabel, defaultValue: 'Elapsed time: {{time}}' })}
+                                </p>
+                            )}
                         </div>
                     )}
 
@@ -1792,7 +1854,16 @@ export default function YoutubeUpload() {
                                     {t('upload.youtube_status.stop_refresh')}
                                 </button>
                             </div>
-                            <p className="text-xs text-slate-500 break-all">{t('upload.youtube_status.video_id_label')}:  {youtubeVideoId}</p>
+                            {resolvedYoutubeVideoId && (
+                                <p className="text-xs text-slate-500 break-all">
+                                    {t('upload.youtube_status.video_id_label')}: {resolvedYoutubeVideoId}
+                                </p>
+                            )}
+                            {showTrackingReference && (
+                                <p className="text-xs text-slate-500 break-all">
+                                    {t('upload.youtube_status.tracking_id_label', 'Tracking ID')}: {trackingReferenceId}
+                                </p>
+                            )}
                             <p className="text-sm text-slate-700">
                                 {youtubeStatus
                                     ? `${t('upload.youtube_status.state_label')}: ${youtubeStatus.processingStatus || youtubeStatus.uploadStatus || t('upload.youtube_status.unknown')}`
@@ -1800,6 +1871,16 @@ export default function YoutubeUpload() {
                                         ? t('upload.youtube_status.checking')
                                         : t('upload.youtube_status.waiting')}
                             </p>
+                            {youtubeStatus?.stage && (
+                                <p className="text-xs text-slate-500">
+                                    {t('upload.youtube_status.stage_label', 'Stage')}: {youtubeStatus.stage}
+                                </p>
+                            )}
+                            {youtubeStatus?.message && (
+                                <p className="text-xs text-slate-500">
+                                    {t('upload.youtube_status.message_label', 'Message')}: {youtubeStatus.message}
+                                </p>
+                            )}
                             {youtubeStatusError && (
                                 <p className="text-sm text-red-600">{youtubeStatusError}</p>
                             )}
@@ -1858,7 +1939,7 @@ export default function YoutubeUpload() {
                                 {isValidating
                                     ? t('upload.button.analyzing')
                                     : uploading
-                                        ? t('upload.button.processing_with_progress', { progress })
+                                        ? t('upload.progress.uploading_with_progress', { progress })
                                         : t('upload.button.submit_participation')}
                             </button>
                         )}

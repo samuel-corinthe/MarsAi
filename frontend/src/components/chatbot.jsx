@@ -273,6 +273,19 @@ export default function FaqChatbot() {
     }
   }, [flows, activeCategoryId]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const isMobileViewport = window.matchMedia("(max-width: 639px)").matches;
+    if (!isOpen || !isMobileViewport) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
+
   const markQuestionAsAsked = (question) => {
     const normalized = normalizeQuestionKey(question);
     if (!normalized) return;
@@ -348,6 +361,20 @@ export default function FaqChatbot() {
     setActiveCategoryId(getDefaultCategoryId(flows));
   };
 
+  const rootPositionClass = isOpen
+    ? (isRtl
+      ? "inset-0 sm:inset-auto sm:left-6 sm:bottom-6"
+      : "inset-0 sm:inset-auto sm:right-6 sm:bottom-6")
+    : (isRtl
+      ? "left-4 bottom-4 sm:left-6 sm:bottom-6"
+      : "right-4 bottom-4 sm:right-6 sm:bottom-6");
+
+  const panelOpenClass = isOpen
+    ? "w-full h-[100dvh] rounded-none border-0 opacity-100 scale-100 sm:w-[26rem] sm:h-[min(82vh,680px)] sm:rounded-2xl sm:border"
+    : "w-0 h-0 opacity-0 scale-95 invisible";
+
+  const toggleVisibilityClass = isOpen ? "hidden sm:flex" : "flex";
+
   const renderPicker = () => (
     <div className="space-y-2">
       <p className={`text-[10px] uppercase tracking-[0.2em] ${theme.metaLabel}`}>{ui.categoriesTitle}</p>
@@ -390,20 +417,19 @@ export default function FaqChatbot() {
   );
 
   return (
-    <div className={`fixed bottom-6 z-[70] font-sans ${isRtl ? "left-6" : "right-6"}`}>
+    <div className={`fixed z-[70] font-sans ${rootPositionClass}`}>
       <div
-        className={`rounded-2xl border backdrop-blur-lg transition-all duration-300 ${
+        className={`backdrop-blur-lg transition-all duration-300 ${
           isRtl ? "origin-bottom-left" : "origin-bottom-right"
-        } ${theme.panel} ${
-          isOpen
-            ? "w-80 h-[500px] md:w-96 opacity-100 scale-100"
-            : "w-0 h-0 opacity-0 scale-0 invisible"
-        }`}
+        } ${theme.panel} ${panelOpenClass}`}
         dir={isRtl ? "rtl" : "ltr"}
       >
         {isOpen && (
           <div className="flex flex-col h-full overflow-hidden">
-            <div className={`p-4 border-b flex justify-between items-center ${theme.header}`}>
+            <div
+              className={`sticky top-0 z-10 border-b flex justify-between items-center px-4 py-3 sm:p-4 ${theme.header}`}
+              style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}
+            >
               <div>
                 <h3 className="font-bold text-lg tracking-tight">{ui.title}</h3>
                 <p className={`text-[10px] uppercase tracking-[0.2em] ${theme.subtitle}`}>{ui.subtitle}</p>
@@ -412,9 +438,20 @@ export default function FaqChatbot() {
                 type="button"
                 onClick={() => setIsOpen(false)}
                 aria-label={ui.close}
-                className={`rounded-full w-8 h-8 flex items-center justify-center transition ${theme.closeButton}`}
+                className={`h-10 w-10 sm:h-8 sm:w-8 rounded-full shrink-0 grid place-items-center transition ${theme.closeButton}`}
               >
-                <span aria-hidden="true">x</span>
+                <svg
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
               </button>
             </div>
 
@@ -479,6 +516,17 @@ export default function FaqChatbot() {
                   {ui.reset}
                 </button>
               )}
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className={`sm:hidden w-full rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                  isLight
+                    ? "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                    : "border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700"
+                }`}
+              >
+                {ui.close}
+              </button>
             </div>
           </div>
         )}
@@ -488,16 +536,25 @@ export default function FaqChatbot() {
         type="button"
         onClick={() => setIsOpen((value) => !value)}
         aria-label={isOpen ? ui.close : ui.open}
-        className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
+        className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full items-center justify-center transition-all duration-300 ${toggleVisibilityClass} ${
           isOpen
-            ? `${theme.toggleOpen} rotate-90`
+            ? theme.toggleOpen
             : theme.toggleClosed
         }`}
       >
         {isOpen ? (
-          <span className="text-2xl" aria-hidden="true">
-            x
-          </span>
+          <svg
+            className="h-7 w-7"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
         ) : (
           <div className="relative">
             <span className="text-3xl" aria-hidden="true">
