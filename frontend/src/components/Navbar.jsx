@@ -55,11 +55,37 @@ export default function Navbar() {
   useEffect(() => {
     if (!mobileMenuOpen) return undefined;
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const body = document.body;
+    const root = document.documentElement;
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyPosition = body.style.position;
+    const previousBodyTop = body.style.top;
+    const previousBodyLeft = body.style.left;
+    const previousBodyRight = body.style.right;
+    const previousBodyWidth = body.style.width;
+    const previousRootOverflow = root.style.overflow;
+    const previousRootOverscroll = root.style.overscrollBehaviorY;
+
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    root.style.overflow = "hidden";
+    root.style.overscrollBehaviorY = "contain";
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      body.style.overflow = previousBodyOverflow;
+      body.style.position = previousBodyPosition;
+      body.style.top = previousBodyTop;
+      body.style.left = previousBodyLeft;
+      body.style.right = previousBodyRight;
+      body.style.width = previousBodyWidth;
+      root.style.overflow = previousRootOverflow;
+      root.style.overscrollBehaviorY = previousRootOverscroll;
+      window.scrollTo(0, scrollY);
     };
   }, [mobileMenuOpen]);
 
@@ -414,13 +440,16 @@ export default function Navbar() {
 
       {mobileMenuOpen && (
         <div
-          className={`fixed inset-x-0 top-20 z-[90] border-t px-4 py-4 xl:hidden max-h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain ${
+          className={`fixed inset-x-0 top-20 z-[90] border-t px-4 py-4 xl:hidden max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain ${
             isLight
               ? "border-cyan-200/80 bg-[linear-gradient(160deg,rgba(244,250,255,0.96),rgba(226,240,255,0.94))]"
               : "border-slate-700/60 bg-slate-950/96"
           }`}
         >
-          <div className="site-container px-0 pb-6">
+          <div
+            className="site-container px-0"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}
+          >
             <div className="space-y-1">
               {mobileNavItems.map((item) => (
                 <Link
