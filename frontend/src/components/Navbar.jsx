@@ -32,6 +32,7 @@ export default function Navbar() {
   const [utilityMenuOpen, setUtilityMenuOpen] = useState(false);
   const utilityButtonRef = useRef(null);
   const utilityMenuRef = useRef(null);
+  const lockedScrollYRef = useRef(0);
   const currentLanguage = normalizeLanguage(i18n.language);
   const isRtl = currentLanguage === "ar";
   const {
@@ -66,10 +67,14 @@ export default function Navbar() {
     const previousBodyWidth = body.style.width;
     const previousRootOverflow = root.style.overflow;
     const previousRootOverscroll = root.style.overscrollBehaviorY;
+    lockedScrollYRef.current = scrollY;
+
+    // Always open the mobile drawer from the top of the page.
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
 
     body.style.overflow = "hidden";
     body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
+    body.style.top = "0";
     body.style.left = "0";
     body.style.right = "0";
     body.style.width = "100%";
@@ -85,7 +90,7 @@ export default function Navbar() {
       body.style.width = previousBodyWidth;
       root.style.overflow = previousRootOverflow;
       root.style.overscrollBehaviorY = previousRootOverscroll;
-      window.scrollTo(0, scrollY);
+      window.scrollTo(0, lockedScrollYRef.current || 0);
     };
   }, [mobileMenuOpen]);
 
