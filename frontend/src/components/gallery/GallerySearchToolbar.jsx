@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { getLocalizedMoviePath } from "../../utils/localizedRoutes";
 
 export default function GallerySearchToolbar({
   searchRef,
@@ -21,14 +22,16 @@ export default function GallerySearchToolbar({
   phase2SelectedCount,
   phaseSelectionMinRequired,
   phase2SelectionError,
+  language,
   t,
 }) {
   return (
-    <div className="w-full max-w-2xl">
+    <div role="search" className="w-full max-w-2xl">
       <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-grow" ref={searchRef}>
           <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
             <svg
+              aria-hidden="true"
               className={`h-5 w-5 ${isLight ? "text-cyan-700/70" : "text-slate-400"}`}
               fill="none"
               stroke="currentColor"
@@ -44,6 +47,7 @@ export default function GallerySearchToolbar({
           </div>
           <input
             type="text"
+            aria-label={t("gallery.search_placeholder", "Rechercher un film...")}
             placeholder={t(
               "gallery.search_placeholder",
               "Rechercher un film...",
@@ -71,7 +75,7 @@ export default function GallerySearchToolbar({
               {suggestions.map((movie) => (
                 <Link
                   key={movie.id}
-                  to={`/movie/${movie.id}`}
+                  to={getLocalizedMoviePath(movie.id, language)}
                   onClick={onSuggestionClick}
                   className={`flex w-full items-center gap-4 border-b px-6 py-4 transition-colors last:border-none ${
                     isLight
@@ -106,10 +110,11 @@ export default function GallerySearchToolbar({
               ? "bg-gradient-to-r from-cyan-500 to-sky-500 shadow-cyan-400/40 hover:brightness-105"
               : "bg-cyan-500 shadow-cyan-900/40 hover:bg-cyan-400"
           }`}
-          aria-label="Ouvrir les filtres avances"
-          title="Filtres avances"
+          aria-label={t("gallery.filter_button_aria")}
+          title={t("gallery.filter_button_title")}
         >
           <svg
+            aria-hidden="true"
             className="mx-auto h-6 w-6"
             fill="none"
             stroke="currentColor"
@@ -130,21 +135,21 @@ export default function GallerySearchToolbar({
           {sortBy !== "default" && (
             <button
               onClick={onResetSort}
-              className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${
+              className={`rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wider ${
                 isLight
                   ? "bg-cyan-100 text-cyan-800 hover:bg-cyan-200"
-                  : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                : "bg-blue-50 text-blue-700 hover:bg-blue-100"
               }`}
             >
-              Tri: {activeSortLabel} x
+              {t("gallery.sort_chip", { label: activeSortLabel })} x
             </button>
           )}
           {(minRating > 0 || maxRating < 5) && (
             <button
               onClick={onResetRating}
-              className="rounded-full bg-amber-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-amber-700 hover:bg-amber-100"
+              className="rounded-full bg-amber-50 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-amber-700 hover:bg-amber-100"
             >
-              Note {minRating}-{maxRating} x
+              {t("gallery.rating_chip", { min: minRating, max: maxRating })} x
             </button>
           )}
         </div>
@@ -158,7 +163,9 @@ export default function GallerySearchToolbar({
               : "border-blue-100 bg-blue-50 text-blue-900"
           }`}
         >
-          {canManagePhase2Selection ? "Selection phase 2" : "Selection jury phase 3"}: {phase2SelectedCount}/{phaseSelectionMinRequired}
+          {canManagePhase2Selection
+            ? t("gallery.selection_phase2")
+            : t("gallery.selection_phase3")}: {phase2SelectedCount}/{phaseSelectionMinRequired}
         </div>
       )}
       {phase2SelectionError && (

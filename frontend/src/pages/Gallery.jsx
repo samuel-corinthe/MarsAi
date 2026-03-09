@@ -12,6 +12,10 @@ import PageLoader from "../components/ui/PageLoader";
 import { useTheme } from "../context/ThemeContext";
 import { withDeploymentBase } from "../utils/deploymentPath";
 import {
+  getLocalizedPath,
+  normalizeLanguage,
+} from "../utils/localizedRoutes";
+import {
   getCurrentSessionUser,
   getMovies,
   getPhase2SelectionStatus,
@@ -46,6 +50,7 @@ function toDirectPreviewVideoUrl(...values) {
 const Gallery = () => {
   const { t, i18n } = useTranslation();
   const { isLight } = useTheme();
+  const isArabic = normalizeLanguage(i18n.language) === "ar";
   const [movies, setMovies] = useState([]);
   const [moviesLoading, setMoviesLoading] = useState(true);
   const [moviesError, setMoviesError] = useState("");
@@ -73,11 +78,11 @@ const Gallery = () => {
   const searchRef = useRef(null);
   const topCarouselVideoRef = useRef(null);
   const sortOptions = [
-    { label: "Defaut", value: "default" },
-    { label: "Titre A-Z", value: "title_asc" },
-    { label: "Titre Z-A", value: "title_desc" },
-    { label: "Annee - +", value: "year_asc" },
-    { label: "Annee + -", value: "year_desc" },
+    { label: t("gallery.sortOptions.default"), value: "default" },
+    { label: t("gallery.sortOptions.title_asc"), value: "title_asc" },
+    { label: t("gallery.sortOptions.title_desc"), value: "title_desc" },
+    { label: t("gallery.sortOptions.year_asc"), value: "year_asc" },
+    { label: t("gallery.sortOptions.year_desc"), value: "year_desc" },
   ];
 
   const pageSize = 20;
@@ -267,7 +272,7 @@ const Gallery = () => {
       } catch (error) {
         if (cancelled) return;
         setIsGalleryAllowed(true);
-        setMoviesError(error?.message || "Impossible de verifier l'acces galerie.");
+        setMoviesError(error?.message || t("gallery.access_error"));
       } finally {
         if (!cancelled) {
           setAccessLoading(false);
@@ -278,7 +283,7 @@ const Gallery = () => {
     return () => {
       cancelled = true;
     };
-  }, [applyPhase2SelectionSnapshot, applyPhase3EligibilitySnapshot, applyPhase3WinnersSnapshot]);
+  }, [applyPhase2SelectionSnapshot, applyPhase3EligibilitySnapshot, applyPhase3WinnersSnapshot, t]);
 
   useEffect(() => {
     if (accessLoading || !isGalleryAllowed) return;
@@ -308,11 +313,11 @@ const Gallery = () => {
         if (nextPage !== currentPage) {
           setCurrentPage(nextPage);
         }
-      } catch (error) {
+        } catch (error) {
         if (!cancelled) {
           setMovies([]);
           setServerTotalPages(1);
-          setMoviesError(error?.message || "Impossible de charger la galerie.");
+          setMoviesError(error?.message || t("gallery.load_error"));
         }
       } finally {
         if (!cancelled) {
@@ -324,7 +329,7 @@ const Gallery = () => {
     return () => {
       cancelled = true;
     };
-  }, [accessLoading, isGalleryAllowed, currentPage, searchQuery, sortBy, minRating, maxRating]);
+  }, [accessLoading, isGalleryAllowed, currentPage, searchQuery, sortBy, minRating, maxRating, t]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -424,7 +429,10 @@ const Gallery = () => {
     if (!Number.isFinite(safeMovieId) || safeMovieId <= 0) return;
     if (!currentSelected && phase2SelectedCount >= phaseSelectionMinRequired) {
       setPhase2SelectionError(
-        `Quota atteint: ${phase2SelectedCount}/${phaseSelectionMinRequired}. Retire un film avant d'en ajouter un autre.`,
+        t("gallery.selection_quota_error", {
+          count: phase2SelectedCount,
+          max: phaseSelectionMinRequired,
+        }),
       );
       return;
     }
@@ -435,7 +443,7 @@ const Gallery = () => {
       && !phase3EligibleMovieIds.has(safeMovieId)
     ) {
       setPhase2SelectionError(
-        "Ce film n'est pas dans la selection phase 2 et ne peut pas etre promu en phase 3.",
+        t("gallery.phase3_eligibility_error"),
       );
       return;
     }
@@ -453,7 +461,7 @@ const Gallery = () => {
       }
     } catch (error) {
       setPhase2SelectionError(
-        error?.message || "Impossible de modifier la selection en cours.",
+        error?.message || t("gallery.selection_update_error"),
       );
     } finally {
       setPhase2SelectionBusyMovieId(null);
@@ -465,7 +473,7 @@ const Gallery = () => {
   }
 
   if (!isGalleryAllowed) {
-    const callForProjectPath = i18n.language === "en" ? "/call-for-project" : "/appel-a-projet";
+    const callForProjectPath = getLocalizedPath("call", i18n.language);
     return <Navigate to={callForProjectPath} replace />;
   }
 
@@ -476,16 +484,17 @@ const Gallery = () => {
   );
   const breadcrumbItems = [
     {
-      name: i18n.language === "en" ? "Home" : "Accueil",
-      url: i18n.language === "en" ? "/home" : "/accueil",
+      name: t("nav.home", "Accueil"),
+      url: getLocalizedPath("home", i18n.language),
     },
     {
       name: t("nav.films", "Films"),
-      url: i18n.language === "en" ? "/movies" : "/films",
+      url: getLocalizedPath("films", i18n.language),
     },
   ];
   const activeSortLabel =
-    sortOptions.find((option) => option.value === sortBy)?.label || "Defaut";
+    sortOptions.find((option) => option.value === sortBy)?.label ||
+    t("gallery.sortOptions.default");
 
   const resetAdvancedFilters = () => {
     setSortBy("default");
@@ -502,6 +511,7 @@ const Gallery = () => {
         className={`min-h-screen flex flex-col font-sans ${
           isLight ? "bg-[#07163a] text-slate-100" : "bg-[#05060f] text-slate-100"
         }`}
+        dir={isArabic ? "rtl" : "ltr"}
       >
         <GalleryHeroCarousel
           showTopCarousel={showTopCarousel}
@@ -558,6 +568,7 @@ const Gallery = () => {
                   phase2SelectedCount={phase2SelectedCount}
                   phaseSelectionMinRequired={phaseSelectionMinRequired}
                   phase2SelectionError={phase2SelectionError}
+                  language={i18n.language}
                   t={t}
                 />
 

@@ -1,13 +1,20 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import Seo from "../components/Seo";
 import { BreadcrumbSchema } from "../components/Schema";
 import { useTranslation } from "react-i18next";
 import { subscribeNewsletterForm } from "../api";
 import { useTheme } from "../context/ThemeContext";
+import {
+  getLocalizedPath,
+  normalizeLanguage,
+} from "../utils/localizedRoutes";
 
 export default function Newsletter() {
   const { t, i18n } = useTranslation();
   const { isLight } = useTheme();
+  const isArabic = normalizeLanguage(i18n.language) === "ar";
+  const cguPath = getLocalizedPath("cgu", i18n.language);
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -36,7 +43,10 @@ export default function Newsletter() {
     setIsLoading(true);
 
     try {
-      await subscribeNewsletterForm(formData);
+      await subscribeNewsletterForm({
+        ...formData,
+        lang: i18n.language,
+      });
       setIsSubmitted(true);
       setTimeout(() => {
         setIsSubmitted(false);
@@ -117,12 +127,12 @@ export default function Newsletter() {
 
   const breadcrumbItems = [
     {
-      name: i18n.language === "en" ? "Home" : "Accueil",
-      url: i18n.language === "en" ? "/home" : "/accueil",
+      name: t("nav.home", "Accueil"),
+      url: getLocalizedPath("home", i18n.language),
     },
     {
       name: t("newsletter.hero.badge", "Newsletter"),
-      url: "/newsletter",
+      url: getLocalizedPath("newsletter", i18n.language),
     },
   ];
   const theme = isLight
@@ -199,7 +209,7 @@ export default function Newsletter() {
       />
       <BreadcrumbSchema items={breadcrumbItems} />
 
-      <div className={theme.page}>
+      <div className={theme.page} dir={isArabic ? "rtl" : "ltr"}>
         <section className="relative overflow-hidden px-4 pb-20 pt-32">
           <div className={`absolute inset-0 bg-gradient-to-b ${theme.heroOverlay}`}></div>
           <div className="relative z-10 mx-auto max-w-4xl space-y-6 text-center">
@@ -253,10 +263,11 @@ export default function Newsletter() {
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
-                    <label className={`mb-2 block text-sm font-medium ${theme.label}`}>
+                    <label htmlFor="newsletter-firstname" className={`mb-2 block text-sm font-medium ${theme.label}`}>
                       {t("newsletter.form.label_name")}
                     </label>
                     <input
+                      id="newsletter-firstname"
                       type="text"
                       name="firstName"
                       value={formData.firstName}
@@ -268,10 +279,11 @@ export default function Newsletter() {
                   </div>
 
                   <div>
-                    <label className={`mb-2 block text-sm font-medium ${theme.label}`}>
+                    <label htmlFor="newsletter-email" className={`mb-2 block text-sm font-medium ${theme.label}`}>
                       {t("newsletter.form.label_email")}
                     </label>
                     <input
+                      id="newsletter-email"
                       type="email"
                       name="email"
                       value={formData.email}
@@ -282,10 +294,10 @@ export default function Newsletter() {
                     />
                   </div>
 
-                  <div className="space-y-3">
-                    <label className={`mb-3 block text-sm font-medium ${theme.label}`}>
+                  <fieldset className="space-y-3">
+                    <legend className={`mb-3 block text-sm font-medium ${theme.label}`}>
                       {t("newsletter.form.label_preferences")}
-                    </label>
+                    </legend>
                     {["news", "films", "events", "partners"].map((id) => (
                       <label
                         key={id}
@@ -302,16 +314,16 @@ export default function Newsletter() {
                         </span>
                       </label>
                     ))}
-                  </div>
+                  </fieldset>
 
                   <p className={`text-xs leading-relaxed ${theme.helper}`}>
                     {t("newsletter.form.rgpd")}
-                    <a
-                      href="/privacy"
+                    <Link
+                      to={cguPath}
                       className={`ml-1 ${theme.helperLink}`}
                     >
-                      {t("newsletter.form.privacy_link")}
-                    </a>
+                      {t("nav.terms_gu")}
+                    </Link>
                   </p>
 
                   <button

@@ -7,7 +7,6 @@ import { validateAltchaMiddleware } from "../utils/AltchaValidator.js";
 import { validateEmail } from "../utils/EmailValidator.js";
 import { validateFileMagicBytes } from "../utils/FileTypeValidator.js";
 import { validateHoneypot } from "../utils/HoneypotValidator.js";
-import { cleanMetadataMiddleware } from "../utils/MetadataCleaner.js";
 import {
   getUploadCountries,
   getYoutubeUploadStatus,
@@ -18,7 +17,7 @@ const router = express.Router();
 
 const MAX_VIDEO_SIZE_BYTES = 300 * 1024 * 1024;
 
-const ipLimiter = rateLimit({
+export const ipLimiter = rateLimit({
   windowMs: 24 * 60 * 60 * 1000,
   max: 10,
   validate: false,
@@ -31,7 +30,7 @@ const ipLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-const emailLimiter = rateLimit({
+export const emailLimiter = rateLimit({
   windowMs: 24 * 60 * 60 * 1000,
   max: 3,
   validate: false,
@@ -111,7 +110,6 @@ router.post(
   validateFormData,
   validateEmail,
   emailLimiter,
-  cleanMetadataMiddleware,
   submitYoutubeUpload,
 );
 

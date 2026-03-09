@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { getLocalizedMoviePath } from "../../utils/localizedRoutes";
 
 export default function GalleryMovieCard({
   movie,
@@ -13,9 +15,11 @@ export default function GalleryMovieCard({
   canManagePhase2Selection,
   onToggleSelection,
 }) {
+  const { t, i18n } = useTranslation();
+
   return (
     <div className="group space-y-3">
-      <Link to={`/movie/${movie.id}`} className="block">
+      <Link to={getLocalizedMoviePath(movie.id, i18n.language)} className="block">
         <div
           className={`relative mb-5 aspect-video overflow-hidden rounded-[30px] border shadow-xl ${
             isLight
@@ -53,7 +57,7 @@ export default function GalleryMovieCard({
               <div className="w-5 h-3.5 bg-slate-100 rounded-[2px]" />
             )}
             <p className={`text-[10px] font-black uppercase truncate tracking-[0.15em] ${isLight ? "text-slate-500" : "text-slate-400"}`}>
-              {movie.director || "Anonyme"}
+              {movie.director || t("gallery.unknown_director")}
             </p>
           </div>
         </div>
@@ -74,10 +78,10 @@ export default function GalleryMovieCard({
           {isSelectionBusy
             ? "..."
             : isSelectionDisabled
-              ? (isQuotaReachedForAdd ? "Quota atteint" : "Non retenu phase 2")
+              ? (isQuotaReachedForAdd ? t("gallery.quota_reached") : t("gallery.not_selected_phase2"))
               : isSelectedForPhase2
-                ? (canManagePhase2Selection ? "Retirer de la phase 2" : "Retirer de la phase 3")
-                : (canManagePhase2Selection ? "Selectionner pour phase 2" : "Selectionner pour phase 3")}
+                ? (canManagePhase2Selection ? t("gallery.remove_phase2") : t("gallery.remove_phase3"))
+                : (canManagePhase2Selection ? t("gallery.select_phase2") : t("gallery.select_phase3"))}
         </button>
       )}
     </div>

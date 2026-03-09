@@ -12,6 +12,9 @@ import ratingRoutes from "./routes/ratings.js";
 import authRoutes from "./routes/auth.js";
 import movieRoutes from "./routes/movie.js";
 import sitePhaseRoutes from "./routes/sitePhase.js";
+import statsRoutes from "./routes/stats.js";
+import exportCSVRoutes from "./routes/exportCSV.js";
+import chatbotRoutes from "./routes/chatbot.js";
 import { requireAuth, requireRole } from "./middlewares/authMiddleware.js";
 
 const app = express();
@@ -83,8 +86,11 @@ app.use("/api/movie", movieRoutes);
 app.use("/api/altcha", altchaRoutes);
 app.use("/api/upload", verifyOrigin, uploadRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/stats", statsRoutes);
+app.use("/api/chatbot", chatbotRoutes);
 app.use("/api/dashboard", requireAuth, requireRole(["admin", "superadmin"]), dashboardRoutes);
 app.use("/api/assignments", requireAuth, requireRole(["admin", "superadmin"]), assignmentRoutes);
+app.use("/api/export", requireAuth, requireRole(["admin", "superadmin"]), exportCSVRoutes);
 app.use("/api/ratings", requireAuth, requireRole(["admin", "superadmin"]), ratingRoutes);
 app.use("/api/site-phase", sitePhaseRoutes);
 deploymentBaseAliases.forEach((basePath) => {
@@ -96,6 +102,8 @@ deploymentBaseAliases.forEach((basePath) => {
   app.use(`${basePath}/api/altcha`, altchaRoutes);
   app.use(`${basePath}/api/upload`, verifyOrigin, uploadRoutes);
   app.use(`${basePath}/api/auth`, authRoutes);
+  app.use(`${basePath}/api/stats`, statsRoutes);
+  app.use(`${basePath}/api/chatbot`, chatbotRoutes);
   app.use(
     `${basePath}/api/dashboard`,
     requireAuth,
@@ -113,6 +121,12 @@ deploymentBaseAliases.forEach((basePath) => {
     requireAuth,
     requireRole(["admin", "superadmin"]),
     ratingRoutes,
+  );
+  app.use(
+    `${basePath}/api/export`,
+    requireAuth,
+    requireRole(["admin", "superadmin"]),
+    exportCSVRoutes,
   );
   app.use(`${basePath}/api/site-phase`, sitePhaseRoutes);
 });

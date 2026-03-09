@@ -60,7 +60,7 @@ const VARIANTS = {
     },
     wrapperClassName:
       "mb-10 rounded-2xl border border-blue-300/30 bg-blue-900/40 p-5",
-    counterLabelClassName: "text-[10px] uppercase tracking-[0.2em] text-blue-200",
+    counterLabelClassName: "text-[11px] uppercase tracking-[0.2em] text-blue-200",
     nextTextClassName: "mt-4 text-xs text-blue-100/85",
   },
 };
@@ -136,7 +136,7 @@ export default function PhaseCountdownBanner({
 
     return (
       <div className={containerClassName}>
-        <p className={`text-center text-[10px] font-black uppercase tracking-[0.25em] sm:text-[11px] ${homeTitleClassName}`}>
+        <p className={`text-center text-[11px] font-black uppercase tracking-[0.25em] sm:text-[11px] ${homeTitleClassName}`}>
           {phaseCountdown.title}
         </p>
 
@@ -147,7 +147,7 @@ export default function PhaseCountdownBanner({
                 <div className={`tabular-nums text-5xl font-black leading-none tracking-tight sm:text-6xl md:text-7xl ${homeValueClassName}`}>
                   {String(item.value).padStart(2, "0")}
                 </div>
-                <div className={`mt-1 text-[10px] font-black uppercase tracking-[0.24em] ${homeLabelClassName}`}>
+                <div className={`mt-1 text-[11px] font-black uppercase tracking-[0.24em] ${homeLabelClassName}`}>
                   {item.label}
                 </div>
               </div>

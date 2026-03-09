@@ -17,6 +17,8 @@ export default function Seo({
   description,
   image,
   url,
+  type = "website",
+  video,
   noIndex = false,
   lang,
 }) {
@@ -32,7 +34,7 @@ export default function Seo({
     { name: "description", content: finalDescription },
     { property: "og:title", content: finalTitle },
     { property: "og:description", content: finalDescription },
-    { property: "og:type", content: "website" },
+    { property: "og:type", content: type },
     { name: "twitter:card", content: cardType },
   ];
 
@@ -42,6 +44,11 @@ export default function Seo({
 
   if (image) {
     meta.push({ property: "og:image", content: image });
+  }
+
+  if (video) {
+    meta.push({ property: "og:video", content: video });
+    meta.push({ property: "og:video:type", content: "text/html" });
   }
 
   if (noIndex) {

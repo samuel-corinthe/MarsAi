@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
 import { useTheme } from "../context/ThemeContext";
+import { getLocalizedPath, normalizeLanguage } from "../utils/localizedRoutes";
 
 const VARIANTS = {
   cgv: {
@@ -66,43 +67,96 @@ const VARIANTS = {
   },
 };
 
+const normalizeText = (value = "") => String(value || "").replace(/\s+/g, " ").trim();
+
+const isNumericToken = (value = "") => {
+  const text = normalizeText(value);
+  if (!text) return true;
+  return /^[\d\u0660-\u0669\u06F0-\u06F9().\-:،\s]+$/.test(text);
+};
+
+const sanitizeSectionTitle = (rawTitle = "", fallback = "Section") => {
+  let title = normalizeText(rawTitle);
+  if (!title) return fallback;
+
+  // Fix patterns like "(Cookies)6. ..." then strip duplicate numeric prefixes.
+  title = title.replace(/^\s*\(([^)]+)\)\s*[\d\u0660-\u0669\u06F0-\u06F9]+\s*[.)\-:،]?\s*/u, "($1) ");
+  title = title.replace(/^\s*([\d\u0660-\u0669\u06F0-\u06F9]+)\s+\1\s*[.)\-:،]?\s*/u, "");
+  title = title.replace(/^\s*[\d\u0660-\u0669\u06F0-\u06F9]+\s*[.)\-:،]?\s*/u, "");
+
+  return normalizeText(title) || fallback;
+};
+
+const nodeToHtml = (node) => {
+  if (!node) return "";
+  if (node.nodeType === 3) {
+    const text = normalizeText(node.textContent || "");
+    return text ? `<p>${text}</p>` : "";
+  }
+  if (node.nodeType === 1) {
+    return node.outerHTML || "";
+  }
+  return "";
+};
+
 const parseSections = (html) => {
-  if (!html) return [];
+  if (!html || typeof window === "undefined") return [];
 
   const doc = new DOMParser().parseFromString(html, "text/html");
   const nodes = Array.from(doc.body.childNodes).filter((node) => {
-    if (node.nodeType === 3) {
-      return node.textContent && node.textContent.trim().length > 0;
-    }
-    return true;
+    if (node.nodeType === 3) return normalizeText(node.textContent || "").length > 0;
+    if (node.nodeType === 1) return true;
+    return false;
   });
+
+  const hasHeadings = nodes.some(
+    (node) => node.nodeType === 1 && /^h[1-6]$/i.test(node.tagName || ""),
+  );
 
   const sections = [];
   let current = null;
 
-  nodes.forEach((node) => {
-    if (node.nodeType === 1 && node.tagName.toLowerCase() === "h2") {
-      if (current) sections.push(current);
-      current = { title: node.textContent.trim(), content: "" };
-      return;
+  const closeCurrentSection = () => {
+    if (!current) return;
+    if (normalizeText(current.title) || normalizeText(current.content)) {
+      sections.push(current);
     }
+    current = null;
+  };
 
+  const ensureCurrentSection = (title = "Introduction") => {
     if (!current) {
-      current = { title: "Introduction", content: "" };
+      current = { title: sanitizeSectionTitle(title, title), content: "" };
     }
+  };
 
-    if (node.nodeType === 3) {
-      const text = node.textContent.trim();
-      if (text) current.content += `<p>${text}</p>`;
+  nodes.forEach((node) => {
+    const isHeading = node.nodeType === 1 && /^h[1-6]$/i.test(node.tagName || "");
+    if (isHeading) {
+      closeCurrentSection();
+      current = {
+        title: sanitizeSectionTitle(node.textContent || "", "Section"),
+        content: "",
+      };
       return;
     }
 
-    if (node.outerHTML) {
-      current.content += node.outerHTML;
+    const nodeText = normalizeText(node.textContent || "");
+    if (!nodeText) return;
+
+    // Remove orphan numbering blocks that create duplicates like "1" + "1. Title".
+    if (isNumericToken(nodeText)) return;
+
+    if (!hasHeadings) {
+      ensureCurrentSection("Introduction");
+    } else {
+      ensureCurrentSection("Introduction");
     }
+
+    current.content += nodeToHtml(node);
   });
 
-  if (current) sections.push(current);
+  closeCurrentSection();
   return sections;
 };
 
@@ -123,6 +177,8 @@ export default function LegalPage({ page, variant = "cgv" }) {
   const config = VARIANTS[variant] || VARIANTS.cgv;
   const { t, i18n } = useTranslation();
   const { isLight } = useTheme();
+  const currentLanguage = normalizeLanguage(i18n.language);
+  const isArabic = currentLanguage === "ar";
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -133,22 +189,15 @@ export default function LegalPage({ page, variant = "cgv" }) {
     [page?.content?.rendered],
   );
 
-  const locale = i18n.language === "fr" ? "fr-FR" : "en-GB";
+  const locale = currentLanguage === "fr" ? "fr-FR" : currentLanguage === "ar" ? "ar" : "en-GB";
   const lastUpdated = formatDate(page?.modified || page?.date, locale);
-  const homePath = i18n.language === "en" ? "/home" : "/accueil";
-
-  const localizedRouteMap = {
-    "/cgu": "/gcu",
-    "/cgv": "/tos",
-    "/mentions-legales": "/legal-notice",
-    "/agenda": "/schedule",
-    "/jury": "/jury-eng",
-  };
-
-  const otherLinkPath =
-    i18n.language === "en"
-      ? localizedRouteMap[config.otherLink.path] || config.otherLink.path
-      : config.otherLink.path;
+  const homePath = getLocalizedPath("home", i18n.language);
+  const otherLinkKey = config.otherLink.path === "/cgu"
+    ? "cgu"
+    : config.otherLink.path === "/cgv"
+      ? "cgv"
+      : "legal";
+  const otherLinkPath = getLocalizedPath(otherLinkKey, i18n.language);
   const theme = isLight
     ? {
       page: "bg-gradient-to-b from-[#dbe9ff] via-[#d4e5ff] to-[#eaf4ff] text-slate-900",
@@ -217,7 +266,7 @@ export default function LegalPage({ page, variant = "cgv" }) {
         description={page?.excerpt?.rendered || page?.content?.rendered}
       />
 
-      <main className={`min-h-screen ${theme.page}`}>
+      <main className={`min-h-screen ${theme.page}`} dir={isArabic ? "rtl" : "ltr"}>
         <div className={`relative overflow-hidden border-b bg-gradient-to-br ${theme.heroBorder} ${theme.heroBg}`}>
           <div className={`absolute inset-0 ${theme.grid}`} />
 
@@ -314,6 +363,18 @@ export default function LegalPage({ page, variant = "cgv" }) {
             position: absolute;
             left: 0;
             color: var(--accent-color, ${theme.bulletColorFallback});
+          }
+          [dir="rtl"] .legal-content ul {
+            margin-right: 1.2rem;
+            margin-left: 0;
+          }
+          [dir="rtl"] .legal-content li {
+            padding-right: 1.15rem;
+            padding-left: 0;
+          }
+          [dir="rtl"] .legal-content li::before {
+            right: 0;
+            left: auto;
           }
           .legal-content a {
             color: ${theme.linkColor};

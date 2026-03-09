@@ -89,12 +89,16 @@ export async function fetchYoutubeUploadStatus(videoId) {
 }
 
 export async function postYoutubeUpload(formData, onUploadProgress) {
+  const uploadTimeoutMs = Number(import.meta.env.VITE_UPLOAD_TIMEOUT_MS || 900000);
   return requestApiWithFallback({
     method: "post",
     path: "/api/upload/youtube",
     data: formData,
     config: {
       onUploadProgress,
+      timeout: Number.isFinite(uploadTimeoutMs) ? uploadTimeoutMs : 900000,
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
     },
   });
 }

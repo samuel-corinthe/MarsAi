@@ -4,9 +4,8 @@ import { google } from "googleapis";
 import oauth2Client from "../utils/YT-client.js";
 import { analyzeVideo } from "../utils/VideoAnalyser.js";
 import { validateVideoData } from "../utils/VideoValidator.js";
+import { cleanMetadata } from "../utils/MetadataCleaner.js";
 import { sendUploadSuccessMail } from "../services/messagingService.js";
-import { getSessionFromRequest } from "../services/authService.js";
-import { getSitePhaseState } from "../services/sitePhaseService.js";
 import {
   isObjectStorageConfigured,
   getObjectStorageMissingEnv,
@@ -20,9 +19,32 @@ import {
 } from "../models/uploadSubmissionModel.js";
 import { mapCountriesForUpload } from "../services/countryService.js";
 import { fetchYoutubeStatus, mapYoutubeStatus } from "../services/youtubeStatusService.js";
+import { enqueueUploadJob, getUploadJob, setUploadJobStage } from "../services/uploadJobService.js";
 
 const MAX_SRT_SIZE_BYTES = 1024 * 1024;
 const DEFAULT_POSTER_SEED = "marsai";
+const ANALYZE_VIDEO_TIMEOUT_MS = Number(process.env.ANALYZE_VIDEO_TIMEOUT_MS || 45_000);
+const YOUTUBE_UPLOAD_TIMEOUT_MS = Number(process.env.YOUTUBE_UPLOAD_TIMEOUT_MS || 480_000);
+const MAIL_SEND_TIMEOUT_MS = Number(process.env.MAIL_SEND_TIMEOUT_MS || 10_000);
+const METADATA_CLEAN_TIMEOUT_MS = Number(process.env.METADATA_CLEAN_TIMEOUT_MS || 30_000);
+
+function withTimeout(promise, timeoutMs, timeoutMessage) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(timeoutMessage));
+    }, timeoutMs);
+
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
 
 function cleanupFile(filePath) {
   if (!filePath) return;
@@ -77,6 +99,23 @@ function parseSocialLinks(rawValue) {
   if (x) normalized.x = x;
 
   return normalized;
+}
+
+function buildSocialLinksInput(fields = {}) {
+  if (fields?.socialLinks) {
+    return fields.socialLinks;
+  }
+
+  const website = String(fields?.socialWebsite || "").trim();
+  const instagram = String(fields?.socialInstagram || "").trim();
+  const facebook = String(fields?.socialFacebook || "").trim();
+  const x = String(fields?.socialX || "").trim();
+
+  if (!website && !instagram && !facebook && !x) {
+    return null;
+  }
+
+  return { website, instagram, facebook, x };
 }
 
 function parseCastEntries(rawValue) {
@@ -155,108 +194,81 @@ function validateSrtContent(filePath) {
   return { valid: true };
 }
 
-export async function submitYoutubeUpload(req, res) {
-  const title = String(req.body?.title || "").trim();
-  const description = String(req.body?.description || "").trim();
-  const bio = req.body?.bio ? String(req.body.bio).trim() : "";
-  const parsedSocialLinks = parseSocialLinks(req.body?.socialLinks ? String(req.body.socialLinks) : null);
+function cloneUploadFile(file) {
+  if (!file) return null;
+  return {
+    path: String(file.path || "").trim(),
+    originalname: String(file.originalname || "").trim(),
+    mimetype: String(file.mimetype || "").trim(),
+    size: Number(file.size) || 0,
+  };
+}
+
+async function processQueuedYoutubeUpload({ jobId, payload }) {
+  const fields = payload?.fields || {};
+  const videoFile = payload?.files?.video || null;
+  const subtitleFile = payload?.files?.subtitle || null;
+  const posterFile = payload?.files?.poster || null;
+
+  const title = String(fields?.title || "").trim();
+  const description = String(fields?.description || "").trim();
+  const bio = fields?.bio ? String(fields.bio).trim() : "";
+  const parsedSocialLinks = parseSocialLinks(buildSocialLinksInput(fields));
   const socialLinks = Object.keys(parsedSocialLinks).length > 0
     ? JSON.stringify(parsedSocialLinks)
     : null;
-  const castEntries = parseCastEntries(req.body?.cast ? String(req.body.cast) : null);
+  const castEntries = parseCastEntries(fields?.cast ? String(fields.cast) : null);
   const youtubeDescription = buildYoutubeDescription({
     description,
     bio,
     socialLinks: parsedSocialLinks,
   });
-  const videoFile = req.files?.video?.[0];
-  const subtitleFile = req.files?.subtitle?.[0];
-  const posterFile = req.files?.poster?.[0];
 
-  if (!videoFile) {
-    return res.status(400).json({ error: "Aucun fichier video recu." });
-  }
-
-  if (!isObjectStorageConfigured()) {
-    cleanupFile(videoFile.path);
-    cleanupFile(subtitleFile?.path);
-    cleanupFile(posterFile?.path);
-    return res.status(500).json({
-      error: "Stockage Scaleway S3 non configure.",
-      details: `Variables manquantes: ${getObjectStorageMissingEnv().join(", ")}`,
-    });
+  if (!videoFile?.path) {
+    throw new Error("Aucun fichier video recu.");
   }
 
   try {
-    const sitePhaseState = await getSitePhaseState();
-    const phaseKey = String(sitePhaseState?.currentPhase || "phase_1").toLowerCase();
-    if (phaseKey === "phase_2" || phaseKey === "phase_3") {
-      const session = getSessionFromRequest(req);
-      const role = String(session?.role || "").toLowerCase();
-      const hasAdminSession = role === "admin" || role === "superadmin";
-      if (!hasAdminSession) {
-        cleanupFile(videoFile.path);
-        cleanupFile(subtitleFile?.path);
-        cleanupFile(posterFile?.path);
-        return res.status(403).json({
-          error: "Uploads visiteurs desactives pendant les phases 2 et 3.",
-        });
-      }
-    }
-  } catch (phaseError) {
-    cleanupFile(videoFile.path);
-    cleanupFile(subtitleFile?.path);
-    cleanupFile(posterFile?.path);
-    return res.status(500).json({
-      error: "Impossible de verifier la phase du site avant upload.",
-      details: phaseError.message,
-    });
-  }
+    setUploadJobStage(jobId, "metadata_cleanup", "Nettoyage des metadonnees video...");
+    await withTimeout(
+      cleanMetadata(videoFile.path),
+      METADATA_CLEAN_TIMEOUT_MS,
+      "Nettoyage metadata trop long. Veuillez reessayer.",
+    );
 
-  if (subtitleFile) {
-    const srtValidation = validateSrtContent(subtitleFile.path);
-    if (!srtValidation.valid) {
-      cleanupFile(videoFile.path);
-      cleanupFile(subtitleFile.path);
-      cleanupFile(posterFile?.path);
-      return res.status(400).json({ error: srtValidation.error });
-    }
-  }
-
-  try {
-    const metadata = await analyzeVideo(videoFile.path);
+    setUploadJobStage(jobId, "video_analysis", "Analyse video en cours...");
+    const metadata = await withTimeout(
+      analyzeVideo(videoFile.path),
+      ANALYZE_VIDEO_TIMEOUT_MS,
+      "Analyse video trop longue. Veuillez reessayer.",
+    );
     const validation = validateVideoData(metadata);
-
     if (!validation.isValid) {
       const refusalReasons = validation.errors.map((entry) => entry.message).join(" ; ");
-      cleanupFile(videoFile.path);
-      cleanupFile(subtitleFile?.path);
-      cleanupFile(posterFile?.path);
-
-      return res.status(400).json({
-        error: `Video refusee : ${refusalReasons}`,
-        validationErrors: validation.errors,
-        validationWarnings: validation.warnings,
-        metadata: validation.metadata,
-      });
+      throw new Error(`Video refusee : ${refusalReasons}`);
     }
 
+    setUploadJobStage(jobId, "youtube_upload", "Envoi vers YouTube en cours...");
     const youtube = google.youtube({ version: "v3", auth: oauth2Client });
-    const uploadResponse = await youtube.videos.insert({
-      part: "snippet,status",
-      requestBody: {
-        snippet: {
-          title: title || "Upload MarsAI",
-          description: youtubeDescription,
+    const uploadResponse = await withTimeout(
+      youtube.videos.insert({
+        part: "snippet,status",
+        requestBody: {
+          snippet: {
+            title: title || "Upload MarsAI",
+            description: youtubeDescription,
+          },
+          status: {
+            privacyStatus: "private",
+          },
         },
-        status: {
-          privacyStatus: "private",
+        media: {
+          body: fs.createReadStream(videoFile.path),
         },
-      },
-      media: {
-        body: fs.createReadStream(videoFile.path),
-      },
-    });
+      }),
+      YOUTUBE_UPLOAD_TIMEOUT_MS,
+      "Upload vers YouTube trop long. Verifiez la connexion et reessayez.",
+    );
 
     const youtubeId = String(uploadResponse?.data?.id || "").trim();
     if (!youtubeId) {
@@ -264,7 +276,13 @@ export async function submitYoutubeUpload(req, res) {
     }
 
     const youtubeUrl = `https://www.youtube.com/watch?v=${youtubeId}`;
+    setUploadJobStage(jobId, "youtube_uploaded", "Video envoyee a YouTube, finalisation...", {
+      youtubeVideoId: youtubeId,
+      youtubeUrl,
+    });
+
     const slug = toSlug(title);
+    setUploadJobStage(jobId, "storage_upload", "Envoi des fichiers sur le stockage...");
     const videoName = `${slug}-${youtubeId}.mp4`;
     const storedVideo = await uploadFileToObjectStorage({
       localFilePath: videoFile.path,
@@ -275,7 +293,7 @@ export async function submitYoutubeUpload(req, res) {
     const videoStorageUrl = storedVideo.url;
 
     let posterUrl = `https://picsum.photos/seed/${slug}-${youtubeId}/600/900`;
-    if (posterFile) {
+    if (posterFile?.path) {
       const posterExt = path.extname(posterFile.originalname || "").toLowerCase() || ".jpg";
       const posterName = `${slug}-${youtubeId}${posterExt}`;
       const storedPoster = await uploadFileToObjectStorage({
@@ -287,7 +305,7 @@ export async function submitYoutubeUpload(req, res) {
       posterUrl = storedPoster.url;
     }
 
-    if (subtitleFile) {
+    if (subtitleFile?.path) {
       const subtitleName = `${slug}-${youtubeId}.srt`;
       await uploadFileToObjectStorage({
         localFilePath: subtitleFile.path,
@@ -297,22 +315,23 @@ export async function submitYoutubeUpload(req, res) {
       });
     }
 
-    const submittedBy = `${String(req.body?.firstName || "").trim()} ${String(req.body?.lastName || "").trim()}`
+    setUploadJobStage(jobId, "database_save", "Enregistrement de la soumission...");
+    const submittedBy = `${String(fields?.firstName || "").trim()} ${String(fields?.lastName || "").trim()}`
       .trim() || "Utilisateur";
-    const countryAlpha2 = String(req.body?.countryAlpha2 || "").trim().toUpperCase();
-    const language = String(req.body?.language || "").trim();
-    const aiTools = String(req.body?.aiTools || "").trim();
+    const countryAlpha2 = String(fields?.countryAlpha2 || "").trim().toUpperCase();
+    const language = String(fields?.language || "").trim();
+    const aiTools = String(fields?.aiTools || "").trim();
     const dbBio = bio || null;
     const duration = Math.max(1, Math.round(Number(metadata?.duration || 0)));
     const releaseYear = new Date().getFullYear();
     const countryId = await findCountryIdByAlpha2(countryAlpha2);
     if (!countryId) {
-      return res.status(400).json({ error: "Code pays introuvable dans la base." });
+      throw new Error("Code pays introuvable dans la base.");
     }
 
     const movieId = await createMovieRecord({
       title: title || "Sans titre",
-      age: Number.parseInt(req.body?.age, 10),
+      age: Number.parseInt(fields?.age, 10),
       bio: dbBio,
       socialLinks,
       synopsis: description,
@@ -342,42 +361,38 @@ export async function submitYoutubeUpload(req, res) {
       }
     }
 
+    setUploadJobStage(jobId, "email_send", "Envoi de l'email de confirmation...");
     let confirmationEmailSent = false;
     let confirmationEmailError = "";
     try {
-      await sendUploadSuccessMail({
-        toEmail: String(req.body?.email || "").trim(),
-        firstName: String(req.body?.firstName || "").trim(),
-        lastName: String(req.body?.lastName || "").trim(),
-        movieTitle: title || "Sans titre",
-        videoUrl: youtubeUrl,
-      });
+      await withTimeout(
+        sendUploadSuccessMail({
+          toEmail: String(fields?.email || "").trim(),
+          firstName: String(fields?.firstName || "").trim(),
+          lastName: String(fields?.lastName || "").trim(),
+          movieTitle: title || "Sans titre",
+          videoUrl: youtubeUrl,
+          lang: String(fields?.lang || "fr").trim(),
+        }),
+        MAIL_SEND_TIMEOUT_MS,
+        "Envoi email de confirmation trop long",
+      );
       confirmationEmailSent = true;
     } catch (mailError) {
       confirmationEmailError = String(mailError?.message || "Echec envoi confirmation email");
       console.error("[UPLOAD] confirmation email error:", confirmationEmailError);
     }
 
-    return res.status(200).json({
-      ok: true,
-      message: "Upload reussi !",
-      videoId: youtubeId,
+    return {
+      stage: "completed",
+      message: "Traitement termine.",
+      youtubeVideoId: youtubeId,
       movieId,
-      videoUrl: videoStorageUrl,
       youtubeUrl,
-      statusEndpoint: `/api/upload/youtube/status/${youtubeId}`,
+      videoUrl: videoStorageUrl,
       confirmationEmailSent,
-      ...(confirmationEmailSent ? {} : { confirmationEmailError }),
-    });
-  } catch (error) {
-    console.error("[UPLOAD] Erreur:", error.message);
-    if (!res.headersSent) {
-      return res.status(500).json({
-        error: "Erreur interne du serveur",
-        details: error.message,
-      });
-    }
-    return null;
+      confirmationEmailError,
+    };
   } finally {
     cleanupFile(videoFile?.path);
     cleanupFile(subtitleFile?.path);
@@ -385,14 +400,133 @@ export async function submitYoutubeUpload(req, res) {
   }
 }
 
-export async function getYoutubeUploadStatus(req, res) {
-  const videoId = String(req.params.id || "").trim();
-  if (!videoId) {
-    return res.status(400).json({ error: "Identifiant video invalide." });
+function buildQueuedStatusFallback(job) {
+  const jobStatus = String(job?.status || "").trim().toLowerCase();
+  const processingStatus = jobStatus === "queued"
+    ? "queued"
+    : (jobStatus === "failed" ? "failed" : "processing");
+
+  return {
+    id: job?.youtubeVideoId || job?.id || null,
+    trackingId: job?.id || null,
+    youtubeVideoId: job?.youtubeVideoId || null,
+    uploadStatus: jobStatus === "failed" ? "failed" : "uploaded",
+    privacyStatus: null,
+    rejectionReason: job?.error || null,
+    processingStatus,
+    processingFailureReason: job?.error || null,
+    stage: job?.stage || null,
+    jobStatus: job?.status || null,
+    message: job?.message || null,
+    confirmationEmailSent: typeof job?.confirmationEmailSent === "boolean"
+      ? job.confirmationEmailSent
+      : null,
+    confirmationEmailError: String(job?.confirmationEmailError || "").trim() || null,
+  };
+}
+
+async function resolveQueuedYoutubeStatus(job) {
+  if (!job) return null;
+
+  if (job.youtubeVideoId) {
+    try {
+      const item = await fetchYoutubeStatus(job.youtubeVideoId);
+      if (item) {
+        return {
+          ...mapYoutubeStatus(item),
+          trackingId: job.id,
+          youtubeVideoId: job.youtubeVideoId,
+          stage: job.stage || null,
+          jobStatus: job.status || null,
+          message: job.message || null,
+          confirmationEmailSent: typeof job?.confirmationEmailSent === "boolean"
+            ? job.confirmationEmailSent
+            : null,
+          confirmationEmailError: String(job?.confirmationEmailError || "").trim() || null,
+        };
+      }
+    } catch (error) {
+      console.warn("[UPLOAD] status fallback (job->youtube) error:", error.message);
+    }
+  }
+
+  return buildQueuedStatusFallback(job);
+}
+
+export async function submitYoutubeUpload(req, res) {
+  const videoFile = req.files?.video?.[0];
+  const subtitleFile = req.files?.subtitle?.[0];
+  const posterFile = req.files?.poster?.[0];
+
+  if (!videoFile) {
+    return res.status(400).json({ error: "Aucun fichier video recu." });
+  }
+
+  if (!isObjectStorageConfigured()) {
+    cleanupFile(videoFile.path);
+    cleanupFile(subtitleFile?.path);
+    cleanupFile(posterFile?.path);
+    return res.status(500).json({
+      error: "Stockage Scaleway S3 non configure.",
+      details: `Variables manquantes: ${getObjectStorageMissingEnv().join(", ")}`,
+    });
+  }
+
+  if (subtitleFile) {
+    const srtValidation = validateSrtContent(subtitleFile.path);
+    if (!srtValidation.valid) {
+      cleanupFile(videoFile.path);
+      cleanupFile(subtitleFile.path);
+      cleanupFile(posterFile?.path);
+      return res.status(400).json({ error: srtValidation.error });
+    }
   }
 
   try {
-    const item = await fetchYoutubeStatus(videoId);
+    const queuedJob = enqueueUploadJob(processQueuedYoutubeUpload, {
+      fields: { ...(req.body || {}) },
+      files: {
+        video: cloneUploadFile(videoFile),
+        subtitle: cloneUploadFile(subtitleFile),
+        poster: cloneUploadFile(posterFile),
+      },
+    });
+
+    return res.status(202).json({
+      ok: true,
+      queued: true,
+      message: "Upload recu. Traitement en cours.",
+      videoId: queuedJob.id,
+      trackingId: queuedJob.id,
+      statusEndpoint: `/api/upload/youtube/status/${queuedJob.id}`,
+      confirmationEmailSent: false,
+    });
+  } catch (error) {
+    cleanupFile(videoFile?.path);
+    cleanupFile(subtitleFile?.path);
+    cleanupFile(posterFile?.path);
+    console.error("[UPLOAD] queue error:", error.message);
+    return res.status(500).json({
+      error: "Erreur interne du serveur",
+      details: error.message,
+    });
+  }
+}
+
+export async function getYoutubeUploadStatus(req, res) {
+  const requestedId = String(req.params.id || "").trim();
+  if (!requestedId) {
+    return res.status(400).json({ error: "Identifiant video invalide." });
+  }
+
+  const queuedJob = getUploadJob(requestedId);
+  if (queuedJob) {
+    const status = await resolveQueuedYoutubeStatus(queuedJob);
+    return res.json({ ok: true, status });
+  }
+
+  try {
+    const item = await fetchYoutubeStatus(requestedId);
     if (!item) {
       return res.status(404).json({ error: "Video introuvable sur YouTube." });
     }

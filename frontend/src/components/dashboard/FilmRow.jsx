@@ -98,9 +98,9 @@ export default function FilmRow({
     Number(phase2SelectionBusyMovieId) === Number(movieId);
 
   return (
-    <div className="rounded-3xl border border-slate-500/30 bg-slate-900/50 p-4 backdrop-blur md:p-5">
+    <div className="dashboard-film-row rounded-3xl border border-slate-300/35 bg-slate-900/60 p-4 backdrop-blur md:p-5">
       <div className="grid gap-5 lg:grid-cols-[260px_1fr_220px] lg:items-start">
-        <CardWrapper className="group block" {...cardWrapperProps}>
+        <CardWrapper className="group block text-inherit" {...cardWrapperProps}>
           <div className="relative aspect-video overflow-hidden rounded-2xl border border-slate-500/35 bg-slate-950 shadow-xl">
             {posterUrl ? (
               <img
@@ -133,7 +133,7 @@ export default function FilmRow({
               ) : (
                 <div className="h-3.5 w-5 rounded-[2px] bg-slate-200" />
               )}
-              <p className="truncate text-[10px] font-black uppercase tracking-[0.15em] text-cyan-200/90">
+              <p className="truncate text-[11px] font-black uppercase tracking-[0.15em] text-cyan-200/90">
                 {directorLabel}
               </p>
             </div>
@@ -142,32 +142,32 @@ export default function FilmRow({
 
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-slate-500/45 bg-slate-800/70 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-slate-200">
+            <span className="rounded-full border border-slate-300/40 bg-slate-800/75 px-2 py-0.5 text-[11px] font-black uppercase tracking-[0.12em] text-slate-100">
               {film.status}
             </span>
-            <span className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-cyan-200">
+            <span className="rounded-full border border-cyan-300/35 bg-cyan-400/10 px-2 py-0.5 text-[11px] font-black uppercase tracking-[0.12em] text-cyan-200">
               {film.phase}
             </span>
           </div>
 
           <div className="grid gap-2 text-sm text-slate-200/95 sm:grid-cols-2">
-            <div className="rounded-xl border border-slate-500/30 bg-slate-900/45 px-3 py-2">
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Pays</p>
+            <div className="rounded-xl border border-slate-400/35 bg-slate-800/60 px-3 py-2">
+              <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-200/90">Pays</p>
               <p className="mt-0.5 font-semibold text-slate-100">{film.country}</p>
             </div>
-            <div className="rounded-xl border border-slate-500/30 bg-slate-900/45 px-3 py-2">
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Duree</p>
+            <div className="rounded-xl border border-slate-400/35 bg-slate-800/60 px-3 py-2">
+              <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-200/90">Duree</p>
               <p className="mt-0.5 font-semibold text-slate-100">{film.duration}</p>
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-500/30 bg-slate-900/45 px-3 py-2.5">
-            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Stack IA</p>
+          <div className="rounded-xl border border-slate-400/35 bg-slate-800/60 px-3 py-2.5">
+            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-200/90">Stack IA</p>
             <p className="mt-0.5 text-sm font-medium text-slate-100/95">{film.tools || "Non renseigne"}</p>
           </div>
 
-          <div className="rounded-xl border border-slate-500/30 bg-slate-900/45 px-3 py-2.5">
-            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200/95">Mon commentaire</p>
+          <div className="rounded-xl border border-slate-400/35 bg-slate-800/60 px-3 py-2.5">
+            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-cyan-200/95">Mon commentaire</p>
             <p className="mt-1 text-sm text-slate-100/95" title={myComment || "Aucun commentaire"}>
               {myComment || "Aucun commentaire"}
             </p>
@@ -176,7 +176,7 @@ export default function FilmRow({
 
         <div className="space-y-3 lg:pl-2">
           <div className="rounded-xl border border-cyan-300/30 bg-cyan-400/10 px-3 py-2.5">
-            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200/95">Notes</p>
+            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-cyan-200/95">Notes</p>
             <p className="mt-1 text-lg font-black text-white">
               {ratingLabel}
               <span className="ml-1 text-xs font-semibold text-slate-300/85">({film.notesCount})</span>

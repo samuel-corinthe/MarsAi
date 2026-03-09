@@ -17,7 +17,13 @@
       "contact": "Contact",
       "language": "Langue",
       "login": "Connexion",
-      "submitFilm": "Déposer un film"
+      "submitFilm": "Déposer un film",
+      "theme": {
+        "switchToDark": "Passer en mode sombre",
+        "switchToLight": "Passer en mode clair",
+        "darkActivated": "Mode sombre activé",
+        "lightActivated": "Mode clair activé"
+      }
     },
     "footer": {
       "description": "Le premier festival international dédié aux films créés avec l'intelligence artificielle. Une célébration de la créativité augmentée et de l'innovation cinématographique.",
@@ -26,7 +32,7 @@
       "legal_title": "Légal",
       "newsletter": "Newsletter",
       "competition": "Films en compétition",
-      "privacy": "Politique de confidentialité",
+      "cgv": "Politique de confidentialité",
       "rights": "Tous droits réservés."
     }
   },
@@ -48,7 +54,13 @@
       "contact": "Contact",
       "language": "Language",
       "login": "Login",
-      "submitFilm": "Submit a Film"
+      "submitFilm": "Submit a Film",
+      "theme": {
+        "switchToDark": "Switch to dark mode",
+        "switchToLight": "Switch to light mode",
+        "darkActivated": "Dark mode activated",
+        "lightActivated": "Light mode activated"
+      }
     },
     "footer": {
       "description": "The first international festival dedicated to films created with artificial intelligence. A celebration of augmented creativity and cinematic innovation.",
@@ -59,6 +71,37 @@
       "competition": "Movies in competition",
       "privacy": "Privacy Policy",
       "rights": "All rights reserved."
+    }
+  },
+  "ar": {
+    "nav": {
+      "home": "الرئيسية",
+      "about": "من نحن",
+      "films": "الأفلام",
+      "agenda": "البرنامج",
+      "callForProjects": "دعوة للمشاريع",
+      "jury": "لجنة التحكيم",
+      "partners": "شركاؤنا",
+      "more": "المزيد",
+      "terms_gv": "شروط البيع ",
+      "terms_gu": "شروط الاستخدام",
+      "privacy": "الخصوصية",
+      "legal": "إشعار قانوني",
+      "examplePage": "صفحة تجريبية",
+      "contact": "اتصل بنا",
+      "language": "اللغة",
+      "login": "تسجيل الدخول",
+      "submitFilm": "تقديم فيلم"
+    },
+    "footer": {
+      "description": "أول مهرجان دولي مخصص للأفلام التي تم إنشاؤها بواسطة الذكاء الاصطناعي. احتفاء بالإبداع المعزز والابتكار السينمائي.",
+      "festival": "المهرجان",
+      "participate": "المشاركة",
+      "legal_title": "قانون",
+      "newsletter": "النشرة الإخبارية",
+      "competition": "أفلام المسابقة",
+      "privacy": "سياسة الخصوصية",
+      "rights": "جميع الحقوق محفوظة."
     }
   }
 }

@@ -1,15 +1,25 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
 import { BreadcrumbSchema, ArticleSchema } from "../components/Schema";
 import { getPageBySlug } from "../api";
 import NotFound from "./NotFound";
 import PageLoader from "../components/ui/PageLoader";
+import { getLocalizedPath, normalizeLanguage } from "../utils/localizedRoutes";
+
+function containsArabicText(value = "") {
+  return /[\u0600-\u06FF]/.test(String(value || ""));
+}
 
 export default function Partenaires() {
   const { t, i18n } = useTranslation();
   const [page, setPage] = useState(null);
   const [loading, setLoading] = useState(true);
+  const currentLanguage = normalizeLanguage(i18n.language);
+  const homePath = getLocalizedPath("home", i18n.language);
+  const partnersPath = getLocalizedPath("partners", i18n.language);
+  const contactPath = getLocalizedPath("contact", i18n.language);
 
   useEffect(() => {
     let cancelled = false;
@@ -17,8 +27,32 @@ export default function Partenaires() {
     (async () => {
       setLoading(true);
       try {
-        const slug = i18n.language.startsWith("en") ? "partners" : "partenaires";
-        const data = await getPageBySlug(slug);
+        const slugCandidates = currentLanguage === "en"
+          ? [{ slug: "partners", lang: "en" }]
+          : currentLanguage === "ar"
+            ? [
+              { slug: "partners-ar", lang: "ar" },
+              { slug: "partners", lang: "ar" },
+              { slug: "partenaires", lang: "ar" },
+            ]
+            : [{ slug: "partenaires", lang: "fr" }];
+        let data = null;
+
+        for (const candidate of slugCandidates) {
+          const candidateData = await getPageBySlug(candidate.slug, candidate.lang);
+          if (!candidateData) continue;
+
+          const candidateLooksArabic =
+            normalizeLanguage(candidateData.lang || candidate.lang) === "ar" ||
+            containsArabicText(candidateData?.title?.rendered) ||
+            containsArabicText(candidateData?.content?.rendered);
+
+          if (currentLanguage !== "ar" || candidateLooksArabic) {
+            data = candidateData;
+            break;
+          }
+        }
+
         if (!cancelled) setPage(data);
       } catch {
         if (!cancelled) setPage(null);
@@ -30,7 +64,7 @@ export default function Partenaires() {
     return () => {
       cancelled = true;
     };
-  }, [i18n.language]);
+  }, [currentLanguage, i18n.language]);
 
   if (loading) {
     return <PageLoader message={t("partners.loading", "Chargement...")} />;
@@ -43,12 +77,12 @@ export default function Partenaires() {
     page?.excerpt?.rendered || page?.content?.rendered || t("partners.subtitle");
   const breadcrumbItems = [
     {
-      name: i18n.language === "en" ? "Home" : "Accueil",
-      url: i18n.language === "en" ? "/home" : "/accueil",
+      name: t("nav.home", "Accueil"),
+      url: homePath,
     },
     {
       name: t("nav.partners", "Partenaires"),
-      url: i18n.language === "en" ? "/partners" : "/partenaires",
+      url: partnersPath,
     },
   ];
 
@@ -76,10 +110,13 @@ export default function Partenaires() {
         dateModified={page?.modified}
       />
 
-      <main className={`min-h-screen py-14 md:py-16 ${theme.page}`}>
+      <main
+        className={`min-h-screen py-14 md:py-16 ${theme.page}`}
+        dir={currentLanguage === "ar" ? "rtl" : "ltr"}
+      >
         <div className="site-container">
           <section className="pb-10">
-            <p className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] ${theme.badge}`}>
+            <p className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] ${theme.badge}`}>
               {t("partners.badge", "Partenaires")}
             </p>
             <h1
@@ -105,12 +142,12 @@ export default function Partenaires() {
             <p className={`mt-2 text-sm leading-relaxed sm:text-base ${theme.ctaText}`}>
               {t("partners.cta_text")}
             </p>
-            <a
-              href="/contact"
+            <Link
+              to={contactPath}
               className="mt-5 inline-flex rounded-full bg-gradient-to-r from-cyan-300 to-sky-400 px-6 py-3 text-xs font-black uppercase tracking-[0.12em] text-slate-950 transition hover:brightness-105"
             >
               {t("partners.cta_button")}
-            </a>
+            </Link>
           </section>
         </div>
       </main>

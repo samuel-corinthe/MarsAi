@@ -84,6 +84,33 @@ function resolveApiCandidates(urls) {
   return appendLocalCandidates(withDeploymentPaths);
 }
 
+export function buildDeploymentAwareApiPath(path = "/") {
+  const rawPath = String(path || "").trim() || "/";
+  const normalizedPath = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
+  const deploymentPrefixes = ["/MarsAi", "/MarsAiFestival", "/backend"];
+
+  if (deploymentPrefixes.some((prefix) => normalizedPath === prefix || normalizedPath.startsWith(`${prefix}/`))) {
+    return withApiOrigin(normalizedPath);
+  }
+
+  if (API_ORIGIN) {
+    return withApiOrigin(normalizedPath);
+  }
+
+  if (typeof window === "undefined") return withApiOrigin(normalizedPath);
+
+  const pathname = String(window.location?.pathname || "").toLowerCase();
+  const activePrefix = deploymentPrefixes.find((prefix) => {
+    const lower = prefix.toLowerCase();
+    return pathname === lower || pathname.startsWith(`${lower}/`);
+  });
+  if (activePrefix) {
+    return withApiOrigin(`${activePrefix}${normalizedPath}`);
+  }
+
+  return withApiOrigin(normalizedPath);
+}
+
 function isObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -263,12 +290,73 @@ async function fetchApi(path, options = {}) {
   throw lastError || new Error("Impossible de joindre l'API backend.");
 }
 
+const REQUEST_CACHE_TTL_MS = 1500;
+
+function createRequestCache(ttlMs = REQUEST_CACHE_TTL_MS) {
+  return {
+    ttlMs,
+    value: undefined,
+    timestamp: 0,
+    promise: null,
+  };
+}
+
+const currentSessionCache = createRequestCache();
+const sitePhaseCache = createRequestCache();
+
+function hasFreshCacheValue(cache) {
+  return cache.timestamp > 0 && (Date.now() - cache.timestamp) < cache.ttlMs;
+}
+
+function writeRequestCache(cache, value) {
+  cache.value = value;
+  cache.timestamp = Date.now();
+}
+
+function clearRequestCache(cache) {
+  cache.value = undefined;
+  cache.timestamp = 0;
+  cache.promise = null;
+}
+
+async function runCachedRequest(cache, requestFactory) {
+  if (cache.promise) {
+    return cache.promise;
+  }
+
+  if (hasFreshCacheValue(cache)) {
+    return cache.value;
+  }
+
+  cache.promise = (async () => {
+    try {
+      const value = await requestFactory();
+      writeRequestCache(cache, value);
+      return value;
+    } catch (error) {
+      clearRequestCache(cache);
+      throw error;
+    } finally {
+      cache.promise = null;
+    }
+  })();
+
+  return cache.promise;
+}
+
+function primeCurrentSessionCache(user) {
+  writeRequestCache(currentSessionCache, {
+    authenticated: true,
+    user: user || null,
+  });
+}
+
 export const getPageBySlug = async (slug, lang = "fr") => {
   const response = await fetch(
     `${WORDPRESS_V2_URL}/pages?slug=${encodeURIComponent(slug)}&lang=${encodeURIComponent(lang)}`,
   );
   const data = await response.json();
-  return data[0];
+  return Array.isArray(data) ? data[0] : null;
 };
 
 export async function getWpPostsBySlug({
@@ -293,6 +381,57 @@ export async function getWpPostsBySlug({
 
   const data = await response.json();
   return Array.isArray(data) ? data : [];
+}
+
+export async function getWpPostsBySearch({
+  query,
+  lang = "fr",
+  perPage = 10,
+  fields = "id,title,content,excerpt,slug",
+  signal,
+} = {}) {
+  const safeQuery = String(query || "").trim();
+  if (!safeQuery) return [];
+
+  const response = await fetch(
+    `${WORDPRESS_V2_URL}/posts?search=${encodeURIComponent(safeQuery)}&per_page=${encodeURIComponent(perPage)}&_fields=${encodeURIComponent(fields)}&lang=${encodeURIComponent(lang)}`,
+    {
+      cache: "no-store",
+      signal,
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`WP posts by search error ${response.status}`);
+  }
+
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
+}
+
+export async function getWpPostById({
+  id,
+  lang = "fr",
+  fields = "id,title,content,excerpt,slug",
+  signal,
+} = {}) {
+  const safeId = Number(id);
+  if (!Number.isFinite(safeId) || safeId <= 0) return null;
+
+  const response = await fetch(
+    `${WORDPRESS_V2_URL}/posts/${encodeURIComponent(safeId)}?_fields=${encodeURIComponent(fields)}&lang=${encodeURIComponent(lang)}`,
+    {
+      cache: "no-store",
+      signal,
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`WP post by id error ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data && typeof data === "object" ? data : null;
 }
 
 export async function getWpPostsByCategory({
@@ -352,7 +491,13 @@ function truncateText(value = "", max = 180) {
 }
 
 export async function getRecentAgendaEvents({ lang = "fr", limit = 5 } = {}) {
-  const agendaCategoryId = String(lang).toLowerCase() === "en" ? 51 : 14;
+  const categoryMap = {
+    fr: 14,
+    en: 51,
+    ar: 103,
+  };
+  const agendaCategoryId =
+    categoryMap[String(lang).toLowerCase()] || categoryMap.fr;
   const safeLimit = Math.max(1, Math.min(20, Number(limit) || 5));
 
   const posts = await getWpPostsByCategory({
@@ -381,6 +526,19 @@ export async function getRecentAgendaEvents({ lang = "fr", limit = 5 } = {}) {
       date: String(post?.date || "").trim(),
     };
   });
+}
+
+export async function getPublicStats({ signal } = {}) {
+  const { payload } = await fetchWith404Fallback(
+    ["/api/stats", "/MarsAi/api/stats"],
+    {
+      cache: "no-store",
+      signal,
+    },
+    "Stats API",
+  );
+
+  return payload?.stats || null;
 }
 
 export async function getMoviesPaginated({
@@ -453,13 +611,19 @@ export async function getMovieById(movieId) {
   return null;
 }
 
-export async function sendContactForm({ name, email, subject, message }) {
+export async function sendContactForm({
+  name,
+  email,
+  subject,
+  message,
+  lang = "fr",
+}) {
   const { payload } = await fetchWith404Fallback(
     ["/api/send-email", "/send-email", "/api/mail/send-email"],
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, subject, message }),
+      body: JSON.stringify({ name, email, subject, message, lang }),
     },
     "Contact API",
   );
@@ -467,7 +631,12 @@ export async function sendContactForm({ name, email, subject, message }) {
   return payload;
 }
 
-export async function subscribeNewsletterForm({ firstName, email, preferences }) {
+export async function subscribeNewsletterForm({
+  firstName,
+  email,
+  preferences,
+  lang = "fr",
+}) {
   const { payload } = await fetchWith404Fallback(
     [
       "/api/subscribe-newsletter",
@@ -477,7 +646,7 @@ export async function subscribeNewsletterForm({ firstName, email, preferences })
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ firstName, email, preferences }),
+      body: JSON.stringify({ firstName, email, preferences, lang }),
     },
     "Newsletter API",
   );
@@ -486,6 +655,7 @@ export async function subscribeNewsletterForm({ firstName, email, preferences })
 }
 
 export async function loginWithWordPress({ email, username, password }) {
+  clearRequestCache(currentSessionCache);
   let res;
   try {
     res = await fetchApi("/api/auth/wordpress/login", {
@@ -517,24 +687,38 @@ export async function loginWithWordPress({ email, username, password }) {
     throw new Error(details);
   }
 
+  if (payload?.user) {
+    primeCurrentSessionCache(payload.user);
+  }
+
   return payload;
 }
 
-export async function getCurrentSessionUser() {
-  const res = await fetchApi("/api/auth/me", {
-    credentials: "include",
-    cache: "no-store",
-  });
+export async function getCurrentSessionUser({ signal } = {}) {
+  const loadSession = async () => {
+    const res = await fetchApi("/api/auth/me", {
+      signal,
+      credentials: "include",
+      cache: "no-store",
+    });
 
-  if (!res.ok) {
-    const payload = await res.json().catch(() => ({}));
-    throw new Error(payload?.error || `Auth error ${res.status}`);
+    if (!res.ok) {
+      const payload = await res.json().catch(() => ({}));
+      throw new Error(payload?.error || `Auth error ${res.status}`);
+    }
+
+    return res.json();
+  };
+
+  if (signal) {
+    return loadSession();
   }
 
-  return res.json();
+  return runCachedRequest(currentSessionCache, loadSession);
 }
 
 export async function logoutSession() {
+  clearRequestCache(currentSessionCache);
   const res = await fetchApi("/api/auth/logout", {
     method: "POST",
     credentials: "include",
@@ -589,6 +773,10 @@ export async function updateCurrentSessionProfile({
     throw new Error(details);
   }
 
+  if (payload?.user) {
+    primeCurrentSessionCache(payload.user);
+  }
+
   return payload;
 }
 
@@ -614,17 +802,25 @@ export async function getAdminDashboardData({ signal } = {}) {
 }
 
 export async function getSitePhaseState({ signal } = {}) {
-  const { payload } = await fetchSameOriginWithFallback(
-    ["/api/site-phase", "/MarsAi/api/site-phase", "/MarsAiFestival/api/site-phase"],
-    {
-      signal,
-      cache: "no-store",
-      credentials: "include",
-    },
-    "Site phase API",
-  );
+  const loadSitePhaseState = async () => {
+    const { payload } = await fetchSameOriginWithFallback(
+      ["/api/site-phase", "/MarsAi/api/site-phase", "/MarsAiFestival/api/site-phase", "/backend/api/site-phase"],
+      {
+        signal,
+        cache: "no-store",
+        credentials: "include",
+      },
+      "Site phase API",
+    );
 
-  return payload;
+    return payload;
+  };
+
+  if (signal) {
+    return loadSitePhaseState();
+  }
+
+  return runCachedRequest(sitePhaseCache, loadSitePhaseState);
 }
 
 export async function updateSitePhaseState({ currentPhase, mode } = {}) {
@@ -642,6 +838,7 @@ export async function updateSitePhaseState({ currentPhase, mode } = {}) {
     "Site phase API",
   );
 
+  clearRequestCache(sitePhaseCache);
   return payload;
 }
 
@@ -695,6 +892,7 @@ export async function patchPhase2Selection(movieId, selected) {
     "Phase 2 selection API",
   );
 
+  clearRequestCache(sitePhaseCache);
   return payload;
 }
 
@@ -712,6 +910,7 @@ export async function validatePhase2Selection() {
     "Phase 2 selection API",
   );
 
+  clearRequestCache(sitePhaseCache);
   return payload;
 }
 
@@ -783,6 +982,7 @@ export async function patchPhase3Selection(movieId, selected) {
     "Phase 3 selection API",
   );
 
+  clearRequestCache(sitePhaseCache);
   return payload;
 }
 
@@ -800,6 +1000,7 @@ export async function validatePhase3Selection() {
     "Phase 3 selection API",
   );
 
+  clearRequestCache(sitePhaseCache);
   return payload;
 }
 

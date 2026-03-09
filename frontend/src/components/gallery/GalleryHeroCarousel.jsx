@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { getLocalizedMoviePath } from "../../utils/localizedRoutes";
 
 const CAROUSEL_SHIFT = "clamp(62px, 16vw, 240px)";
 const CAROUSEL_POSITIONS = [
@@ -51,7 +52,7 @@ export default function GalleryHeroCarousel({
             isLight ? "text-white" : "text-slate-100"
           }`}
         >
-          {language === "fr" ? "Decouvrez " : "Discover "}
+          {t("gallery.discover_prefix", "Decouvrez ")}
           <span className={isLight ? "text-cyan-400" : "text-cyan-300"}>
             {t("gallery.title_accent", "nos Merveilles")}
           </span>
@@ -60,7 +61,7 @@ export default function GalleryHeroCarousel({
         {showTopCarousel && topMovies.length > 0 && (
           <div className="mt-6 md:mt-10">
             <p
-              className={`font-black uppercase tracking-[0.16em] sm:tracking-widest text-[10px] md:text-sm mb-6 ${
+              className={`font-black uppercase tracking-[0.16em] sm:tracking-widest text-[11px] md:text-sm mb-6 ${
                 isLight ? "text-white/90" : "text-slate-300"
               }`}
             >
@@ -79,7 +80,7 @@ export default function GalleryHeroCarousel({
 
                 return (
                   <Link
-                    to={`/movie/${movie.id}`}
+                    to={getLocalizedMoviePath(movie.id, language)}
                     key={movie.id}
                     className="absolute left-1/2 top-1/2 w-44 sm:w-60 md:w-72 transition-all duration-700 ease-out"
                     style={{
@@ -108,6 +109,7 @@ export default function GalleryHeroCarousel({
                           }`}
                         >
                           <svg
+                            aria-hidden="true"
                             className="w-6 h-6 ml-1"
                             fill="currentColor"
                             viewBox="0 0 20 20"

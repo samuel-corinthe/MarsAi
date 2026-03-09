@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import Seo from "../components/Seo";
+import { useLocation } from "react-router-dom";
 import Dashboard from "./Dashboard";
+import StatsPage from "./StatsPage";
 import { getCurrentSessionUser, loginWithWordPress } from "../api";
 import PageLoader from "../components/ui/PageLoader";
 import { useTheme } from "../context/ThemeContext";
@@ -16,6 +18,7 @@ const WP_LOGIN_URL =
 export default function DashboardEntry() {
   const { t } = useTranslation();
   const { isLight } = useTheme();
+  const location = useLocation();
   const [loadingSession, setLoadingSession] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const [sessionUser, setSessionUser] = useState(null);
@@ -68,12 +71,15 @@ export default function DashboardEntry() {
     }
   };
 
+  const isStatsRoute = location.pathname.startsWith("/dashboard/stats")
+    || location.pathname.startsWith("/dashboard/statistiques");
+
   if (loadingSession) {
     return <PageLoader message={t("ui.loading_admin_session", "Checking admin session...")} />;
   }
 
   if (authenticated) {
-    return <Dashboard />;
+    return isStatsRoute ? <StatsPage dashboardMode /> : <Dashboard />;
   }
   const panelClass = isLight ? "bg-white/92" : "site-panel-solid";
   const titleClass = isLight ? "text-slate-900" : "text-white";

@@ -8,6 +8,7 @@ import { getRecentAgendaEvents, getSitePhaseState } from "../api";
 import PhaseCountdownBanner from "../components/phases/PhaseCountdownBanner";
 import { useTheme } from "../context/ThemeContext";
 import { stripDeploymentPrefix, withDeploymentBase } from "../utils/deploymentPath";
+import { getLocalizedPath, normalizeLanguage } from "../utils/localizedRoutes";
 
 export default function Home({ page }) {
   const { i18n, t } = useTranslation();
@@ -22,33 +23,33 @@ export default function Home({ page }) {
   const modelFallbackSrc = isLight
     ? withDeploymentBase("/images/robot_light.png")
     : withDeploymentBase("/images/robot_night.png");
-  const submitFilmPath =
-    i18n.language === "en" ? "/submit-film" : "/deposer-un-film";
+  const currentLanguage = normalizeLanguage(i18n.language);
+  const isArabic = currentLanguage === "ar";
+  const submitFilmPath = getLocalizedPath("submitFilm", i18n.language);
   const participateVideoUrl =
     import.meta.env.VITE_HOME_PARTICIPATE_VIDEO_URL
     || "https://cdn.pixabay.com/video/2023/07/28/173530-849610807_large.mp4";
-  const agendaPath = i18n.language === "en" ? "/schedule" : "/agenda";
-  const callForProjectsPath =
-    i18n.language === "en" ? "/call-for-project" : "/appel-a-projet";
-  const partnersPath = i18n.language === "en" ? "/partners" : "/partenaires";
-  const aboutPath = i18n.language === "en" ? "/about" : "/a-propos";
-  const moviesPath = i18n.language === "en" ? "/movies" : "/films";
+  const agendaPath = getLocalizedPath("agenda", i18n.language);
+  const callForProjectsPath = getLocalizedPath("call", i18n.language);
+  const partnersPath = getLocalizedPath("partners", i18n.language);
+  const aboutPath = getLocalizedPath("about", i18n.language);
+  const moviesPath = getLocalizedPath("films", i18n.language);
   const currentPhaseKey = String(sitePhase?.currentPhase || "phase_1").toLowerCase();
   const isCallForProjectsVisible = currentPhaseKey === "phase_1";
   const isCallForProjectsPhase = currentPhaseKey === "phase_1";
   const heroCtaPath = isCallForProjectsPhase ? submitFilmPath : moviesPath;
-  const heroCtaBadge = i18n.language === "en"
-    ? (isCallForProjectsPhase ? "Call for projects" : "Official selection")
-    : (isCallForProjectsPhase ? "Appel a projet" : "Selection officielle");
-  const heroCtaTitle = i18n.language === "en"
-    ? (isCallForProjectsPhase ? "Participate" : "Watch films")
-    : (isCallForProjectsPhase ? "Participer" : "Visionner les films");
-  const heroCtaSubtitle = i18n.language === "en"
-    ? (isCallForProjectsPhase ? "Click to submit your film" : "Click to open the gallery")
-    : (isCallForProjectsPhase ? "Clique pour deposer ton film" : "Clique pour ouvrir la galerie");
-  const heroCtaAria = i18n.language === "en"
-    ? (isCallForProjectsPhase ? "Submit your film" : "Open movie gallery")
-    : (isCallForProjectsPhase ? "Deposer un film" : "Ouvrir la galerie des films");
+  const heroCtaBadge = isCallForProjectsPhase
+    ? t("home.hero_cta.call_badge")
+    : t("home.hero_cta.selection_badge");
+  const heroCtaTitle = isCallForProjectsPhase
+    ? t("home.hero_cta.call_title")
+    : t("home.hero_cta.selection_title");
+  const heroCtaSubtitle = isCallForProjectsPhase
+    ? t("home.hero_cta.call_subtitle")
+    : t("home.hero_cta.selection_subtitle");
+  const heroCtaAria = isCallForProjectsPhase
+    ? t("home.hero_cta.call_aria")
+    : t("home.hero_cta.selection_aria");
   const isCallForProjectsHref = (href) => {
     const normalized = String(href || "").toLowerCase();
     return normalized.includes("/appel-a-projet") || normalized.includes("/call-for-project");
@@ -153,18 +154,24 @@ export default function Home({ page }) {
         "/submit-film": submitFilmPath,
         "/deposer-un-film": submitFilmPath,
         "/concours": submitFilmPath,
+        "/ar/submit-film": submitFilmPath,
         "/agenda": agendaPath,
         "/schedule": agendaPath,
+        "/ar/schedule": agendaPath,
         "/appel-a-projet": callForProjectsPath,
         "/appel-a-projets": callForProjectsPath,
         "/call-for-project": callForProjectsPath,
         "/call-for-projects": callForProjectsPath,
+        "/ar/call-for-project": callForProjectsPath,
         "/partenaires": partnersPath,
         "/partners": partnersPath,
+        "/ar/partners": partnersPath,
         "/a-propos": aboutPath,
         "/about": aboutPath,
+        "/ar/about": aboutPath,
         "/films": moviesPath,
         "/movies": moviesPath,
+        "/ar/movies": moviesPath,
       };
 
       return mappedPaths[path] || (path.startsWith("/") ? path : raw);
@@ -299,7 +306,10 @@ export default function Home({ page }) {
       <OrganizationSchema />
       <EventSchema />
       <WebSiteSchema />
-      <main className={`w-full overflow-hidden font-['Montserrat'] ${theme.main}`}>
+      <main
+        className={`w-full overflow-hidden font-['Montserrat'] ${theme.main}`}
+        dir={isArabic ? "rtl" : "ltr"}
+      >
 
       {/* Texture Grain - opacite reduite pour ne pas gener la lecture */}
       <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 mix-blend-overlay pointer-events-none z-[60]"></div>
@@ -314,6 +324,7 @@ export default function Home({ page }) {
           loop
           playsInline
           preload="metadata"
+          aria-hidden="true"
         />
         <div className={`absolute inset-0 bg-gradient-to-b ${theme.heroOverlay}`} />
         <div className={`absolute inset-0 ${theme.heroHalo}`} />
@@ -324,7 +335,7 @@ export default function Home({ page }) {
           className="relative z-20 flex min-h-screen w-full items-center justify-center px-4 text-center sm:px-6"
         >
           <div className={`group w-full max-w-3xl rounded-[2rem] border px-4 py-8 backdrop-blur-md transition-all duration-500 hover:scale-[1.02] sm:rounded-[2.5rem] sm:px-8 sm:py-10 md:px-14 md:py-14 ${theme.heroCard}`}>
-            <p className={`mb-4 text-[10px] font-black uppercase tracking-[0.22em] sm:text-[11px] sm:tracking-[0.35em] ${theme.heroBadge}`}>
+            <p className={`mb-4 text-[11px] font-black uppercase tracking-[0.22em] sm:text-[11px] sm:tracking-[0.35em] ${theme.heroBadge}`}>
               {heroCtaBadge}
             </p>
             <h2 className={`text-4xl font-black uppercase tracking-tight sm:text-5xl md:text-7xl ${theme.heroTitle}`}>
@@ -376,7 +387,7 @@ export default function Home({ page }) {
                   <Link
                     key={i}
                     to={l.href}
-                    aria-label={`Acceder a ${l.text}`}
+                    aria-label={t("home.hero_link_aria", { label: l.text })}
                     className={`w-full sm:w-auto px-8 py-4 rounded-full font-black uppercase tracking-widest text-[11px] transition-colors shadow-lg text-center ${theme.introLink}`}
                   >
                     {l.text}
@@ -385,7 +396,7 @@ export default function Home({ page }) {
                   <a
                     key={i}
                     href={l.href}
-                    aria-label={`Acceder a ${l.text}`}
+                    aria-label={t("home.hero_link_aria", { label: l.text })}
                     className={`w-full sm:w-auto px-8 py-4 rounded-full font-black uppercase tracking-widest text-[11px] transition-colors shadow-lg text-center ${theme.introLink}`}
                   >
                     {l.text}
@@ -454,7 +465,7 @@ export default function Home({ page }) {
                     {event.image ? (
                       <img
                         src={event.image}
-                        alt=""
+                        alt={t("home.event_poster_alt", { title: event.title })}
                         loading="lazy"
                         className="h-full w-full object-cover"
                       />
@@ -469,7 +480,7 @@ export default function Home({ page }) {
                     {event.excerpt}
                   </p>
                   <Link
-                    to={agendaPath}
+                    to={event.id ? `${agendaPath}?article=${encodeURIComponent(String(event.id))}` : agendaPath}
                     className={`inline-block mt-6 text-[11px] font-black uppercase tracking-widest transition-colors border-b-2 pb-1 w-fit ${theme.newsLink}`}
                   >
                       {t("agenda.read_article", "Lire l'article")}

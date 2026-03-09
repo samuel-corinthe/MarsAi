@@ -2,12 +2,14 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
 import { useTheme } from "../context/ThemeContext";
+import { getLocalizedPath, normalizeLanguage } from "../utils/localizedRoutes";
 
 export default function NotFound() {
   const { t, i18n } = useTranslation();
   const { isLight } = useTheme();
-  const homePath = i18n.language === "en" ? "/home" : "/accueil";
-  const moviesPath = i18n.language === "en" ? "/movies" : "/films";
+  const isArabic = normalizeLanguage(i18n.language) === "ar";
+  const homePath = getLocalizedPath("home", i18n.language);
+  const moviesPath = getLocalizedPath("films", i18n.language);
   const panelClass = isLight ? "bg-white/92" : "site-panel-solid";
   const titleClass = isLight ? "text-slate-900" : "text-white";
   const textClass = isLight ? "text-slate-600" : "text-slate-300";
@@ -15,8 +17,8 @@ export default function NotFound() {
 
   return (
     <>
-      <Seo title="Page introuvable" description={t("not_found.description")} noIndex />
-      <main className="site-page py-16">
+      <Seo title={t("not_found.title")} description={t("not_found.description")} noIndex />
+      <main className="site-page py-16" dir={isArabic ? "rtl" : "ltr"}>
         <div className="site-container">
           <section className={`site-panel mx-auto max-w-3xl text-center ${panelClass}`}>
             <p className="site-kicker mx-auto">404</p>

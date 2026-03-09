@@ -9,7 +9,7 @@ const ALTCHA_CHALLENGE_LIMIT_PER_HOUR = Number.parseInt(
   10,
 );
 
-const challengeLimiter = rateLimit({
+export const challengeLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: Number.isFinite(ALTCHA_CHALLENGE_LIMIT_PER_HOUR) && ALTCHA_CHALLENGE_LIMIT_PER_HOUR > 0
     ? ALTCHA_CHALLENGE_LIMIT_PER_HOUR

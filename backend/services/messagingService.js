@@ -166,17 +166,45 @@ export async function validateEmailAddress(email) {
   });
 }
 
-export async function sendContactMail({ name, email, subject, message }) {
+function resolveMailLanguage(lang = "fr") {
+  const normalized = String(lang || "fr").split("-")[0].toLowerCase();
+  return normalized === "fr" ? "fr" : "en";
+}
+
+// send a contact notification; lang may be "fr" or "en" (defaults to fr)
+export async function sendContactMail({
+  name,
+  email,
+  subject,
+  message,
+  lang = "fr",
+}) {
   assertMailConfig();
   const senderAddress = getSenderAddress();
+
+  // FR keeps French template, all other languages use English.
+  const normalized = resolveMailLanguage(lang);
+
+  const templates = {
+    fr: {
+      subject: `${subject}`,
+      text: `Nouveau message recu de : ${name} (${email})\n\nSujet: ${subject}\n\nMessage :\n${message}`,
+    },
+    en: {
+      subject: `${subject}`,
+      text: `New message received from: ${name} (${email})\n\nSubject: ${subject}\n\nMessage:\n${message}`,
+    },
+  };
+
+  const { subject: mailSubject, text } = templates[normalized] || templates.fr;
 
   if (hasBrevoApiKey()) {
     await sendWithBrevoApi({
       senderName: name,
       toEmail: senderAddress,
       replyToEmail: email,
-      subject: `${subject} `,
-      textContent: `Nouveau message recu de : ${name} (${email})\n\nMessage :\n${message}`,
+      subject: mailSubject,
+      textContent: text,
     });
     return;
   }
@@ -185,19 +213,19 @@ export async function sendContactMail({ name, email, subject, message }) {
     from: `"${name}" <${senderAddress}>`,
     replyTo: email,
     to: senderAddress,
-    subject: `${subject} `,
-    text: `Nouveau message recu de : ${name} (${email})\n\nMessage :\n${message}`,
+    subject: mailSubject,
+    text,
   };
 
   await createSmtpTransporter().sendMail(mailOptions);
 }
-
 export async function sendUploadSuccessMail({
   toEmail,
   firstName,
   lastName,
   movieTitle,
   videoUrl,
+  lang = "fr",
 }) {
   assertMailConfig();
   const senderAddress = getSenderAddress();
@@ -205,42 +233,67 @@ export async function sendUploadSuccessMail({
 
   const safeToEmail = String(toEmail || "").trim();
   if (!safeToEmail) {
-    throw new Error("Email destinataire manquant pour la confirmation d'upload.");
+    throw new Error(
+      "Email destinataire manquant pour la confirmation d'upload.",
+    );
   }
 
   const nameParts = [firstName, lastName]
     .map((part) => String(part || "").trim())
     .filter(Boolean);
+  const mailLang = resolveMailLanguage(lang);
   const recipientName = nameParts.length ? nameParts.join(" ") : "participant";
-  const safeMovieTitle = String(movieTitle || "votre film").trim();
+
+  const safeMovieTitle = String(movieTitle || (mailLang === "fr" ? "votre film" : "your film")).trim();
   const safeVideoUrl = String(videoUrl || "").trim();
   const recipientNameHtml = escapeHtml(recipientName);
   const safeMovieTitleHtml = escapeHtml(safeMovieTitle);
   const safeVideoUrlHtml = escapeHtml(safeVideoUrl);
 
-  const subject = "Upload MarsAI recu avec succes";
+  const templates = {
+    fr: {
+      subject: "Upload MarsAI recu avec succes",
+      greeting: `Bonjour ${recipientName},`,
+      body: `Votre upload pour "${safeMovieTitle}" a bien ete recu et envoye sur YouTube.`,
+      linkLabel: "Lien video",
+      review: "Le film est maintenant en cours de verification par l'equipe.",
+      thanks: "Merci,",
+    },
+    en: {
+      subject: "MarsAI upload received successfully",
+      greeting: `Hello ${recipientName},`,
+      body: `Your upload for "${safeMovieTitle}" has been received and sent to YouTube.`,
+      linkLabel: "Video link",
+      review: "The film is now under review by the team.",
+      thanks: "Thank you,",
+    },
+  };
+
+  const copy = templates[mailLang] || templates.fr;
+  const subject = copy.subject;
+
   const textContent = [
-    `Bonjour ${recipientName},`,
+    copy.greeting,
     "",
-    `Votre upload pour "${safeMovieTitle}" a bien ete recu et envoye sur YouTube.`,
-    safeVideoUrl ? `Lien video: ${safeVideoUrl}` : "",
+    copy.body,
+    safeVideoUrl ? `${copy.linkLabel}: ${safeVideoUrl}` : "",
     "",
-    "Le film est maintenant en cours de verification par l'equipe.",
+    copy.review,
     "",
-    "Merci,",
+    copy.thanks,
     "marsAI Festival",
   ]
     .filter(Boolean)
     .join("\n");
 
   const htmlContent = [
-    `<p>Bonjour ${recipientNameHtml},</p>`,
-    `<p>Votre upload pour <strong>${safeMovieTitleHtml}</strong> a bien ete recu et envoye sur YouTube.</p>`,
+    `<p>${escapeHtml(copy.greeting)}</p>`,
+    `<p>${escapeHtml(copy.body).replace(escapeHtml(safeMovieTitle), `<strong>${safeMovieTitleHtml}</strong>`)}</p>`,
     safeVideoUrl
-      ? `<p>Lien video: <a href="${safeVideoUrlHtml}" target="_blank" rel="noopener noreferrer">${safeVideoUrlHtml}</a></p>`
+      ? `<p>${escapeHtml(copy.linkLabel)}: <a href="${safeVideoUrlHtml}" target="_blank" rel="noopener noreferrer">${safeVideoUrlHtml}</a></p>`
       : "",
-    "<p>Le film est maintenant en cours de verification par l'equipe.</p>",
-    "<p>Merci,<br/>marsAI Festival</p>",
+    `<p>${escapeHtml(copy.review)}</p>`,
+    `<p>${escapeHtml(copy.thanks)}<br/>marsAI Festival</p>`,
   ]
     .filter(Boolean)
     .join("");
@@ -264,17 +317,25 @@ export async function sendUploadSuccessMail({
     senderName: "marsAI Festival",
     senderCandidates: senderCandidates.length
       ? senderCandidates
-      : [String(senderAddress || "").trim(), String(process.env.EMAIL_USER || "").trim()],
+      : [
+          String(senderAddress || "").trim(),
+          String(process.env.EMAIL_USER || "").trim(),
+        ],
     toEmail: safeToEmail,
     subject,
     textContent,
     htmlContent,
   });
 }
-
-export async function createOrUpdateBrevoContact({ firstName, email, safePreferences }) {
+export async function createOrUpdateBrevoContact({
+  firstName,
+  email,
+  safePreferences,
+}) {
   if (!ensureBrevoClientsConfigured()) {
-    throw new Error("BREVO_API_KEY manquante: impossible d'ajouter le contact Brevo.");
+    throw new Error(
+      "BREVO_API_KEY manquante: impossible d'ajouter le contact Brevo.",
+    );
   }
 
   const contact = new SibApiV3Sdk.CreateContact();
@@ -289,19 +350,43 @@ export async function createOrUpdateBrevoContact({ firstName, email, safePrefere
   await contactsApi.createContact(contact);
 }
 
-export async function sendNewsletterWelcomeMail({ firstName, email, safePreferences }) {
+export async function sendNewsletterWelcomeMail({
+  firstName,
+  email,
+  safePreferences,
+  lang = "fr",
+}) {
   assertMailConfig();
   const senderAddress = getSenderAddress();
+  const normalized = resolveMailLanguage(lang);
+  const prefs = safePreferences.join(", ");
+
+  const templates = {
+    fr: {
+      subject: `Bienvenue a bord, ${firstName} !`,
+      text: `Bienvenue ${firstName} !\nMerci de rejoindre la communaute marsAI.\nTes preferences : ${prefs}`,
+      html: `<h1>Bienvenue ${firstName} !</h1>
+           <p>Merci de rejoindre la communaute <strong>marsAI</strong>.</p>
+           <p>Tes preferences : ${prefs}</p>`,
+    },
+    en: {
+      subject: `Welcome aboard, ${firstName}!`,
+      text: `Welcome ${firstName}!\nThanks for joining the marsAI community.\nYour preferences: ${prefs}`,
+      html: `<h1>Welcome ${firstName}!</h1>
+           <p>Thanks for joining the <strong>marsAI</strong> community.</p>
+           <p>Your preferences: ${prefs}</p>`,
+    },
+  };
+
+  const { subject, text, html } = templates[normalized] || templates.fr;
 
   if (hasBrevoApiKey()) {
     await sendWithBrevoApi({
       senderName: "marsAI Festival",
       toEmail: email,
-      subject: `Bienvenue a bord, ${firstName} !`,
-      textContent: `Bienvenue ${firstName} !\nMerci de rejoindre la communaute marsAI.\nTes preferences : ${safePreferences.join(", ")}`,
-      htmlContent: `<h1>Bienvenue ${firstName} !</h1>
-           <p>Merci de rejoindre la communaute <strong>marsAI</strong>.</p>
-           <p>Tes preferences : ${safePreferences.join(", ")}</p>`,
+      subject,
+      textContent: text,
+      htmlContent: html,
     });
     return;
   }
@@ -309,10 +394,8 @@ export async function sendNewsletterWelcomeMail({ firstName, email, safePreferen
   const mailOptions = {
     from: `"marsAI Festival" <${senderAddress}>`,
     to: email,
-    subject: `Bienvenue a bord, ${firstName} !`,
-    html: `<h1>Bienvenue ${firstName} !</h1>
-           <p>Merci de rejoindre la communaute <strong>marsAI</strong>.</p>
-           <p>Tes preferences : ${safePreferences.join(", ")}</p>`,
+    subject,
+    html,
   };
 
   await createSmtpTransporter().sendMail(mailOptions);

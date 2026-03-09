@@ -210,6 +210,49 @@
     box-shadow: var(--dash-shadow);
   }
 
+  /* Make dashboard cards feel lighter and more polished */
+  .dash-page .glass,
+  .dash-page .stat-card,
+  .dash-page .list-card {
+    position: relative;
+    overflow: hidden;
+    transition:
+      transform 180ms ease,
+      border-color 220ms ease,
+      box-shadow 220ms ease,
+      background-color 220ms ease;
+  }
+  .dash-page .glass::before,
+  .dash-page .stat-card::before,
+  .dash-page .list-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background:
+      radial-gradient(circle at 10% 0%, rgba(56, 189, 248, 0.12), transparent 45%),
+      linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0));
+  }
+  .dash-page .glass > *,
+  .dash-page .stat-card > *,
+  .dash-page .list-card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .dash-page .glass:hover,
+    .dash-page .stat-card:hover,
+    .dash-page .list-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(125, 211, 252, 0.36);
+      box-shadow:
+        0 24px 58px rgba(2, 6, 23, 0.45),
+        0 0 0 1px rgba(34, 211, 238, 0.16);
+    }
+  }
+
   .table-header { @apply text-[10px] font-black uppercase tracking-[0.18em] text-slate-300/75; }
   .table-row { @apply py-3 border-b border-white/5 last:border-0; }
 
@@ -227,7 +270,7 @@
     width: 100%;
   }
   .dash-sidenav .active {
-    background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(129, 140, 248, 0.2));
+    background: linear-gradient(135deg, rgba(103, 232, 249, 0.3), rgba(56, 189, 248, 0.24));
     border: 1px solid rgba(255,255,255,0.2);
   }
 
@@ -247,7 +290,7 @@
     text-overflow: ellipsis;
   }
   .bottom-nav .active {
-    background: linear-gradient(135deg, rgba(56, 189, 248, 0.35), rgba(129, 140, 248, 0.32));
+    background: linear-gradient(135deg, rgba(103, 232, 249, 0.4), rgba(56, 189, 248, 0.34));
     border-color: rgba(255,255,255,0.35);
   }
 
@@ -276,25 +319,57 @@
   .dash-page .btn-primary {
     @apply border-0 font-black tracking-[0.04em] text-slate-950;
     background: linear-gradient(120deg, #67e8f9, #38bdf8);
-    box-shadow: 0 10px 30px rgba(56, 189, 248, 0.35);
+    box-shadow: 0 12px 30px rgba(56, 189, 248, 0.4);
   }
   .dash-page .btn-primary:hover {
-    filter: brightness(1.05);
+    filter: brightness(1.06);
   }
 
   .dash-page .btn-ghost {
     @apply font-black uppercase tracking-[0.06em] text-slate-100;
-    background: rgba(15, 23, 42, 0.55);
-    border-color: rgba(148, 163, 184, 0.3);
+    background: rgba(15, 23, 42, 0.82);
+    border-color: rgba(56, 189, 248, 0.4);
   }
   .dash-page .btn-ghost:hover {
-    background: rgba(30, 41, 59, 0.75);
-    color: #e2e8f0;
-    border-color: rgba(56, 189, 248, 0.45);
+    background: rgba(30, 41, 59, 0.9);
+    color: #f8fafc;
+    border-color: rgba(56, 189, 248, 0.7);
   }
 
   .dash-page a {
     @apply font-bold tracking-[0.02em];
+  }
+
+  .dash-page a:not(.btn-primary):not(.btn-ghost):not(.site-btn-primary):not(.site-btn-secondary) {
+    color: #bae6fd;
+    text-decoration-color: rgba(186, 230, 253, 0.45);
+  }
+  .dash-page a:not(.btn-primary):not(.btn-ghost):not(.site-btn-primary):not(.site-btn-secondary):visited {
+    color: #bae6fd;
+  }
+  .dash-page a:not(.btn-primary):not(.btn-ghost):not(.site-btn-primary):not(.site-btn-secondary):hover {
+    color: #e0f2fe;
+    text-decoration-color: rgba(224, 242, 254, 0.8);
+  }
+
+  body:not([data-theme="light"]) .dash-page :is(.glass, .stat-card, .list-card, .dash-sidenav, .bottom-nav) button:not(.btn-primary):not(.btn-ghost),
+  body:not([data-theme="light"]) .dash-page :is(.glass, .stat-card, .list-card, .dash-sidenav, .bottom-nav) a:not(.btn-primary):not(.btn-ghost) {
+    color: #e2e8f0;
+  }
+  body:not([data-theme="light"]) .dash-page :is(.glass, .stat-card, .list-card) button[class*="bg-white/10"] {
+    color: #f8fafc !important;
+    border-color: rgba(148, 163, 184, 0.42) !important;
+  }
+
+  body:not([data-theme="light"]) .dash-page :is(.glass, .stat-card, .list-card, .dash-sidenav, .bottom-nav) :is(
+    .text-slate-700,
+    .text-slate-800,
+    .text-slate-900,
+    .text-blue-700,
+    .text-cyan-700,
+    .text-indigo-700
+  ) {
+    color: #e2e8f0 !important;
   }
 }
 
@@ -517,8 +592,42 @@ body[data-theme="light"] .dash-page .dash-sidenav button:hover {
 
 body[data-theme="light"] .dash-page .dash-sidenav .active {
   color: #082f49 !important;
-  background: linear-gradient(135deg, rgba(125, 211, 252, 0.55), rgba(191, 219, 254, 0.5));
+  background: linear-gradient(135deg, rgba(125, 211, 252, 0.58), rgba(186, 230, 253, 0.52));
   border-color: rgba(2, 132, 199, 0.45) !important;
+}
+
+body[data-theme="light"] .dash-page .btn-primary {
+  color: #082f49 !important;
+  background: linear-gradient(120deg, #67e8f9, #38bdf8);
+  border: 1px solid rgba(8, 47, 73, 0.18);
+  box-shadow: 0 10px 24px rgba(14, 116, 144, 0.24);
+}
+
+body[data-theme="light"] .dash-page .btn-primary:hover {
+  filter: brightness(1.07);
+}
+
+body[data-theme="light"] .dash-page .btn-ghost {
+  color: #0f172a !important;
+  background: rgba(241, 245, 249, 0.95);
+  border-color: rgba(148, 163, 184, 0.56);
+}
+
+body[data-theme="light"] .dash-page .btn-ghost:hover {
+  color: #0b1324 !important;
+  background: rgba(226, 232, 240, 0.96);
+  border-color: rgba(71, 85, 105, 0.5);
+}
+
+body[data-theme="light"] .dash-page :is(.glass, .stat-card, .list-card) button[class*="bg-white/10"] {
+  color: #0f172a !important;
+  background: rgba(241, 245, 249, 0.92) !important;
+  border-color: rgba(148, 163, 184, 0.5) !important;
+}
+
+body[data-theme="light"] .dash-page :is(.glass, .stat-card, .list-card) button[class*="bg-white/20"] {
+  color: #0f172a !important;
+  background: rgba(226, 232, 240, 0.96) !important;
 }
 
 body[data-theme="light"] .dash-page .bottom-nav button {
@@ -529,7 +638,7 @@ body[data-theme="light"] .dash-page .bottom-nav button {
 
 body[data-theme="light"] .dash-page .bottom-nav .active {
   color: #082f49 !important;
-  background: linear-gradient(135deg, rgba(125, 211, 252, 0.62), rgba(191, 219, 254, 0.56));
+  background: linear-gradient(135deg, rgba(125, 211, 252, 0.66), rgba(186, 230, 253, 0.6));
   border-color: rgba(2, 132, 199, 0.45) !important;
 }
 
@@ -553,6 +662,49 @@ body[data-theme="light"] .dash-page a:not(.btn-primary):not(.site-btn-primary):n
 
 body[data-theme="light"] .dash-page a:not(.btn-primary):not(.site-btn-primary):not(.site-btn-secondary):hover {
   color: #0c4a6e;
+}
+
+/* Keep film list cards readable in light mode (dark card + white text like night mode) */
+body[data-theme="light"] .dash-page .dashboard-film-row {
+  background: rgba(15, 23, 42, 0.9) !important;
+  border-color: rgba(148, 163, 184, 0.38) !important;
+}
+
+body[data-theme="light"] .dash-page .dashboard-film-row :is(
+  .bg-slate-900,
+  .bg-slate-900\/80,
+  .bg-slate-900\/70,
+  .bg-slate-800,
+  .bg-slate-800\/80
+) {
+  background: rgba(15, 23, 42, 0.84) !important;
+  border-color: rgba(148, 163, 184, 0.35) !important;
+}
+
+body[data-theme="light"] .dash-page .dashboard-film-row :is(
+  .text-white,
+  .text-slate-100,
+  .text-slate-100\/95,
+  .text-slate-100\/90,
+  .text-slate-100\/85,
+  .text-slate-100\/80,
+  .text-slate-200,
+  .text-slate-200\/95,
+  .text-slate-200\/90,
+  .text-slate-200\/85,
+  .text-slate-200\/80,
+  .text-slate-300,
+  .text-slate-300\/85
+) {
+  color: #f8fafc !important;
+}
+
+body[data-theme="light"] .dash-page .dashboard-film-row :is(
+  .text-cyan-200,
+  .text-cyan-200\/95,
+  .text-cyan-200\/90
+) {
+  color: #67e8f9 !important;
 }
 
 @layer base {

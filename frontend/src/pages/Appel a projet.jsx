@@ -5,6 +5,7 @@ import Seo from "../components/Seo";
 import { getSitePhaseState } from "../api";
 import PhaseCountdownBanner from "../components/phases/PhaseCountdownBanner";
 import { useTheme } from "../context/ThemeContext";
+import { getLocalizedPath, normalizeLanguage } from "../utils/localizedRoutes";
 
 export default function CallForProject({ page }) {
   const { t, i18n } = useTranslation();
@@ -12,8 +13,15 @@ export default function CallForProject({ page }) {
   const [sitePhase, setSitePhase] = useState(null);
   const [phaseLoaded, setPhaseLoaded] = useState(false);
   const [phaseLoadError, setPhaseLoadError] = useState("");
+  const isArabic = normalizeLanguage(i18n.language) === "ar";
+  const isEnglish = normalizeLanguage(i18n.language) === "en";
 
-  const uploadPath = i18n.language === "en" ? "/submit-film" : "/deposer-un-film";
+  const uploadPath = getLocalizedPath("submitFilm", i18n.language);
+  const submitFilmLabel = isArabic
+    ? "ارسل فيلمك"
+    : isEnglish
+      ? "Submit your film"
+      : "Deposer un film";
 
   useEffect(() => {
     let cancelled = false;
@@ -24,7 +32,7 @@ export default function CallForProject({ page }) {
         if (!cancelled) setSitePhase(payload);
       } catch (error) {
         if (!cancelled) {
-          setPhaseLoadError(error?.message || "Impossible de charger l'etat des phases.");
+          setPhaseLoadError(error?.message || t("projects.phase_error"));
         }
       } finally {
         if (!cancelled) setPhaseLoaded(true);
@@ -34,10 +42,8 @@ export default function CallForProject({ page }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
-  const currentPhaseKey = String(sitePhase?.currentPhase || "phase_1").toLowerCase();
-  const isPhase1 = phaseLoaded && Boolean(sitePhase) && currentPhaseKey === "phase_1";
   const seoTitle = page?.title?.rendered || "Appel a projet";
   const seoDescription = page?.excerpt?.rendered || page?.content?.rendered || "";
   const theme = isLight
@@ -69,10 +75,13 @@ export default function CallForProject({ page }) {
   return (
     <>
       <Seo title={seoTitle} description={seoDescription} />
-      <main className={`min-h-screen py-14 md:py-16 ${theme.page}`}>
+      <main
+        className={`min-h-screen py-14 md:py-16 ${theme.page}`}
+        dir={isArabic ? "rtl" : "ltr"}
+      >
         <div className="site-container space-y-8">
           <section>
-            <p className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] ${theme.kicker}`}>
+            <p className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] ${theme.kicker}`}>
               {t("projects.main_title")}
             </p>
             <h1 className={`mt-4 text-3xl font-black uppercase tracking-tight sm:text-4xl md:text-5xl ${theme.title}`}>
@@ -98,27 +107,18 @@ export default function CallForProject({ page }) {
           <section className={`border-t pt-8 ${theme.divider}`}>
             <div
               className={`site-richtext ${theme.richtext}`}
-              dangerouslySetInnerHTML={{ __html: page?.content?.rendered || "" }}
+              dangerouslySetInnerHTML={{ __html: (page?.content?.rendered || "")
+                .replace(/<h[1-6][^>]*>\s*<\/h[1-6]>/gi, "")
+                .replace(/<video(\s)/gi, '<video aria-hidden="true"$1')
+                .replace(/<audio(\s)/gi, '<audio aria-hidden="true"$1') }}
             />
 
-            {isPhase1 && (
-              <div className={`mt-8 rounded-2xl border p-5 ${theme.infoBox}`}>
-                <p className={`text-xs font-black uppercase tracking-[0.2em] ${theme.infoKicker}`}>
-                  {i18n.language === "en" ? "Call for projects is open" : "Appel a projet ouvert"}
-                </p>
-                <p className={`mt-2 text-sm ${theme.infoText}`}>
-                  {i18n.language === "en"
-                    ? "Submit your film directly from the upload form."
-                    : "Depose ton film directement depuis le formulaire d'upload."}
-                </p>
-                <Link
-                  to={uploadPath}
-                  className={`mt-4 inline-flex rounded-full bg-gradient-to-r px-6 py-3 text-xs font-black uppercase tracking-[0.12em] transition hover:brightness-105 ${theme.cta}`}
-                >
-                  {t("nav.submitFilm")}
-                </Link>
-              </div>
-            )}
+            <Link
+              to={uploadPath}
+              className={`mt-8 inline-flex rounded-full bg-gradient-to-r px-6 py-3 text-xs font-black uppercase tracking-[0.12em] transition hover:brightness-105 ${theme.cta}`}
+            >
+              {submitFilmLabel}
+            </Link>
           </section>
         </div>
       </main>

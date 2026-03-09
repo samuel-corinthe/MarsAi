@@ -2,6 +2,43 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import navbarTranslations from "./locales/navbar.json";
 
+const LANGUAGE_STORAGE_KEY = "marsai-language";
+
+function normalizeLanguageCode(value = "fr") {
+  const language = String(value || "").toLowerCase();
+  if (language.startsWith("ar")) return "ar";
+  if (language.startsWith("en")) return "en";
+  return "fr";
+}
+
+function getLanguageFromPathname() {
+  if (typeof window === "undefined") return null;
+  const pathname = String(window.location?.pathname || "").toLowerCase();
+  if (pathname === "/ar" || pathname.startsWith("/ar/")) return "ar";
+  if (pathname === "/en" || pathname.startsWith("/en/")) return "en";
+  return null;
+}
+
+function getStoredLanguage() {
+  if (typeof window === "undefined") return null;
+  try {
+    return normalizeLanguageCode(window.localStorage.getItem(LANGUAGE_STORAGE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+function resolveInitialLanguage() {
+  return getLanguageFromPathname() || getStoredLanguage() || "fr";
+}
+
+function applyDocumentLanguage(language) {
+  if (typeof document === "undefined") return;
+  const normalized = normalizeLanguageCode(language);
+  document.documentElement.lang = normalized;
+  document.documentElement.dir = normalized === "ar" ? "rtl" : "ltr";
+}
+
 i18n.use(initReactI18next).init({
   resources: {
     fr: {
@@ -34,6 +71,19 @@ i18n.use(initReactI18next).init({
           top_movies_subtitle: "Découvrez les 5 meilleurs films",
           search_placeholder: "Rechercher un film...",
           no_results: "Aucun résultat trouvé",
+          sortOptions: {
+            default: "Par défaut",
+            title_asc: "Titre (A-Z)",
+            title_desc: "Titre (Z-A)",
+            year_asc: "Plus anciens",
+            year_desc: "Plus récents",
+          },
+          filterTitle: "Filtres Avancés",
+          sortBy: "Trier par",
+          ratingRange: "Note (min - max)",
+          min: "Min",
+          max: "Max",
+          reset: "Réinitialiser",
         },
         genres: {
           all: "Tous",
@@ -188,6 +238,7 @@ i18n.use(initReactI18next).init({
             casting_label: "Casting",
             add_cast_member: "Ajouter",
             cast_member: "Membre",
+            cast_field_aria: "Membre {{num}} — {{field}}",
             remove_cast_member: "Supprimer",
             cast_name_placeholder: "Nom *",
             cast_role_placeholder: "Role *",
@@ -198,8 +249,7 @@ i18n.use(initReactI18next).init({
               "Si vous ajoutez un membre, le role est obligatoire.",
             poster_label: "Image poster",
             poster_preview_alt: "Apercu du poster",
-            poster_hint:
-              "JPG, PNG, WebP ou GIF, max 5 Mo apres optimisation.",
+            poster_hint: "JPG, PNG, WebP ou GIF, max 5 Mo apres optimisation.",
             poster_auto_crop_hint:
               "Recadrage automatique centre au format 2:3 avant envoi.",
             subtitle_label: "Sous-titres (fichier .srt)",
@@ -233,12 +283,16 @@ i18n.use(initReactI18next).init({
             region_aria: "Progression de l'envoi",
             bar_aria: "Progression de l'envoi : {{progress}} pourcent",
             uploading_with_progress: "Envoi en cours... {{progress}}%",
+            elapsed_label: "Temps ecoule : {{time}}",
           },
           youtube_status: {
             title: "Statut YouTube",
             stop_refresh: "Stop refresh",
             video_id_label: "Video ID",
+            tracking_id_label: "Tracking ID",
             state_label: "Etat",
+            stage_label: "Etape",
+            message_label: "Message",
             unknown: "inconnu",
             checking: "Verification en cours...",
             waiting: "En attente du statut YouTube",
@@ -364,7 +418,6 @@ i18n.use(initReactI18next).init({
             submit: "S'inscrire à la newsletter",
             loading: "Inscription en cours...",
             rgpd: "En vous inscrivant, vous acceptez de recevoir des emails de marsAI Festival. Vous pouvez vous désabonner à tout moment.",
-            privacy_link: "Politique de confidentialité",
             success_title: "Inscription confirmée !",
             success_msg:
               "Bienvenue dans la communauté marsAI ! Vous recevrez bientôt votre première newsletter.",
@@ -438,6 +491,17 @@ i18n.use(initReactI18next).init({
           top_movies_subtitle: "Discover the top 5 movies",
           search_placeholder: "Search for a movie...",
           no_results: "No results found",
+          sortOptions: {
+            default: "Default",
+            title_asc: "Title (A-Z)",
+            title_desc: "Title (Z-A)",
+            year_asc: "Oldest first",
+            year_desc: "Newest first",
+          },
+          filterTitle: "Advanced Filters",
+          sortBy: "Sort by",
+          ratingRange: "Rating (min - max)",
+          reset: "Reset",
         },
         genres: {
           all: "All",
@@ -569,7 +633,8 @@ i18n.use(initReactI18next).init({
               "This title will appear on YouTube and on the contest website",
             description_label: "Description",
             description_placeholder: "Briefly explain your project...",
-            description_hint: "This description will accompany your YouTube video",
+            description_hint:
+              "This description will accompany your YouTube video",
             country_label: "Country code (alpha-2)",
             country_placeholder: "Ex: FR, US, MA",
             country_hint: "ISO 3166-1 alpha-2 code of your country (2 letters)",
@@ -590,6 +655,7 @@ i18n.use(initReactI18next).init({
             casting_label: "Casting",
             add_cast_member: "Add",
             cast_member: "Member",
+            cast_field_aria: "Member {{num}} — {{field}}",
             remove_cast_member: "Remove",
             cast_name_placeholder: "Name *",
             cast_role_placeholder: "Role *",
@@ -600,8 +666,7 @@ i18n.use(initReactI18next).init({
               "If you add a cast member, the role is required.",
             poster_label: "Poster image",
             poster_preview_alt: "Poster preview",
-            poster_hint:
-              "JPG, PNG, WebP or GIF, max 5 MB after optimization.",
+            poster_hint: "JPG, PNG, WebP or GIF, max 5 MB after optimization.",
             poster_auto_crop_hint:
               "Automatic centered crop to 2:3 ratio before upload.",
             subtitle_label: "Subtitles (.srt file)",
@@ -635,12 +700,16 @@ i18n.use(initReactI18next).init({
             region_aria: "Upload progress",
             bar_aria: "Upload progress: {{progress}} percent",
             uploading_with_progress: "Uploading... {{progress}}%",
+            elapsed_label: "Elapsed time: {{time}}",
           },
           youtube_status: {
             title: "YouTube status",
             stop_refresh: "Stop refresh",
             video_id_label: "Video ID",
+            tracking_id_label: "Tracking ID",
             state_label: "State",
+            stage_label: "Stage",
+            message_label: "Message",
             unknown: "unknown",
             checking: "Checking...",
             waiting: "Waiting for YouTube status",
@@ -809,11 +878,758 @@ i18n.use(initReactI18next).init({
         },
       },
     },
+    ar: {
+      translation: {
+        nav: navbarTranslations.ar.nav,
+        footer: navbarTranslations.ar.footer,
+        loading: "جاري التحميل...",
+        prev: "السابق",
+        next: "التالي",
+        home_news: "الأخبار",
+        not_found: {
+          title: "الصفحة غير موجودة",
+          description: "عذراً، هذه الصفحة غير موجودة أو تم نقلها.",
+          back_home: "العودة للرئيسية",
+          see_movies: "مشاهدة الأفلام",
+        },
+        jury: {
+          jury_title: "لجنة التحكيم",
+          jury_subtitle: "تعرف على الخبراء الرؤيويين في اختياراتنا الرسمية.",
+          jury_profile_label: "ملف عضو اللجنة",
+          close_profile: "إغلاق الملف",
+          loading: "جاري التحميل...",
+          no_members: "لم يتم العثور على أعضاء.",
+        },
+        gallery: {
+          title_accent: "عجائبنا",
+          top_movies_subtitle: "اكتشف أفضل 5 أفلام",
+          search_placeholder: "ابحث عن فيلم...",
+          no_results: "لا توجد نتائج",
+
+          sortOptions: {
+            default: "افتراضي",
+            title_asc: "العنوان (أ-ي)",
+            title_desc: "العنوان (ي-أ)",
+            year_asc: "الأقدم أولاً",
+            year_desc: "الأحدث أولاً",
+          },
+
+          filterTitle: "مرشحات متقدمة",
+          sortBy: "ترتيب حسب",
+          ratingRange: "التقييم (أدنى - أقصى)",
+          reset: "إعادة تعيين",
+        },
+        genres: {
+          all: "الكل",
+          action: "أكشن",
+          "sci-fi": "خيال علمي",
+          adventure: "مغامرة",
+          fantasy: "فانتازيا",
+          drama: "دراما",
+        },
+        movie_details: {
+          not_found: "الفيلم غير موجود",
+          back_to_gallery: "العودة إلى المعرض",
+          watch_movie: "شاهد الفيلم",
+          synopsis: "قصة الفيلم",
+          ai_stack: "أدوات الذكاء الاصطناعي",
+          no_ai_tools: "لم يتم تحديد أدوات.",
+          casting: "طاقم العمل",
+          creator_bio: "نبذة عن المبدع",
+          social_links: "روابط التواصل",
+          admin_db_access: "وصول لقاعدة البيانات",
+          admin_note: "التقييم",
+          admin_not_rated: "غير مقيم",
+          admin_manage_note: "إدارة التقييم",
+          admin_comment: "تعليق خاص",
+          admin_no_comment: "لا يوجد تعليق",
+          tech_specs: "المواصفات التقنية",
+          global_rating: "التقييم العام",
+          director: "المخرج",
+          country: "البلد",
+          language: "اللغة",
+          age: "العمر",
+          release_date: "تاريخ الإصدار",
+          duration: "المدة",
+          modal_title: "قيم",
+          modal_confirm: "تأكيد",
+          modal_delete: "حذف التقييم",
+          modal_comment_label: "تعليق (للمشرف فقط)",
+          modal_comment_placeholder: "لماذا اخترت هذا التقييم؟",
+          na: "غير متاح",
+        },
+        partners: {
+          partners_title: "شركاؤنا",
+          loading: "جاري تحميل الشركاء...",
+          badge: "هم يثقون بنا",
+          subtitle: "اكتشف الشركاء الذين يدعمون مشروعنا",
+          cta_title: "كن شريكاً",
+          cta_text:
+            "هل تريد الانضمام إلى مغامرتنا؟ انضم إلى شركائنا وشارك في مشروع مبتكر.",
+          cta_button: "اتصل بنا",
+        },
+        legal: {
+          badge: "وثائق قانونية",
+          lastUpdated: "آخر تحديث: {{date}}",
+          backHome: "العودة للرئيسية",
+          viewCgv: "عرض الشروط العامة للبيع",
+          viewCgu: "عرض شروط الاستخدام",
+          defaultTitle: "وثيقة قانونية",
+        },
+        about: {
+          loading: "جاري تحميل قاعدة البيانات...",
+          defaultTitle: "حول",
+          description:
+            "هي منصة مخصصة لمبدعي الفيديو المعتمد على الذكاء الاصطناعي. نحن ندعم العقول الشغوفة بالابتكار السينمائي.",
+          community:
+            "انضم إلى مجتمع إبداعي وجريء يركز على استكشاف مستقبل تحول فيه التكنولوجيا إنتاج الفيديو.",
+          cta_join: "شارك",
+          cta_more: "لمعرفة المزيد",
+          cta_contact: "اتصل بنا",
+          features: {
+            ai: "الذكاء الاصطناعي",
+            innovation: "ابتكار الفيديو",
+            creativity: "إبداع بلا حدود",
+            future: "المستقبل الرقمي",
+            tech: "تكنولوجيا متقدمة",
+          },
+        },
+        contact: {
+          badge: "اتصل بنا",
+          form: {
+            label_name: "الاسم الكامل",
+            placeholder_name: "اسمك",
+            label_email: "البريد الإلكتروني",
+            placeholder_email: "you@email.com",
+            label_subject: "الموضوع",
+            placeholder_subject: "موضوع الرسالة",
+            label_message: "رسالتك",
+            placeholder_message: "أخبرنا بما تحتاجه.",
+            button_idle: "إرسال الرسالة",
+            button_loading: "جاري الإرسال...",
+          },
+          info: {
+            location_title: "الموقع",
+            address: "مدرسة La Plateforme_، مرسيليا",
+          },
+        },
+        upload: {
+          page_title: "مسابقة MarsAI 2026",
+          page_subtitle: "شاركنا رؤيتك لمستقبل مرغوب فيه.",
+          title: "ارفع الفيديو الخاص بك",
+          subtitle: "شاركنا إبداعك في بضع نقرات.",
+          status: {
+            video_validated: "تم التحقق من الفيديو وهو جاهز للرفع.",
+            upload_success: "تم رفع الفيديو بنجاح! شكراً لك.",
+            video_uploaded_checking:
+              "تم رفع الفيديو. جاري التحقق من قبل يوتيوب.",
+            video_uploaded_email_failed:
+              "تم رفع الفيديو، لكن تعذر إرسال بريد التأكيد.",
+          },
+          form: {
+            required: "مطلوب",
+            optional: "اختياري",
+            email_label: "البريد الإلكتروني",
+            email_placeholder: "example@domain.com",
+            email_hint: "سنستخدم هذا العنوان للتواصل معك عند الحاجة.",
+            first_name_label: "الاسم الأول",
+            first_name_placeholder: "اسمك الأول",
+            last_name_label: "اسم العائلة",
+            last_name_placeholder: "اسم عائلتك",
+            age_label: "العمر",
+            age_placeholder: "عمرك",
+            age_hint: "يجب أن يكون عمرك 18 عاماً على الأقل.",
+            title_label: "عنوان الفيديو",
+            title_placeholder: "اختر عنواناً جذاباً لفيديوهاتك",
+            movie_title_label: "عنوان فيلمك",
+            movie_title_placeholder: "مثال: حياتي على المريخ",
+            movie_title_hint: "سيظهر هذا العنوان على يوتيوب وموقع المسابقة",
+            description_label: "الوصف",
+            description_placeholder: "اشرح مشروعك بإيجاز...",
+            description_hint: "سيرافق هذا الوصف فيديوهاتك على يوتيوب",
+            country_label: "رمز الدولة (alpha-2)",
+            country_placeholder: "مثال: FR, MA, SA",
+            language_label: "لغة الفيلم",
+            language_placeholder: "مثال: العربية",
+            ai_tools_label: "أدوات الذكاء الاصطناعي المستخدمة",
+            ai_tools_placeholder: "مثال: Runway, DALL-E",
+            bio_label: "نبذة عن المخرج",
+            bio_placeholder: "بضع كلمات عنك...",
+            social_links_label: "روابط التواصل الاجتماعي",
+            website_label: "الموقع الإلكتروني",
+            instagram_label: "إنستغرام",
+            facebook_label: "فيسبوك",
+            x_label: "إكس (تويتر)",
+            casting_label: "طاقم التمثيل",
+            add_cast_member: "إضافة",
+            cast_member: "عضو",
+            remove_cast_member: "إزالة",
+            cast_name_placeholder: "الاسم *",
+            cast_role_placeholder: "الدور *",
+            cast_avatar_placeholder: "رابط الصورة (https://...)",
+            poster_label: "صورة الملصق (Poster)",
+            poster_hint: "JPG, PNG, WebP أو GIF، بحد أقصى 5 ميجابايت.",
+            subtitle_label: "الترجمة (ملف .srt)",
+            video_label: "ملف الفيديو (MP4 فقط)",
+            video_requirements:
+              "الحجم الأقصى: 300 ميجابايت - صيغة 16:9 - المدة: 45-100 ثانية",
+            antispam_label: "التحقق من الأمان",
+            part_1_badge: "الجزء 1/3",
+            part_1_title: "معلومات المشارك",
+            part_2_badge: "الجزء 2/3",
+            part_2_title: "معلومات الفيلم",
+            part_3_badge: "الجزء 3/3",
+            part_3_title: "الملفات والتحقق",
+            step_back: "رجوع",
+            step_next: "التالي",
+          },
+          button: {
+            choose_video: "اختر فيديو",
+            analyzing: "جاري تحليل الفيديو...",
+            uploading: "جاري الرفع...",
+            submit: "إرسال إلى يوتيوب",
+            submit_participation: "إرسال مشاركتي",
+          },
+          youtube_status: {
+            title: "حالة يوتيوب",
+            stop_refresh: "إيقاف التحديث",
+            video_id_label: "معرف الفيديو",
+            state_label: "الحالة",
+            unknown: "غير معروف",
+            checking: "جاري التحقق...",
+            waiting: "في انتظار حالة يوتيوب",
+            refresh_now: "تحديث الآن",
+          },
+          errors: {
+            format_mp4: "يتم قبول ملفات MP4 فقط.",
+            file_size: "الملف كبير جداً (الأقصى {{size}} ميجابايت).",
+            not_compliant: "الفيديو لا يستوفي المتطلبات التقنية.",
+            analysis_failed: "فشل تحليل الفيديو. حاول مرة أخرى.",
+            form_invalid: "يرجى تصحيح الأخطاء في النموذج.",
+            select_video: "يرجى اختيار فيديو صالح.",
+            upload_failed: "حدث خطأ أثناء الرفع. حاول مرة أخرى.",
+            summary_title: "يرجى تصحيح الحقول التالية:",
+          },
+        },
+        altcha: {
+          label: "أنا لست برنامج روبوت",
+          verifying: "جاري التحقق...",
+          verified: "تم التحقق",
+          error: "فشل التحقق",
+          expired: "انتهت صلاحية التحدي، حاول مرة أخرى",
+        },
+        projects: {
+          main_title: "طلب مشاريع",
+          view_call: "عرض طلب المشاريع",
+          not_found: "المقال غير موجود",
+        },
+        common: {
+          loading: "جاري التحميل...",
+        },
+        agenda: {
+          subtitle: "البرنامج",
+          back_to_agenda: "العودة للبرنامج",
+          no_events_available: "لا توجد فعاليات متاحة.",
+          no_events_today: "لا توجد فعاليات في هذا اليوم.",
+          read_article: "اقرأ المقال",
+          event_badge: "فعالية",
+          hour_label: "الوقت",
+          place_label: "الموقع",
+          place_default: "مرسيليا",
+          event_count_zero: "لا توجد فعاليات",
+          event_count_one: "فعالية واحدة",
+          event_count_two: "فعاليتان",
+          event_count_few: "{{count}} فعاليات",
+          event_count_many: "{{count}} فعالية",
+          event_count_other: "{{count}} فعالية",
+          tags: {
+            event: "فعالية",
+            screening: "عرض",
+            workshop: "ورشة عمل",
+            masterclass: "ماستر كلاس",
+            conference: "مؤتمر",
+            competition: "مسابقة",
+          },
+        },
+
+        newsletter: {
+          hero: {
+            badge: "النشرة الإخبارية",
+            title_main: "ابقَ على",
+            title_accent: "إطلاع دائم",
+            description:
+              "انضم إلى مجتمعنا واحصل على آخر الأخبار، العروض الحصرية، والمحتوى المميز مباشرة في بريدك الإلكتروني.",
+          },
+          stats: {
+            subscribers: "مشترك نشط",
+            frequency: "تواتر الإرسال",
+            freq_value: "أسبوعي",
+            open_rate: "نسبة الفتح",
+          },
+          form: {
+            title: "اشترك الآن",
+            subtitle: "لا تفوت أي تحديث من عالمنا",
+            label_name: "الاسم الشخصي",
+            placeholder_name: "أدخل اسمك",
+            label_email: "البريد الإلكتروني",
+            placeholder_email: "name@example.com",
+            label_preferences: "ما الذي يهمك؟",
+            rgpd: "نحن نحترم خصوصيتك. يمكنك إلغاء الاشتراك في أي وقت.",
+            privacy_link: "سياسة الخصوصية",
+            submit: "اشترك في النشرة",
+            loading: "جاري الإرسال...",
+            success_title: "تم التسجيل بنجاح!",
+            success_msg: "شكراً لانضمامك إلينا. ستتلقى رسالة تأكيد قريباً.",
+            success_hint:
+              "تأكد من فحص ملف البريد العشوائي (Spam) إذا لم تجد الرسالة.",
+          },
+          preferences: {
+            news: "آخر الأخبار",
+            films: "الأفلام والعروض",
+            events: "الفعاليات",
+            partners: "عروض الشركاء",
+          },
+          benefits: {
+            title: "لماذا تشترك؟",
+            subtitle: "مزايا حصرية لمشتركي النشرة الإخبارية",
+            preview: {
+              title: "معاينة حصرية",
+              desc: "كن أول من يعلم بالمشاريع والإصدارات القادمة قبل الجميع.",
+            },
+            offers: {
+              title: "عروض خاصة",
+              desc: "تخفيضات وهدايا مخصصة فقط لأعضاء مجتمعنا.",
+            },
+            content: {
+              title: "محتوى ملهم",
+              desc: "نصائح، قصص، ومقالات مختارة بعناية لتطوير مهاراتك.",
+            },
+          },
+          faq: {
+            title: "الأسئلة الشائعة",
+            q1: "كم مرة سأتلقى رسائل البريد الإلكتروني؟",
+            a1: "نرسل عادةً رسالة واحدة أسبوعياً لنشاركك الأفضل فقط دون إزعاج.",
+            q2: "هل يمكنني تغيير تفضيلاتي لاحقاً؟",
+            a2: "نعم، يمكنك تعديل اهتماماتك أو إلغاء الاشتراك عبر الرابط الموجود أسفل كل رسالة.",
+            q3: "هل بياناتي في أمان؟",
+            a3: "بكل تأكيد. نحن لا نشارك بياناتك مع أطراف ثالثة ونلتزم بحماية خصوصيتك.",
+            errors: {
+              server: "حدث خطأ أثناء الاتصال بالخادم. يرجى المحاولة لاحقاً.",
+            },
+          },
+        },
+      },
+    },
   },
 
-  lng: "fr",
+  lng: resolveInitialLanguage(),
   fallbackLng: "fr",
   interpolation: { escapeValue: false },
+});
+
+const extraTranslations = {
+  fr: {
+    nav: {
+      profile: "Profil",
+      theme_day: "Mode jour",
+      theme_night: "Mode nuit",
+      toggle_menu: "Ouvrir le menu",
+    },
+    home: {
+      hero_cta: {
+        call_badge: "Appel a projet",
+        selection_badge: "Selection officielle",
+        call_title: "Participer",
+        selection_title: "Visionner les films",
+        call_subtitle: "Clique pour deposer ton film",
+        selection_subtitle: "Clique pour ouvrir la galerie",
+        call_aria: "Deposer un film",
+        selection_aria: "Ouvrir la galerie des films",
+      },
+      hero_link_aria: "Acceder a {{label}}",
+    },
+    projects: {
+      phase_error: "Impossible de charger l'etat des phases.",
+      open_badge: "Appel a projet ouvert",
+      open_text: "Depose ton film directement depuis le formulaire d'upload.",
+    },
+    gallery: {
+      discover_prefix: "Decouvrez ",
+      access_error: "Impossible de verifier l'acces galerie.",
+      load_error: "Impossible de charger la galerie.",
+      filter_button_aria: "Ouvrir les filtres avances",
+      filter_button_title: "Filtres avances",
+      sort_chip: "Tri: {{label}}",
+      rating_chip: "Note {{min}}-{{max}}",
+      selection_phase2: "Selection phase 2",
+      selection_phase3: "Selection jury phase 3",
+      quota_reached: "Quota atteint",
+      selection_quota_error: "Quota atteint: {{count}}/{{max}}. Retire un film avant d'en ajouter un autre.",
+      phase3_eligibility_error: "Ce film n'est pas dans la selection phase 2 et ne peut pas etre promu en phase 3.",
+      selection_update_error: "Impossible de modifier la selection en cours.",
+      not_selected_phase2: "Non retenu phase 2",
+      remove_phase2: "Retirer de la phase 2",
+      remove_phase3: "Retirer de la phase 3",
+      select_phase2: "Selectionner pour phase 2",
+      select_phase3: "Selectionner pour phase 3",
+      unknown_director: "Anonyme",
+    },
+    movie_details: {
+      load_error: "Impossible de charger ce film.",
+      youtube_player: "Lecteur YouTube",
+      close_player: "Fermer",
+      unknown_person: "Inconnu",
+      download_movie: "Telecharger le film",
+      share_label: "Partager :",
+      share_facebook_aria: "Partager sur Facebook (une nouvelle fenêtre va s'ouvrir)",
+      share_twitter_aria: "Partager sur X / Twitter (une nouvelle fenêtre va s'ouvrir)",
+      share_linkedin_aria: "Partager sur LinkedIn (une nouvelle fenêtre va s'ouvrir)",
+      share_pinterest_aria: "Partager sur Pinterest (une nouvelle fenêtre va s'ouvrir)",
+      share_whatsapp_aria: "Partager via WhatsApp (une nouvelle fenêtre va s'ouvrir)",
+      share_email_label: "Email / Partager via…",
+      share_email_aria: "Partager par email ou via une application (une nouvelle page va s'ouvrir)",
+    },
+    contact: {
+      form: {
+        success_message: "Message envoye avec succes !",
+        error_message: "Impossible de contacter le serveur.",
+      },
+    },
+    common: {
+      load_page_error: "Impossible de charger la page pour le moment.",
+    },
+    ui: {
+      loading_page: "Chargement...",
+      loading_stream: "Chargement du flux...",
+      loading_gallery_access: "Verification des acces galerie...",
+      loading_admin_session: "Verification de la session admin...",
+      loading_admin_dashboard: "Chargement du dashboard admin...",
+      loading_admin_profile: "Chargement du profil admin...",
+      loading_upload_access: "Verification des droits d upload...",
+      admin_no_data: "Aucune donnee admin disponible.",
+      no_phase_config: "Aucune phase configuree.",
+    },
+  },
+  en: {
+    nav: {
+      profile: "Profile",
+      theme_day: "Day mode",
+      theme_night: "Night mode",
+      toggle_menu: "Open menu",
+    },
+    home: {
+      hero_cta: {
+        call_badge: "Call for projects",
+        selection_badge: "Official selection",
+        call_title: "Participate",
+        selection_title: "Watch films",
+        call_subtitle: "Click to submit your film",
+        selection_subtitle: "Click to open the gallery",
+        call_aria: "Submit your film",
+        selection_aria: "Open movie gallery",
+      },
+      hero_link_aria: "Go to {{label}}",
+    },
+    projects: {
+      phase_error: "Unable to load the phase status.",
+      open_badge: "Call for projects is open",
+      open_text: "Submit your film directly from the upload form.",
+    },
+    gallery: {
+      discover_prefix: "Discover ",
+      access_error: "Unable to verify gallery access.",
+      load_error: "Unable to load the gallery.",
+      filter_button_aria: "Open advanced filters",
+      filter_button_title: "Advanced filters",
+      sort_chip: "Sort: {{label}}",
+      rating_chip: "Rating {{min}}-{{max}}",
+      selection_phase2: "Phase 2 selection",
+      selection_phase3: "Phase 3 jury selection",
+      quota_reached: "Quota reached",
+      selection_quota_error: "Quota reached: {{count}}/{{max}}. Remove a movie before adding another one.",
+      phase3_eligibility_error: "This movie is not in the phase 2 selection and cannot be promoted to phase 3.",
+      selection_update_error: "Unable to update the current selection.",
+      not_selected_phase2: "Not selected for phase 2",
+      remove_phase2: "Remove from phase 2",
+      remove_phase3: "Remove from phase 3",
+      select_phase2: "Select for phase 2",
+      select_phase3: "Select for phase 3",
+      unknown_director: "Anonymous",
+    },
+    movie_details: {
+      load_error: "Unable to load this movie.",
+      youtube_player: "YouTube player",
+      close_player: "Close",
+      unknown_person: "Unknown",
+      download_movie: "Download movie",
+      share_label: "Share:",
+      share_facebook_aria: "Share on Facebook (a new window will open)",
+      share_twitter_aria: "Share on X / Twitter (a new window will open)",
+      share_linkedin_aria: "Share on LinkedIn (a new window will open)",
+      share_pinterest_aria: "Share on Pinterest (a new window will open)",
+      share_whatsapp_aria: "Share via WhatsApp (a new window will open)",
+      share_email_label: "Email / Share via…",
+      share_email_aria: "Share via email or another app (a new window will open)",
+    },
+    contact: {
+      form: {
+        success_message: "Message sent successfully!",
+        error_message: "Unable to contact the server.",
+      },
+    },
+    common: {
+      load_page_error: "Unable to load the page right now.",
+    },
+    ui: {
+      loading_page: "Loading...",
+      loading_stream: "Loading stream...",
+      loading_gallery_access: "Checking gallery access...",
+      loading_admin_session: "Checking admin session...",
+      loading_admin_dashboard: "Loading admin dashboard...",
+      loading_admin_profile: "Loading admin profile...",
+      loading_upload_access: "Checking upload access...",
+      admin_no_data: "No admin data available.",
+      no_phase_config: "No phase configured.",
+    },
+    upload: {
+      form: {
+        step_label: "Part",
+      },
+      errors: {
+        timeout: "Processing timeout exceeded. Please try again.",
+      },
+      validation: {
+        required: "This field is required.",
+        no_emoji: "Emojis are not allowed in this field.",
+        email_required: "Email is required.",
+        email_invalid: "Please enter a valid email address (e.g. name@domain.com).",
+        first_name_required: "First name is required.",
+        first_name_invalid:
+          "First name must contain between 1 and 50 characters (letters, hyphens and apostrophes only).",
+        last_name_required: "Last name is required.",
+        last_name_invalid:
+          "Last name must contain between 1 and 50 characters (letters, hyphens and apostrophes only).",
+        age_required: "Age is required.",
+        age_number: "Age must be a valid number.",
+        age_min: "You must be at least 18 years old to participate.",
+        title_required: "Title is required.",
+        title_invalid:
+          "Title must contain between 2 and 100 characters (letters, numbers and basic punctuation).",
+        description_invalid: "Description must not exceed 250 characters.",
+        country_required: "Country code is required.",
+        country_invalid:
+          "Invalid country code (2 uppercase letters, e.g. FR).",
+        language_required: "Movie language is required.",
+        language_invalid: "Movie language must contain between 2 and 50 characters.",
+        ai_tools_required: "AI tools are required.",
+        ai_tools_one_required: "At least one AI tool is required.",
+        ai_tools_max: "No more than 5 AI tools are allowed.",
+        ai_tools_invalid:
+          "AI tools format is invalid (max 5 tools, separated by commas).",
+        bio_invalid: "Bio must not exceed 500 characters.",
+        url_invalid: "Invalid URL (must start with https://).",
+        cast_max: "Maximum 10 cast members.",
+        cast_member_required: "Each cast member must have a name and a role.",
+        cast_too_long: "Cast name/role is too long (max 120 characters).",
+        cast_avatar_invalid:
+          "Invalid cast avatar URL (https:// required).",
+        video_unreadable:
+          "Unable to read the video file. The video format must be valid (mp4).",
+        video_file_too_large:
+          "The file is too large ({{current}} MB). Maximum: {{max}} MB.",
+        video_mp4_only: "Only MP4 format is allowed.",
+        video_duration_range:
+          "Video duration ({{duration}}s) must be between {{min}}s and {{max}}s.",
+        video_ratio_16_9: "Video aspect ratio must be 16:9.",
+      },
+    },
+  },
+  ar: {
+    nav: {
+      profile: "الملف الشخصي",
+      theme_day: "الوضع النهاري",
+      theme_night: "الوضع الليلي",
+      toggle_menu: "فتح القائمة",
+    },
+    home: {
+      hero_cta: {
+        call_badge: "دعوة لتقديم المشاريع",
+        selection_badge: "الاختيار الرسمي",
+        call_title: "شارك",
+        selection_title: "شاهد الافلام",
+        call_subtitle: "اضغط لتقديم فيلمك",
+        selection_subtitle: "اضغط لفتح المعرض",
+        call_aria: "تقديم فيلم",
+        selection_aria: "فتح معرض الافلام",
+      },
+      hero_link_aria: "الانتقال الى {{label}}",
+    },
+    projects: {
+      phase_error: "تعذر تحميل حالة المراحل.",
+      open_badge: "دعوة تقديم المشاريع مفتوحة",
+      open_text: "قدم فيلمك مباشرة من نموذج الرفع.",
+    },
+    gallery: {
+      discover_prefix: "اكتشف ",
+      access_error: "تعذر التحقق من الوصول الى المعرض.",
+      load_error: "تعذر تحميل المعرض.",
+      filter_button_aria: "فتح الفلاتر المتقدمة",
+      filter_button_title: "فلاتر متقدمة",
+      sort_chip: "الترتيب: {{label}}",
+      rating_chip: "التقييم {{min}}-{{max}}",
+      selection_phase2: "اختيار المرحلة الثانية",
+      selection_phase3: "اختيار لجنة المرحلة الثالثة",
+      quota_reached: "تم بلوغ الحد الاقصى",
+      selection_quota_error: "تم بلوغ الحد الاقصى: {{count}}/{{max}}. ازل فيلما قبل اضافة فيلم اخر.",
+      phase3_eligibility_error: "هذا الفيلم غير موجود في اختيار المرحلة الثانية ولا يمكن ترقيته الى المرحلة الثالثة.",
+      selection_update_error: "تعذر تعديل الاختيار الحالي.",
+      not_selected_phase2: "غير مختار للمرحلة الثانية",
+      remove_phase2: "ازالة من المرحلة الثانية",
+      remove_phase3: "ازالة من المرحلة الثالثة",
+      select_phase2: "اختيار للمرحلة الثانية",
+      select_phase3: "اختيار للمرحلة الثالثة",
+      unknown_director: "مجهول",
+    },
+    movie_details: {
+      load_error: "تعذر تحميل هذا الفيلم.",
+      youtube_player: "مشغل يوتيوب",
+      close_player: "اغلاق",
+      unknown_person: "غير معروف",
+      download_movie: "تنزيل الفيلم",
+      share_label: "مشاركة:",
+      share_facebook_aria: "المشاركة على فيسبوك (ستفتح نافذة جديدة)",
+      share_twitter_aria: "المشاركة على إكس / تويتر (ستفتح نافذة جديدة)",
+      share_linkedin_aria: "المشاركة على لينكدإن (ستفتح نافذة جديدة)",
+      share_pinterest_aria: "المشاركة على بنترست (ستفتح نافذة جديدة)",
+      share_whatsapp_aria: "المشاركة عبر واتساب (ستفتح نافذة جديدة)",
+      share_email_label: "البريد / مشاركة عبر…",
+      share_email_aria: "المشاركة عبر البريد الإلكتروني أو تطبيق آخر (ستفتح نافذة جديدة)",
+    },
+    contact: {
+      form: {
+        success_message: "تم ارسال الرسالة بنجاح!",
+        error_message: "تعذر الاتصال بالخادم.",
+      },
+    },
+    common: {
+      load_page_error: "تعذر تحميل الصفحة حاليا.",
+    },
+    ui: {
+      loading_page: "جار التحميل...",
+      loading_stream: "جار تحميل البث...",
+      loading_gallery_access: "جار التحقق من الوصول الى المعرض...",
+      loading_admin_session: "جار التحقق من جلسة الادارة...",
+      loading_admin_dashboard: "جار تحميل لوحة الادارة...",
+      loading_admin_profile: "جار تحميل ملف الادارة...",
+      loading_upload_access: "جار التحقق من صلاحيات الرفع...",
+      admin_no_data: "لا توجد بيانات ادارية متاحة.",
+      no_phase_config: "لا توجد مرحلة مهيأة.",
+    },
+    upload: {
+      form: {
+        ai_tools_hint: "افصل الأدوات بفواصل (حد أقصى 5 أدوات)",
+        antispam_hint: "أكمل التحقق الأمني قبل إرسال النموذج",
+        cast_field_aria: "عضو الطاقم {{num}} - {{field}}",
+        cast_role_required_hint: "عند إضافة عضو، حقل الدور إلزامي.",
+        casting_hint: "سيتم الحفاظ على ترتيب الطاقم كما أدخلته في صفحة الفيلم.",
+        country_hint: "رمز ISO 3166-1 alpha-2 للدولة (حرفان)",
+        country_loading: "جار تحميل أعلام الدول...",
+        flag_alt: "علم",
+        honeypot_label: "الموقع الإلكتروني (لا تملأ هذا الحقل إذا كنت إنسانا)",
+        poster_auto_crop_hint: "يتم قص الملصق تلقائيا بنسبة 2:3 قبل الإرسال.",
+        poster_preview_alt: "معاينة الملصق",
+        poster_processing: "جار معالجة صورة الملصق...",
+        step_label: "الجزء",
+        video_input_aria: "اختر ملف فيديو MP4",
+      },
+      button: {
+        analyzing_short: "تحليل...",
+        processing_with_progress: "جار المعالجة... {{progress}}%",
+      },
+      progress: {
+        region_aria: "تقدم الرفع",
+        bar_aria: "تقدم الرفع {{progress}} بالمئة",
+        uploading_with_progress: "جار رفع الفيديو... {{progress}}%",
+      },
+      sr: {
+        need_file: "يرجى اختيار ملف فيديو قبل الإرسال",
+        uploading: "جار رفع الفيديو",
+        validating: "جار التحقق من صلاحية الفيديو",
+        poster_processing: "جار معالجة صورة الملصق، يرجى الانتظار",
+      },
+      youtube_status: {
+        fetch_failed: "تعذر جلب حالة يوتيوب.",
+      },
+      errors: {
+        altcha_missing: "يرجى إكمال التحقق الأمني.",
+        cast_name_required: "اسم العضو إلزامي.",
+        cast_name_too_long: "اسم العضو طويل جدا (الحد الأقصى 120 حرفا).",
+        cast_role_required: "الدور إلزامي.",
+        cast_role_too_long: "الدور طويل جدا (الحد الأقصى 120 حرفا).",
+        cast_avatar_invalid: "رابط صورة العضو غير صالح (يجب أن يبدأ بـ https://).",
+        poster_format: "صيغة الملصق غير صالحة. الصيغ المدعومة: JPG, PNG, WebP, GIF.",
+        poster_too_large: "الملصق بعد المعالجة يتجاوز الحد الأقصى (5 ميجابايت).",
+        subtitle_format: "صيغة ملف الترجمة غير صالحة (.srt فقط).",
+        subtitle_too_large: "ملف الترجمة يتجاوز الحد الأقصى المسموح (2 ميجابايت).",
+      },
+      validation: {
+        required: "هذا الحقل إلزامي.",
+        no_emoji: "الرموز التعبيرية غير مسموحة في هذا الحقل.",
+        email_required: "البريد الإلكتروني إلزامي.",
+        email_invalid: "يرجى إدخال بريد إلكتروني صالح (مثال: nom@domaine.fr).",
+        first_name_required: "الاسم الأول إلزامي.",
+        first_name_invalid: "الاسم الأول يجب أن يكون بين 1 و50 حرفا.",
+        last_name_required: "اسم العائلة إلزامي.",
+        last_name_invalid: "اسم العائلة يجب أن يكون بين 1 و50 حرفا.",
+        age_required: "العمر إلزامي.",
+        age_number: "العمر يجب أن يكون رقما صالحا.",
+        age_min: "يجب أن يكون عمرك 18 عاما على الأقل للمشاركة.",
+        title_required: "عنوان الفيلم إلزامي.",
+        title_invalid: "العنوان يجب أن يكون بين 2 و100 حرفا.",
+        description_invalid: "الوصف يجب ألا يتجاوز 250 حرفا.",
+        country_required: "رمز الدولة إلزامي.",
+        country_invalid: "رمز الدولة غير صحيح (حرفان كبيران مثل FR).",
+        language_required: "لغة الفيلم إلزامية.",
+        language_invalid: "لغة الفيلم يجب أن تكون بين 2 و50 حرفا.",
+        ai_tools_required: "أدوات الذكاء الاصطناعي إلزامية.",
+        ai_tools_one_required: "يجب إدخال أداة ذكاء اصطناعي واحدة على الأقل.",
+        ai_tools_max: "لا يمكن إدخال أكثر من 5 أدوات ذكاء اصطناعي.",
+        ai_tools_invalid: "صيغة أدوات الذكاء الاصطناعي غير صحيحة (حد أقصى 5 أدوات مفصولة بفواصل).",
+        bio_invalid: "النبذة التعريفية يجب ألا تتجاوز 500 حرفا.",
+        url_invalid: "رابط URL غير صالح (يجب أن يبدأ بـ https://).",
+        cast_max: "الحد الأقصى لأعضاء الطاقم هو 10.",
+        cast_member_required: "كل عضو في الطاقم يجب أن يحتوي على الاسم والدور.",
+        cast_too_long: "اسم/دور عضو الطاقم طويل جدا (الحد الأقصى 120 حرفا).",
+        cast_avatar_invalid: "رابط صورة عضو الطاقم غير صالح (https:// إلزامي).",
+        video_unreadable: "تعذر تحليل ملف الفيديو. يجب أن يكون الملف صالحا (mp4).",
+        video_file_too_large: "الملف كبير جدا ({{current}} MB). الحد الأقصى: {{max}} MB.",
+        video_mp4_only: "صيغة MP4 فقط مسموحة.",
+        video_duration_range: "مدة الفيديو ({{duration}} ثانية) يجب أن تكون بين {{min}} و{{max}} ثانية.",
+        video_ratio_16_9: "نسبة الفيديو يجب أن تكون 16:9.",
+      },
+    },
+    jury: {
+      loading: "جار تحميل المحتوى...",
+    },
+  },
+};
+
+Object.entries(extraTranslations).forEach(([language, bundle]) => {
+  i18n.addResourceBundle(language, "translation", bundle, true, true);
+});
+
+applyDocumentLanguage(i18n.language);
+
+i18n.on("languageChanged", (language) => {
+  const normalized = normalizeLanguageCode(language);
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, normalized);
+    } catch {
+      // Ignore storage write failures.
+    }
+  }
+  applyDocumentLanguage(normalized);
 });
 
 export default i18n;

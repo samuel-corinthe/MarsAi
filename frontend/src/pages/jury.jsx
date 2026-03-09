@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
 import { useTheme } from "../context/ThemeContext";
-import { getWpPostsBySlug } from "../api";
+import { getWpPostById, getWpPostsBySearch, getWpPostsBySlug } from "../api";
 
 const THEMES = {
   dark: {
@@ -63,20 +63,172 @@ const THEMES = {
   },
 };
 
+const AR_SLUG_MAP = {
+  soprano: "soprano",
+  // "???????" stored as escapes to avoid source-encoding issues.
+  "\u0633\u0648\u0628\u0631\u0627\u0646\u0648": "soprano",
+  // Keep legacy mojibake forms seen in some imported WP content.
+  "Ø³ÙˆØ¨Ø±Ø§Ù†Ùˆ": "soprano",
+};
+
+const FORCED_JURY_POST_IDS = {
+  ar: {
+    soprano: 421,
+  },
+};
+
+const toUnique = (values = []) => [...new Set(values.filter(Boolean))];
+
+const normalizeLookupValue = (value = "") =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+const getMappedSlug = (value = "") => {
+  const normalized = normalizeLookupValue(value);
+  return AR_SLUG_MAP[normalized] || "";
+};
+
+const findMappedSlugInText = (value = "") => {
+  const normalized = normalizeLookupValue(value);
+  if (!normalized) return "";
+
+  if (AR_SLUG_MAP[normalized]) return AR_SLUG_MAP[normalized];
+
+  for (const [key, mapped] of Object.entries(AR_SLUG_MAP)) {
+    const safeKey = normalizeLookupValue(key);
+    if (safeKey && normalized.includes(safeKey)) return mapped;
+  }
+
+  return "";
+};
+
+const normalizeLangCode = (value = "fr") => {
+  const lang = String(value || "").toLowerCase();
+  if (lang.startsWith("ar")) return "ar";
+  if (lang.startsWith("en")) return "en";
+  return "fr";
+};
+
+const buildLangCandidates = (lang = "fr") => {
+  const primary = normalizeLangCode(lang);
+  if (primary === "ar") return ["fr", "en", "ar"];
+  if (primary === "en") return ["en", "fr", "ar"];
+  return ["fr", "en", "ar"];
+};
+
+const normalizeSlugValue = (value = "") => {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  const withoutParams = raw.split(/[?#]/)[0].replace(/\/+$/, "");
+  const segment = withoutParams.split("/").filter(Boolean).pop() || withoutParams;
+  try {
+    return decodeURIComponent(segment).trim();
+  } catch {
+    return segment.trim();
+  }
+};
+
+const DISPLAY_NAME_MAP = {
+  soprano: "Soprano",
+};
+
+const ARABIC_NAME_MAP = {
+  soprano: "\u0633\u0648\u0628\u0631\u0627\u0646\u0648",
+};
+
+const toDisplayNameFromSlug = (value = "") => {
+  const slug = normalizeSlugValue(value).replace(/-(ar|eng)$/i, "");
+  if (!slug) return "";
+  const mapped = DISPLAY_NAME_MAP[slug.toLowerCase()];
+  if (mapped) return mapped;
+
+  return slug
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((part) => {
+      if (!/[a-z]/i.test(part)) return part;
+      return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+    })
+    .join(" ");
+};
+
+const toArabicNameFromSlug = (value = "") => {
+  const slug = normalizeSlugValue(value).replace(/-(ar|eng)$/i, "").toLowerCase();
+  if (!slug) return "";
+  return ARABIC_NAME_MAP[slug] || "";
+};
+
+const hasArabicChars = (value = "") => /[\u0600-\u06FF]/.test(String(value || ""));
+
+const getForcedJuryPostId = ({ lang = "fr", slug = "", name = "" } = {}) => {
+  const safeLang = normalizeLangCode(lang);
+  const byLang = FORCED_JURY_POST_IDS[safeLang];
+  if (!byLang) return 0;
+
+  const baseSlug = normalizeSlugValue(slug).replace(/-(ar|eng)$/i, "").toLowerCase();
+  const mappedFromName = normalizeSlugValue(getMappedSlug(name)).replace(/-(ar|eng)$/i, "").toLowerCase();
+
+  const id = Number(byLang[baseSlug] || byLang[mappedFromName] || 0);
+  return Number.isFinite(id) && id > 0 ? id : 0;
+};
+
+const buildSlugCandidates = (rawSlug = "", lang = "fr") => {
+  const slug = normalizeSlugValue(rawSlug);
+  if (!slug) return [];
+
+  const normalizedLang = normalizeLangCode(lang);
+  const baseNoSuffix = slug.replace(/-(ar|eng)$/i, "");
+  const mapped = getMappedSlug(slug) || getMappedSlug(baseNoSuffix);
+  const candidates = [slug, baseNoSuffix, mapped];
+
+  if (normalizedLang.startsWith("ar")) {
+    candidates.push(`${baseNoSuffix}-ar`);
+  } else if (normalizedLang.startsWith("en")) {
+    candidates.push(`${baseNoSuffix}-eng`);
+  }
+
+  return toUnique(candidates.map((value) => normalizeSlugValue(value)));
+};
+
+const extractSlugFromHref = (href = "") => {
+  const value = String(href || "").trim();
+  if (!value || typeof window === "undefined") return "";
+
+  try {
+    const pathname = new URL(value, window.location.origin).pathname;
+    const segments = pathname.split("/").filter(Boolean);
+    return normalizeSlugValue(String(segments[segments.length - 1] || ""));
+  } catch {
+    return "";
+  }
+};
+
 const createSlug = (text, lang = "fr") => {
+  let sourceText = text?.toString().toLowerCase().trim() || "";
+  if (lang === "ar") {
+    const mapped = getMappedSlug(sourceText);
+    if (mapped) sourceText = mapped;
+  }
+
   const baseSlug =
-    text
+    sourceText
       ?.toString()
-      .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .trim()
       .replace(/\s+/g, "-")
-      .replace(/[^\w-]+/g, "")
+      .replace(/[^\p{L}\p{N}_-]+/gu, "")
       .replace(/--+/g, "-") || "";
 
   if (lang === "en" && baseSlug) {
     return `${baseSlug}-eng`;
+  }
+  if (lang === "ar" && baseSlug) {
+    return `${baseSlug}-ar`;
   }
 
   return baseSlug;
@@ -88,19 +240,58 @@ const parseJuryData = (html, lang) => {
   return Array.from(
     new DOMParser().parseFromString(html, "text/html").querySelectorAll("li"),
   )
-    .map((li) => {
+    .map((li, index) => {
       const img = li.querySelector("img");
+      const anchor = li.querySelector("a");
       const strong = li.querySelector("strong") || li.querySelector("b");
-      const name = strong ? strong.textContent : "";
+      const strongName = strong?.textContent?.trim() || "";
+      const anchorName = anchor?.textContent?.trim() || "";
+      const imgAlt = img?.alt?.trim() || "";
+      const name = strongName || anchorName || imgAlt;
+      const rawText = (li.textContent || "").trim();
+      const hintText = [
+        name,
+        rawText,
+        li.getAttribute("data-slug"),
+        li.getAttribute("data-member-slug"),
+        anchor?.getAttribute("data-slug"),
+        anchor?.getAttribute("data-member-slug"),
+        anchor?.getAttribute("href"),
+        imgAlt,
+        img?.src,
+      ]
+        .filter(Boolean)
+        .join(" ");
+      const mappedFromText = findMappedSlugInText(hintText);
+      const slug = normalizeSlugValue(
+        li.getAttribute("data-slug") ||
+          li.getAttribute("data-member-slug") ||
+          anchor?.getAttribute("data-slug") ||
+          anchor?.getAttribute("data-member-slug") ||
+          extractSlugFromHref(anchor?.getAttribute("href") || anchor?.href) ||
+          mappedFromText ||
+          getMappedSlug(name) ||
+          createSlug(name || imgAlt, lang),
+      );
+      const isArabicUi = normalizeLangCode(lang) === "ar";
+      const mappedSlugForName = getMappedSlug(name) || mappedFromText;
+      const arabicDisplayName =
+        (hasArabicChars(name) ? name : "") ||
+        toArabicNameFromSlug(slug) ||
+        toArabicNameFromSlug(mappedSlugForName);
+      const displayName =
+        (isArabicUi ? arabicDisplayName : "") || name || toDisplayNameFromSlug(slug);
+      const role = rawText.replace(displayName || name, "").trim();
 
       return {
-        slug: li.getAttribute("data-slug") || createSlug(name || img?.alt, lang),
-        name,
-        role: (li.textContent || "").replace(name, "").trim(),
+        id: slug || `jury-member-${index + 1}`,
+        slug,
+        name: displayName,
+        role,
         imgSrc: img?.src,
       };
     })
-    .filter((item) => item.slug);
+    .filter((item) => item.name || item.role || item.imgSrc);
 };
 
 const articleCache = new Map();
@@ -128,11 +319,28 @@ function GavelIcon({ theme }) {
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className={`h-7 w-7 ${theme.iconColor}`}
+        className={`h-8 w-8 ${theme.iconColor}`}
       >
-        <path d="m14.5 12.5-8 8a2.119 2.119 0 1 1-3-3l8-8m9.5 3.5 6-6m-14 14 6-6m-5 5 8 8m12 4-8-8" />
+        <rect
+          x="11.25"
+          y="3.5"
+          width="6.5"
+          height="3.5"
+          rx="0.75"
+          transform="rotate(45 14.5 5.25)"
+        />
+        <rect
+          x="8"
+          y="6.75"
+          width="6.5"
+          height="3.5"
+          rx="0.75"
+          transform="rotate(45 11.25 8.5)"
+        />
+        <path d="M11.5 11.5 18 18" />
+        <path d="M8.5 14.5 5 18" />
+        <path d="M3 21h8" />
       </svg>
-      
     </div>
   );
 }
@@ -140,6 +348,7 @@ function GavelIcon({ theme }) {
 export default function JuryWpage({ page }) {
   const { t, i18n } = useTranslation();
   const { themeMode } = useTheme();
+  const isArabic = String(i18n.language || "").toLowerCase().startsWith("ar");
 
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -167,19 +376,71 @@ export default function JuryWpage({ page }) {
   const theme = themeMode === "light" ? THEMES.light : THEMES.dark;
 
   const openArticle = useCallback(
-    async (slug) => {
-      if (!slug) return;
+    async (member) => {
+      const memberSlug = normalizeSlugValue(member?.slug || "");
+      const memberRole = String(member?.role || "").trim();
+      const mappedFromMember = findMappedSlugInText(
+        `${member?.name || ""} ${memberRole} ${memberSlug}`,
+      );
+      const effectiveSlug = memberSlug || mappedFromMember;
+      const memberName = String(member?.name || toDisplayNameFromSlug(effectiveSlug) || "").trim();
+      const memberSearch = memberName || memberRole || toDisplayNameFromSlug(effectiveSlug);
+      if (!effectiveSlug && !memberSearch) return;
 
-      const cacheKey = `${slug}_${i18n.language}`;
-      if (articleCache.has(cacheKey)) {
+      const derivedSlug =
+        effectiveSlug || getMappedSlug(memberSearch) || findMappedSlugInText(memberSearch) || createSlug(memberSearch, i18n.language);
+      const slugCandidates = derivedSlug ? buildSlugCandidates(derivedSlug, i18n.language) : [];
+      const langCandidates = buildLangCandidates(i18n.language);
+      const uiLang = normalizeLangCode(i18n.language);
+      const postFields = "id,title,content,excerpt,slug,translations,lang";
+      const forcedPostId = getForcedJuryPostId({
+        lang: uiLang,
+        slug: derivedSlug,
+        name: memberSearch,
+      });
+      const forcedCacheKey = forcedPostId ? `forced_${forcedPostId}_${uiLang}` : "";
+
+      const resolveArticleForUiLang = async (article, sourceLang) => {
+        if (!article || typeof article !== "object") return null;
+        if (uiLang !== "ar") return article;
+        if (normalizeLangCode(sourceLang) === "ar") return article;
+
+        const translatedId = Number(article?.translations?.ar || 0);
+        if (!Number.isFinite(translatedId) || translatedId <= 0) return article;
+
+        try {
+          const translated = await getWpPostById({
+            id: translatedId,
+            lang: "ar",
+            fields: postFields,
+            signal: abortRef.current.signal,
+          });
+          return translated || article;
+        } catch {
+          return article;
+        }
+      };
+
+      if (forcedCacheKey && articleCache.has(forcedCacheKey)) {
         setLoading(false);
-        setSelected(articleCache.get(cacheKey));
+        setSelected(articleCache.get(forcedCacheKey));
         return;
+      }
+
+      for (const candidate of slugCandidates) {
+        for (const requestLang of langCandidates) {
+          const cacheKey = `${candidate}_${requestLang}`;
+          if (articleCache.has(cacheKey)) {
+            setLoading(false);
+            setSelected(articleCache.get(cacheKey));
+            return;
+          }
+        }
       }
 
       setLoading(true);
       setSelected({
-        slug,
+        slug: derivedSlug || memberSearch,
         title: { rendered: t("jury.loading") },
         content: { rendered: "" },
         isLoading: true,
@@ -189,24 +450,104 @@ export default function JuryWpage({ page }) {
       abortRef.current = new AbortController();
 
       try {
-        const data = await getWpPostsBySlug({
-          slug,
-          lang: i18n.language,
-          fields: "id,title,content,excerpt,slug",
-          signal: abortRef.current.signal,
-        });
+        if (forcedPostId > 0) {
+          try {
+            const forcedArticle = await getWpPostById({
+              id: forcedPostId,
+              lang: uiLang,
+              fields: postFields,
+              signal: abortRef.current.signal,
+            });
 
-        if (data && data.length > 0) {
-          articleCache.set(cacheKey, data[0]);
-          setSelected(data[0]);
-          return;
+            if (forcedArticle) {
+              articleCache.set(forcedCacheKey, forcedArticle);
+              buildSlugCandidates(forcedArticle.slug || derivedSlug, uiLang).forEach((variant) => {
+                articleCache.set(`${variant}_${uiLang}`, forcedArticle);
+              });
+              setSelected(forcedArticle);
+              return;
+            }
+          } catch (requestError) {
+            if (requestError?.name === "AbortError") throw requestError;
+          }
         }
 
-        setSelected(null);
+        for (const requestLang of langCandidates) {
+          for (const candidate of slugCandidates) {
+            let data = [];
+            try {
+              data = await getWpPostsBySlug({
+                slug: candidate,
+                lang: requestLang,
+                fields: postFields,
+                signal: abortRef.current.signal,
+              });
+            } catch (requestError) {
+              if (requestError?.name === "AbortError") throw requestError;
+              continue;
+            }
+
+            if (data && data.length > 0) {
+              const resolved = await resolveArticleForUiLang(data[0], requestLang);
+              buildSlugCandidates((resolved && resolved.slug) || candidate, requestLang).forEach((variant) => {
+                articleCache.set(`${variant}_${requestLang}`, resolved);
+                articleCache.set(`${variant}_${normalizeLangCode(i18n.language)}`, resolved);
+              });
+              setSelected(resolved);
+              return;
+            }
+          }
+        }
+
+        // Fallback: search by displayed member name if slug lookup fails.
+        if (memberSearch) {
+          for (const requestLang of langCandidates) {
+            let searchResults = [];
+            try {
+              searchResults = await getWpPostsBySearch({
+                query: memberSearch,
+                lang: requestLang,
+                fields: postFields,
+                signal: abortRef.current.signal,
+              });
+            } catch (requestError) {
+              if (requestError?.name === "AbortError") throw requestError;
+              continue;
+            }
+
+            if (Array.isArray(searchResults) && searchResults.length > 0) {
+              const resolved = await resolveArticleForUiLang(searchResults[0], requestLang);
+              buildSlugCandidates(
+                (resolved && resolved.slug) || derivedSlug || createSlug(memberSearch, requestLang),
+                requestLang,
+              ).forEach((variant) => {
+                articleCache.set(`${variant}_${requestLang}`, resolved);
+                articleCache.set(`${variant}_${normalizeLangCode(i18n.language)}`, resolved);
+              });
+              setSelected(resolved);
+              return;
+            }
+          }
+        }
+
+        // Keep modal open with a controlled fallback message instead of closing instantly.
+        setSelected({
+          slug: derivedSlug || memberSearch,
+          title: { rendered: memberName || memberSearch || t("jury.jury_profile_label", "Profil jury") },
+          content: {
+            rendered: `<p>${t("common.load_page_error", "Impossible de charger la page pour le moment.")}</p>`,
+          },
+        });
       } catch (error) {
         if (error?.name !== "AbortError") {
           console.error(error);
-          setSelected(null);
+          setSelected({
+            slug: derivedSlug || memberSearch,
+            title: { rendered: memberName || memberSearch || t("jury.jury_profile_label", "Profil jury") },
+            content: {
+              rendered: `<p>${t("common.load_page_error", "Impossible de charger la page pour le moment.")}</p>`,
+            },
+          });
         }
       } finally {
         setLoading(false);
@@ -231,13 +572,16 @@ export default function JuryWpage({ page }) {
     <>
       <Seo title={seoTitle} description={seoDescription} />
 
-      <main className={`relative min-h-screen overflow-x-hidden px-4 pb-20 pt-14 ${theme.pageBg} ${theme.pageText}`}>
+      <main
+        className={`relative min-h-screen overflow-x-hidden px-4 pb-20 pt-14 ${theme.pageBg} ${theme.pageText}`}
+        dir={isArabic ? "rtl" : "ltr"}
+      >
         <Background theme={theme} />
 
         <div className="relative z-10 mx-auto w-full max-w-6xl">
           <header className="mb-12 text-center sm:mb-14">
             <p
-              className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] ${theme.badge}`}
+              className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] ${theme.badge}`}
             >
               {t("jury.jury_profile_label", "Profil jury")}
             </p>
@@ -259,25 +603,26 @@ export default function JuryWpage({ page }) {
             {members.map((member) => {
               const isSelected = selected && !selected.isLoading && selected.slug === member.slug;
               const isDimmed = selected && !isSelected;
+              const canOpen = Boolean(member.slug || member.name || member.role);
 
               return (
                 <article
-                  key={member.slug}
-                  onClick={() => openArticle(member.slug)}
-                  className={`group flex cursor-pointer flex-col items-center gap-4 rounded-[24px] border p-4 text-center shadow-[0_18px_40px_rgba(0,0,0,0.2)] transition duration-300 sm:flex-row sm:gap-6 sm:rounded-[28px] sm:p-6 sm:text-left ${theme.card} ${isSelected ? theme.cardSelected : ""} ${isDimmed ? theme.cardDim : "opacity-100"}`}
+                  key={member.id}
+                  onClick={canOpen ? () => openArticle(member) : undefined}
+                  className={`group flex flex-col items-center gap-4 rounded-[24px] border p-4 text-center shadow-[0_18px_40px_rgba(0,0,0,0.2)] transition duration-300 sm:flex-row sm:gap-6 sm:rounded-[28px] sm:p-6 sm:text-left ${theme.card} ${canOpen ? "cursor-pointer" : "cursor-default"} ${isSelected ? theme.cardSelected : ""} ${isDimmed ? theme.cardDim : "opacity-100"}`}
                 >
                   <img
                     src={member.imgSrc || "https://via.placeholder.com/150"}
-                    alt={member.name}
+                    alt=""
                     className="h-20 w-20 shrink-0 rounded-full border-4 border-current/20 object-cover sm:h-24 sm:w-24"
                     loading="lazy"
                   />
 
                   <div className="min-w-0">
-                    <h3 className={`truncate text-lg font-black uppercase tracking-tight sm:text-xl ${theme.name}`}>
+                    <h2 className={`truncate text-lg font-black uppercase tracking-tight sm:text-xl ${theme.name}`}>
                       {member.name}
-                    </h3>
-                    <p className={`mt-1 text-[10px] font-black uppercase tracking-[0.18em] sm:text-xs ${theme.role}`}>
+                    </h2>
+                    <p className={`mt-1 text-[11px] font-black uppercase tracking-[0.18em] sm:text-xs ${theme.role}`}>
                       {member.role}
                     </p>
                   </div>
@@ -312,12 +657,12 @@ export default function JuryWpage({ page }) {
             >
               <div className={`flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-7 sm:py-6 ${theme.modalBorder}`}>
                 <div>
-                  <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${theme.modalLabel}`}>
+                  <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${theme.modalLabel}`}>
                     {selected.isLoading
-                      ? t("jury.jury.loading")
+                      ? t("jury.loading")
                       : t("jury.jury_profile_label", "Profil jury")}
                   </p>
-                  <h2
+                  <h3
                     className={`mt-2 text-xl font-black uppercase tracking-tight sm:text-3xl ${theme.modalTitle}`}
                     dangerouslySetInnerHTML={{ __html: selected.title.rendered }}
                   />
@@ -352,7 +697,7 @@ export default function JuryWpage({ page }) {
                 <button
                   type="button"
                   onClick={() => setSelected(null)}
-                  className={`text-[10px] font-black uppercase tracking-[0.2em] transition hover:opacity-80 ${theme.modalLabel}`}
+                  className={`text-[11px] font-black uppercase tracking-[0.2em] transition hover:opacity-80 ${theme.modalLabel}`}
                 >
                   {t("jury.close_profile", "Fermer le profil")}
                 </button>
@@ -364,3 +709,4 @@ export default function JuryWpage({ page }) {
     </>
   );
 }
+

@@ -8,6 +8,11 @@ import SocialIcon from "../components/ui/SocialIcon";
 import { useTheme } from "../context/ThemeContext";
 import { buildApiPath, withDeploymentBase } from "../utils/deploymentPath";
 import {
+  getLocalizedMoviePath,
+  getLocalizedPath,
+  normalizeLanguage,
+} from "../utils/localizedRoutes";
+import {
   deleteMyMovieRating,
   getCurrentSessionUser,
   getMovieById,
@@ -25,6 +30,42 @@ const SOCIAL_LINK_ORDER = [
   { key: "website", label: "Website" },
 ];
 const HERO_PREVIEW_SECONDS = 5;
+const SHARE_PLATFORMS = [
+  {
+    key: "facebook",
+    label: "Facebook",
+    ariaKey: "movie_details.share_facebook_aria",
+    getUrl: (url) => `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+  },
+  {
+    key: "twitter",
+    label: "X",
+    ariaKey: "movie_details.share_twitter_aria",
+    getUrl: (url, title) =>
+      `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(title)}`,
+  },
+  {
+    key: "linkedin",
+    label: "LinkedIn",
+    ariaKey: "movie_details.share_linkedin_aria",
+    getUrl: (url) =>
+      `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
+  },
+  {
+    key: "pinterest",
+    label: "Pinterest",
+    ariaKey: "movie_details.share_pinterest_aria",
+    getUrl: (url, title, img) =>
+      `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(url)}&media=${encodeURIComponent(img)}&description=${encodeURIComponent(title)}`,
+  },
+  {
+    key: "whatsapp",
+    label: "WhatsApp",
+    ariaKey: "movie_details.share_whatsapp_aria",
+    getUrl: (url, title) =>
+      `https://wa.me/?text=${encodeURIComponent(`${title} ${url}`)}`,
+  },
+];
 
 function toExternalUrl(value) {
   const raw = String(value || "").trim();
@@ -114,6 +155,25 @@ function toYoutubeEmbedUrl(value) {
   return "";
 }
 
+function toYouTubeWatchUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+
+  if (/youtube\.com\/watch/i.test(raw)) return raw;
+
+  const embedMatch = raw.match(/youtube\.com\/embed\/([^?&/]+)/i);
+  if (embedMatch) {
+    return `https://www.youtube.com/watch?v=${embedMatch[1]}`;
+  }
+
+  const shortMatch = raw.match(/youtu\.be\/([^?&/]+)/i);
+  if (shortMatch) {
+    return `https://www.youtube.com/watch?v=${shortMatch[1]}`;
+  }
+
+  return null;
+}
+
 function toDirectPreviewVideoUrl(...values) {
   for (const value of values) {
     const raw = String(value || "").trim();
@@ -164,8 +224,9 @@ const MovieDetails = () => {
   const { id } = useParams();
   const { t, i18n } = useTranslation();
   const { isLight } = useTheme();
-  const homePath = i18n.language === "en" ? "/home" : "/accueil";
-  const galleryPath = i18n.language === "en" ? "/movies" : "/films";
+  const isArabic = normalizeLanguage(i18n.language) === "ar";
+  const homePath = getLocalizedPath("home", i18n.language);
+  const galleryPath = getLocalizedPath("films", i18n.language);
 
   const [movie, setMovie] = useState(null);
   const [movieLoading, setMovieLoading] = useState(true);
@@ -189,6 +250,9 @@ const MovieDetails = () => {
 
   const seoTitle = movie?.title || t("movie_details.not_found");
   const seoDescription = movie?.description || t("movie_details.back_to_gallery");
+  const seoImage = movie?.img || null;
+  const seoUrl = typeof window !== "undefined" ? window.location.href : undefined;
+  const seoVideo = movie?.videoUrl || movie?.rawVideoUrl || movie?.youtubeUrl || null;
 
   useEffect(() => {
     setIsPlayerOpen(false);
@@ -271,7 +335,7 @@ const MovieDetails = () => {
       } catch (error) {
         if (!cancelled) {
           setMovie(null);
-          setMovieError(error?.message || "Impossible de charger ce film.");
+          setMovieError(error?.message || t("movie_details.load_error"));
         }
       } finally {
         if (!cancelled) {
@@ -283,7 +347,7 @@ const MovieDetails = () => {
     return () => {
       cancelled = true;
     };
-  }, [movieId]);
+  }, [movieId, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -397,6 +461,27 @@ const MovieDetails = () => {
     }
   };
 
+  const handleNativeShare = async () => {
+    const url = toYouTubeWatchUrl(movie?.youtubeUrl) || (typeof window !== "undefined" ? window.location.href : "");
+    const shareData = {
+      title: movie?.title || "",
+      text: movie?.description || movie?.title || "",
+      url,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // Ignore cancelled share attempts.
+      }
+      return;
+    }
+
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent(shareData.title)}&body=${encodeURIComponent(`${shareData.text}\n\n${url}`)}`;
+    window.open(mailtoUrl);
+  };
+
   if (movieLoading) {
     return (
       <>
@@ -464,6 +549,9 @@ const MovieDetails = () => {
     toNonEmptyString(movie.releaseDate, movie.release_date, movie.release_year) || fallbackNa;
   const durationDisplay = toDurationDisplay(movie.duration, fallbackNa);
   const youtubeEmbedUrl = toYoutubeEmbedUrl(movie.youtubeUrl);
+  const shareUrl =
+    toYouTubeWatchUrl(movie.youtubeUrl)
+    || (typeof window !== "undefined" ? window.location.href : "");
   const canWatchMovie = shouldUseYoutubePlayer
     ? Boolean(youtubeEmbedUrl)
     : Boolean(directPlayerVideoUrl);
@@ -473,7 +561,7 @@ const MovieDetails = () => {
   const movieGenreList = Array.isArray(movie.genre) ? movie.genre : [];
   const breadcrumbItems = [
     {
-      name: i18n.language === "en" ? "Home" : "Accueil",
+      name: t("nav.home", "Accueil"),
       url: homePath,
     },
     {
@@ -482,7 +570,7 @@ const MovieDetails = () => {
     },
     {
       name: movie.title,
-      url: `/movie/${movie.id}`,
+      url: getLocalizedMoviePath(movie.id, i18n.language),
     },
   ];
   const theme = isLight
@@ -505,6 +593,9 @@ const MovieDetails = () => {
       techCard: "bg-white border border-slate-200",
       techTitle: "text-slate-900",
       modalOverlay: "bg-slate-900/70",
+      shareLabel: "text-slate-500",
+      shareChip:
+        "border-slate-300 bg-white/95 text-slate-700 hover:border-sky-400 hover:text-sky-700",
     }
     : {
       page: "bg-blue-950 text-white",
@@ -525,11 +616,21 @@ const MovieDetails = () => {
       techCard: "bg-slate-50 border border-slate-100",
       techTitle: "text-blue-950",
       modalOverlay: "bg-blue-950/95",
+      shareLabel: "text-slate-400",
+      shareChip:
+        "border-white/20 bg-white/10 text-white hover:bg-white hover:text-blue-950",
     };
 
   return (
     <>
-      <Seo title={seoTitle} description={seoDescription} />
+      <Seo
+        title={seoTitle}
+        description={seoDescription}
+        image={seoImage}
+        url={seoUrl}
+        type="video.other"
+        video={seoVideo}
+      />
       <MovieSchema
         title={movie.title}
         description={movie.description || seoDescription}
@@ -540,7 +641,10 @@ const MovieDetails = () => {
         genre={movieGenreList}
       />
       <BreadcrumbSchema items={breadcrumbItems} />
-      <div className={`movie-details-page min-h-screen font-sans relative ${theme.page}`}>
+      <div
+        className={`movie-details-page min-h-screen font-sans relative ${theme.page}`}
+        dir={isArabic ? "rtl" : "ltr"}
+      >
         <div className={`sticky top-0 z-30 border-b backdrop-blur-md ${theme.nav}`}>
           <div className="mx-auto w-full max-w-7xl px-4 py-3 sm:px-6">
             <Link
@@ -647,6 +751,34 @@ const MovieDetails = () => {
                     </a>
                   )}
                 </div>
+
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-2 md:justify-start">
+                  <span className={`mr-1 text-[10px] font-black uppercase tracking-widest ${theme.shareLabel}`}>
+                    {t("movie_details.share_label")}
+                  </span>
+                  {SHARE_PLATFORMS.map(({ key, label, ariaKey, getUrl }) => (
+                    <a
+                      key={key}
+                      href={getUrl(shareUrl, movie.title, movie.img || "")}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={t(ariaKey)}
+                      title={label}
+                      className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${theme.shareChip}`}
+                    >
+                      <SocialIcon network={key} className="h-5 w-5" />
+                    </a>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={handleNativeShare}
+                    aria-label={t("movie_details.share_email_aria")}
+                    title={t("movie_details.share_email_label")}
+                    className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${theme.shareChip}`}
+                  >
+                    <SocialIcon network="share" className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -668,14 +800,14 @@ const MovieDetails = () => {
                   <div className="mb-12 overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-xl">
                     <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
                       <p className="text-sm font-bold uppercase tracking-wider text-slate-700">
-                        YouTube Player
+                        {t("movie_details.youtube_player")}
                       </p>
                       <button
                         type="button"
                         onClick={() => setIsPlayerOpen(false)}
                         className="rounded-lg px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-500 hover:bg-slate-100 hover:text-slate-700"
                       >
-                        Fermer
+                        {t("movie_details.close_player")}
                       </button>
                     </div>
                     <div className="aspect-video w-full">
@@ -774,11 +906,11 @@ const MovieDetails = () => {
                           <img
                             src={person.img || `https://i.pravatar.cc/150?u=cast-${movie.id}-${index}`}
                             className="w-16 h-16 rounded-2xl object-cover shadow-md"
-                            alt={person.name || "Casting"}
+                            alt={person.name || t("movie_details.casting")}
                           />
                           <div>
                             <p className="font-black text-blue-900 leading-tight uppercase tracking-tighter">
-                              {person.name || "Inconnu"}
+                              {person.name || t("movie_details.unknown_person")}
                             </p>
                             <p className="text-sm text-slate-400 font-bold uppercase tracking-wider">
                               {person.role || t("movie_details.na")}
@@ -839,7 +971,7 @@ const MovieDetails = () => {
                         {countryFlagPath && (
                           <img
                             src={countryFlagPath}
-                            alt={`Drapeau ${countryName}`}
+                            alt={`${t("upload.form.flag_alt")} ${countryName}`}
                             className="h-4 w-6 rounded-sm border border-slate-200 object-cover"
                             loading="lazy"
                           />
@@ -869,8 +1001,13 @@ const MovieDetails = () => {
               className={`absolute inset-0 backdrop-blur-md ${theme.modalOverlay}`}
               onClick={() => setIsModalOpen(false)}
             ></div>
-            <div className="relative bg-white rounded-[50px] p-12 w-full max-w-sm shadow-2xl text-center">
-              <h3 className="text-3xl font-black text-blue-950 mb-8 uppercase tracking-tighter italic">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="rating-modal-title"
+              className="relative bg-white rounded-[50px] p-12 w-full max-w-sm shadow-2xl text-center"
+            >
+              <h3 id="rating-modal-title" className="text-3xl font-black text-blue-950 mb-8 uppercase tracking-tighter italic">
                 {t("movie_details.modal_title")}
               </h3>
               <div className="flex justify-center gap-3 mb-12">
@@ -878,6 +1015,8 @@ const MovieDetails = () => {
                   <button
                     key={num}
                     onClick={() => setTempRating(num)}
+                    aria-label={t("movie_details.modal_rating_star", { num })}
+                    aria-pressed={tempRating === num}
                     className={`w-12 h-14 rounded-2xl font-black text-2xl transition-all ${tempRating === num ? "bg-blue-600 text-white scale-110 shadow-xl" : "bg-slate-100 text-slate-300"}`}
                   >
                     {num}
@@ -885,10 +1024,11 @@ const MovieDetails = () => {
                 ))}
               </div>
               <div className="mb-6 text-left">
-                <label className="mb-2 block text-xs font-black uppercase tracking-widest text-slate-500">
+                <label htmlFor="rating-comment" className="mb-2 block text-xs font-black uppercase tracking-widest text-slate-500">
                   {t("movie_details.modal_comment_label")}
                 </label>
                 <textarea
+                  id="rating-comment"
                   value={tempComment}
                   onChange={(event) => setTempComment(event.target.value)}
                   maxLength={2000}
@@ -927,7 +1067,7 @@ const DetailRow = ({ label, value, isStar, last }) => (
   <div
     className={`flex flex-col ${!last ? "border-b border-slate-200 pb-4" : ""}`}
   >
-    <span className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">
+    <span className="text-[11px] uppercase font-black text-slate-400 tracking-widest mb-1">
       {label}
     </span>
     <span className="font-bold text-blue-900 uppercase flex items-center gap-2">

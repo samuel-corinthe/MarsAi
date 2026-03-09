@@ -1,8 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../context/ThemeContext";
 import usePhaseAccessController from "../controllers/usePhaseAccessController";
+import {
+  getEquivalentLocalizedPath,
+  getLocalizedPath,
+  isSameRoute,
+  normalizeLanguage,
+} from "../utils/localizedRoutes";
 
 function normalizePath(path = "") {
   const value = String(path || "").trim();
@@ -24,6 +30,10 @@ export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [utilityMenuOpen, setUtilityMenuOpen] = useState(false);
+  const utilityButtonRef = useRef(null);
+  const utilityMenuRef = useRef(null);
+  const currentLanguage = normalizeLanguage(i18n.language);
+  const isRtl = currentLanguage === "ar";
   const {
     hasSession,
     hideGalleryForVisitors,
@@ -53,81 +63,18 @@ export default function Navbar() {
     };
   }, [mobileMenuOpen]);
 
-  const routeAliases = {
-    "/accueil": "/home",
-    "/home": "/accueil",
-    "/a-propos": "/about",
-    "/about": "/a-propos",
-    "/films": "/movies",
-    "/movies": "/films",
-    "/agenda": "/schedule",
-    "/schedule": "/agenda",
-    "/jury": "/jury-eng",
-    "/jury-eng": "/jury",
-    "/partenaires": "/partners",
-    "/partners": "/partenaires",
-    "/appel-a-projet": "/call-for-project",
-    "/call-for-project": "/appel-a-projet",
-    "/call-for-projects": "/appel-a-projet",
-    "/deposer-un-film": "/submit-film",
-    "/submit-film": "/deposer-un-film",
-    "/submit-a-film": "/deposer-un-film",
-    "/cgv": "/tos",
-    "/tos": "/cgv",
-    "/cgu": "/gcu",
-    "/gcu": "/cgu",
-    "/mentions-legales": "/legal-notice",
-    "/legal-notice": "/mentions-legales",
-  };
-
-  const isActive = (path) => {
-    const safePath = normalizePath(path);
-    const currentPath = normalizePath(location.pathname);
-    return currentPath === safePath || normalizePath(routeAliases[currentPath]) === safePath;
-  };
+  const isActive = (path) => isSameRoute(location.pathname, path);
 
   const handleLanguageChange = (nextLanguage) => {
-    if (nextLanguage === i18n.language) return;
-
-    const pathMappings = {
-      fr: {
-        "/home": "/accueil",
-        "/about": "/a-propos",
-        "/movies": "/films",
-        "/schedule": "/agenda",
-        "/jury-eng": "/jury",
-        "/partners": "/partenaires",
-        "/call-for-project": "/appel-a-projet",
-        "/call-for-projects": "/appel-a-projet",
-        "/deposer-un-film": "/deposer-un-film",
-        "/submit-film": "/deposer-un-film",
-        "/submit-a-film": "/deposer-un-film",
-        "/tos": "/cgv",
-        "/gcu": "/cgu",
-        "/legal-notice": "/mentions-legales",
-      },
-      en: {
-        "/accueil": "/home",
-        "/a-propos": "/about",
-        "/films": "/movies",
-        "/agenda": "/schedule",
-        "/jury": "/jury-eng",
-        "/partenaires": "/partners",
-        "/appel-a-projet": "/call-for-project",
-        "/deposer-un-film": "/submit-film",
-        "/submit-a-film": "/submit-film",
-        "/cgv": "/tos",
-        "/cgu": "/gcu",
-        "/mentions-legales": "/legal-notice",
-      },
-    };
-
-    const currentPath = normalizePath(location.pathname);
-    const nextPath = pathMappings[nextLanguage]?.[currentPath] || currentPath;
+    if (nextLanguage === currentLanguage) return;
 
     i18n.changeLanguage(nextLanguage);
-    if (nextPath !== currentPath) {
-      navigate(nextPath, { replace: true });
+    const currentPath = normalizePath(location.pathname);
+    const nextPath = getEquivalentLocalizedPath(currentPath, nextLanguage);
+    const currentUrl = `${currentPath}${location.search || ""}${location.hash || ""}`;
+    const nextUrl = `${nextPath}${location.search || ""}${location.hash || ""}`;
+    if (nextUrl !== currentUrl) {
+      navigate(nextUrl, { replace: true });
     }
     setMobileMenuOpen(false);
     setUtilityMenuOpen(false);
@@ -138,12 +85,13 @@ export default function Navbar() {
     setUtilityMenuOpen(false);
   };
 
-  const homePath = i18n.language === "en" ? "/home" : "/accueil";
-  const submitFilmPath = i18n.language === "en" ? "/submit-film" : "/deposer-un-film";
-  const profileLabel = i18n.language === "en" ? "Profile" : "Profil";
-  const themeToggleLabel = i18n.language === "en"
-    ? (isLight ? "Night mode" : "Day mode")
-    : (isLight ? "Mode nuit" : "Mode jour");
+  const homePath = getLocalizedPath("home", i18n.language);
+  const submitFilmPath = getLocalizedPath("submitFilm", i18n.language);
+  const profileLabel = t("nav.profile");
+  const themeToggleLabel = isLight
+    ? t("nav.theme_night")
+    : t("nav.theme_day");
+  const themeAnnouncement = isLight ? t("nav.theme.lightActivated") : t("nav.theme.darkActivated");
 
   const mainNav = useMemo(
     () => [
@@ -151,32 +99,32 @@ export default function Navbar() {
       {
         id: "about",
         name: normalizeLabel(t("nav.about")),
-        path: i18n.language === "en" ? "/about" : "/a-propos",
+        path: getLocalizedPath("about", i18n.language),
       },
       {
         id: "films",
         name: normalizeLabel(t("nav.films")),
-        path: i18n.language === "en" ? "/movies" : "/films",
+        path: getLocalizedPath("films", i18n.language),
       },
       {
         id: "agenda",
         name: normalizeLabel(t("nav.agenda")),
-        path: i18n.language === "en" ? "/schedule" : "/agenda",
+        path: getLocalizedPath("agenda", i18n.language),
       },
       {
         id: "call",
         name: normalizeLabel(t("nav.callForProjects")),
-        path: i18n.language === "en" ? "/call-for-project" : "/appel-a-projet",
+        path: getLocalizedPath("call", i18n.language),
       },
       {
         id: "jury",
         name: normalizeLabel(t("nav.jury")),
-        path: i18n.language === "en" ? "/jury-eng" : "/jury",
+        path: getLocalizedPath("jury", i18n.language),
       },
       {
         id: "partners",
         name: normalizeLabel(t("nav.partners")),
-        path: i18n.language === "en" ? "/partners" : "/partenaires",
+        path: getLocalizedPath("partners", i18n.language),
       },
     ],
     [t, homePath, i18n.language],
@@ -184,15 +132,15 @@ export default function Navbar() {
 
   const utilityNav = useMemo(
     () => [
-      { id: "terms_gv", name: normalizeLabel(t("nav.terms_gv")), path: i18n.language === "en" ? "/tos" : "/cgv" },
-      { id: "terms_gu", name: normalizeLabel(t("nav.terms_gu")), path: i18n.language === "en" ? "/gcu" : "/cgu" },
+      { id: "terms_gv", name: normalizeLabel(t("nav.terms_gv")), path: getLocalizedPath("cgv", i18n.language) },
+      { id: "terms_gu", name: normalizeLabel(t("nav.terms_gu")), path: getLocalizedPath("cgu", i18n.language) },
       {
         id: "legal",
         name: normalizeLabel(t("nav.legal")),
-        path: i18n.language === "en" ? "/legal-notice" : "/mentions-legales",
+        path: getLocalizedPath("legal", i18n.language),
       },
-      { id: "contact", name: normalizeLabel(t("nav.contact")), path: "/contact" },
-      { id: "newsletter", name: normalizeLabel(t("footer.newsletter")), path: "/newsletter" },
+      { id: "contact", name: normalizeLabel(t("nav.contact")), path: getLocalizedPath("contact", i18n.language) },
+      { id: "newsletter", name: normalizeLabel(t("footer.newsletter")), path: getLocalizedPath("newsletter", i18n.language) },
     ],
     [t, i18n.language],
   );
@@ -215,6 +163,7 @@ export default function Navbar() {
 
   return (
     <header
+      dir={isRtl ? "rtl" : "ltr"}
       className={`sticky top-0 z-[80] border-b transition-all duration-300 ${
         isLight
           ? (isScrolled
@@ -227,7 +176,7 @@ export default function Navbar() {
     >
       <div className="site-container">
         <div className="flex h-20 items-center justify-between gap-4">
-          <Link to={homePath} className="inline-flex items-center gap-3">
+          <Link to={homePath} className="inline-flex items-center gap-3" aria-hidden="true" tabIndex={-1}>
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-300 to-sky-500 text-slate-950 shadow-[0_10px_24px_rgba(14,165,233,0.45)]">
               <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                 <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm12.553 1.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
@@ -235,7 +184,7 @@ export default function Navbar() {
             </span>
             <span className="flex flex-col leading-none">
               <span className={`text-xl font-black uppercase tracking-tight ${isLight ? "text-slate-950" : "text-white"}`}>marsAI</span>
-              <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${isLight ? "text-cyan-700/90" : "text-cyan-300/90"}`}>
+              <span className={`text-[11px] font-bold uppercase tracking-[0.2em] ${isLight ? "text-cyan-700/90" : "text-cyan-300/90"}`}>
                 Festival 2026
               </span>
             </span>
@@ -263,8 +212,21 @@ export default function Navbar() {
 
             <div className="relative">
               <button
+                ref={utilityButtonRef}
                 type="button"
+                aria-haspopup="true"
+                aria-expanded={utilityMenuOpen}
                 onClick={() => setUtilityMenuOpen((prev) => !prev)}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setUtilityMenuOpen(true);
+                    setTimeout(() => {
+                      utilityMenuRef.current?.querySelector("a")?.focus();
+                    }, 0);
+                  }
+                  if (e.key === "Escape") setUtilityMenuOpen(false);
+                }}
                 className={`inline-flex items-center gap-1 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-black uppercase tracking-[0.12em] ${
                   isLight
                     ? "text-slate-700 hover:bg-cyan-50/80 hover:text-cyan-800"
@@ -284,16 +246,37 @@ export default function Navbar() {
               </button>
 
               {utilityMenuOpen && (
-                <div className={`absolute right-0 mt-2 w-64 overflow-hidden rounded-2xl p-2 ${
-                  isLight
-                    ? "border border-cyan-200/80 bg-[linear-gradient(145deg,rgba(248,252,255,0.96),rgba(226,240,255,0.92))] shadow-[0_18px_44px_rgba(2,132,199,0.16)]"
-                    : "border border-slate-600/70 bg-slate-900/95 shadow-[0_18px_44px_rgba(2,6,23,0.7)]"
-                }`}>
-                  {utilityNav.map((item) => (
+                <div
+                  ref={utilityMenuRef}
+                  role="menu"
+                  className={`absolute ${isRtl ? "left-0" : "right-0"} mt-2 w-64 overflow-hidden rounded-2xl p-2 ${
+                    isLight
+                      ? "border border-cyan-200/80 bg-[linear-gradient(145deg,rgba(248,252,255,0.96),rgba(226,240,255,0.92))] shadow-[0_18px_44px_rgba(2,132,199,0.16)]"
+                      : "border border-slate-600/70 bg-slate-900/95 shadow-[0_18px_44px_rgba(2,6,23,0.7)]"
+                  }`}
+                >
+                  {utilityNav.map((item, index) => (
                     <Link
                       key={item.id}
                       to={item.path}
+                      role="menuitem"
                       onClick={closeMenus}
+                      onKeyDown={(e) => {
+                        const items = Array.from(utilityMenuRef.current?.querySelectorAll("a") ?? []);
+                        if (e.key === "ArrowDown") {
+                          e.preventDefault();
+                          items[index + 1]?.focus();
+                        }
+                        if (e.key === "ArrowUp") {
+                          e.preventDefault();
+                          if (index === 0) utilityButtonRef.current?.focus();
+                          else items[index - 1]?.focus();
+                        }
+                        if (e.key === "Escape") {
+                          setUtilityMenuOpen(false);
+                          utilityButtonRef.current?.focus();
+                        }
+                      }}
                       className={`block rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
                         isLight
                           ? "text-slate-700 hover:bg-cyan-50/80 hover:text-cyan-800"
@@ -309,7 +292,7 @@ export default function Navbar() {
           </nav>
 
           <div className="hidden items-center gap-2 md:flex">
-            <div className={`mr-1 inline-flex items-center rounded-full border p-1 ${
+            <div className={`${isRtl ? "ml-1" : "mr-1"} inline-flex items-center rounded-full border p-1 ${
               isLight
                 ? "border-cyan-200/80 bg-white/70"
                 : "border-slate-600/80 bg-slate-900/70"
@@ -318,7 +301,7 @@ export default function Navbar() {
                 type="button"
                 onClick={() => handleLanguageChange("fr")}
                 className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${
-                  i18n.language === "fr"
+                  currentLanguage === "fr"
                     ? (isLight ? "bg-cyan-100/80 text-cyan-800" : "bg-cyan-400/18 text-cyan-200")
                     : (isLight ? "text-slate-600 hover:text-cyan-800" : "text-slate-300 hover:text-white")
                 }`}
@@ -329,12 +312,23 @@ export default function Navbar() {
                 type="button"
                 onClick={() => handleLanguageChange("en")}
                 className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${
-                  i18n.language === "en"
+                  currentLanguage === "en"
                     ? (isLight ? "bg-cyan-100/80 text-cyan-800" : "bg-cyan-400/18 text-cyan-200")
                     : (isLight ? "text-slate-600 hover:text-cyan-800" : "text-slate-300 hover:text-white")
                 }`}
               >
                 EN
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLanguageChange("ar")}
+                className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${
+                  currentLanguage === "ar"
+                    ? (isLight ? "bg-cyan-100/80 text-cyan-800" : "bg-cyan-400/18 text-cyan-200")
+                    : (isLight ? "text-slate-600 hover:text-cyan-800" : "text-slate-300 hover:text-white")
+                }`}
+              >
+                AR
               </button>
             </div>
 
@@ -365,12 +359,14 @@ export default function Navbar() {
               onClick={toggleTheme}
               aria-label={themeToggleLabel}
               title={themeToggleLabel}
-              className={`order-last ml-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border transition ${
+              aria-pressed={!isLight}
+              className={`order-last ${isRtl ? "mr-4" : "ml-4"} inline-flex h-10 w-10 items-center justify-center rounded-xl border transition ${
                 isLight
                   ? "border-cyan-200/80 bg-white/80 text-amber-500 hover:border-cyan-400 hover:text-amber-600"
                   : "border-slate-500/80 bg-slate-900/80 text-cyan-200 hover:border-cyan-300/70 hover:text-white"
               }`}
             >
+              <span className="sr-only">{themeToggleLabel}</span>
               {isLight ? (
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z" />
@@ -403,7 +399,7 @@ export default function Navbar() {
                 : "border-slate-600/70 bg-slate-900/80 text-slate-100 hover:border-cyan-300/70 hover:text-cyan-200"
             }`}
             aria-expanded={mobileMenuOpen}
-            aria-label="Toggle menu"
+            aria-label={t("nav.toggle_menu")}
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               {mobileMenuOpen ? (
@@ -452,13 +448,13 @@ export default function Navbar() {
               </Link>
             )}
 
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:justify-between">
+            <div className={`mt-4 flex flex-wrap items-center justify-center gap-2 ${isRtl ? "sm:flex-row-reverse sm:justify-between" : "sm:justify-between"}`}>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => handleLanguageChange("fr")}
                     className={`rounded-lg border px-3 py-2 text-xs font-black uppercase tracking-[0.12em] ${
-                    i18n.language === "fr"
+                    currentLanguage === "fr"
                       ? (isLight
                         ? "border-cyan-300 bg-cyan-100/80 text-cyan-800"
                         : "border-cyan-400/40 bg-cyan-400/16 text-cyan-200")
@@ -471,7 +467,7 @@ export default function Navbar() {
                   type="button"
                   onClick={() => handleLanguageChange("en")}
                   className={`rounded-lg border px-3 py-2 text-xs font-black uppercase tracking-[0.12em] ${
-                    i18n.language === "en"
+                    currentLanguage === "en"
                       ? (isLight
                         ? "border-cyan-300 bg-cyan-100/80 text-cyan-800"
                         : "border-cyan-400/40 bg-cyan-400/16 text-cyan-200")
@@ -479,6 +475,19 @@ export default function Navbar() {
                   }`}
                 >
                   EN
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleLanguageChange("ar")}
+                  className={`rounded-lg border px-3 py-2 text-xs font-black uppercase tracking-[0.12em] ${
+                    currentLanguage === "ar"
+                      ? (isLight
+                        ? "border-cyan-300 bg-cyan-100/80 text-cyan-800"
+                        : "border-cyan-400/40 bg-cyan-400/16 text-cyan-200")
+                      : (isLight ? "border-cyan-200/80 text-slate-600" : "border-slate-600/70 text-slate-300")
+                  }`}
+                >
+                  AR
                 </button>
               </div>
 
@@ -508,13 +517,14 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={toggleTheme}
-                  aria-label={themeToggleLabel}
+                  aria-pressed={!isLight}
                   className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border ${
                     isLight
                       ? "border-cyan-300 bg-white/80 text-amber-500 hover:border-cyan-400 hover:text-amber-600"
                       : "border-slate-600/70 bg-slate-900/80 text-cyan-200 hover:border-cyan-300/70 hover:text-white"
                   }`}
                 >
+                  <span className="sr-only">{themeToggleLabel}</span>
                   {isLight ? (
                     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z" />
@@ -531,6 +541,9 @@ export default function Navbar() {
           </div>
         </div>
       )}
+      <span aria-live="polite" aria-atomic="true" className="sr-only">
+        {themeAnnouncement}
+      </span>
     </header>
   );
 }

@@ -6,7 +6,9 @@ import {
 } from "../services/messagingService.js";
 
 export async function sendEmail(req, res) {
-  const { name, email, subject, message } = req.body || {};
+  const { name, email, subject, message, lang } = req.body || {};
+  // normalize language
+  const normalizedLang = String(lang || "fr").split("-")[0];
 
   if (!name || !email || !subject || !message) {
     return res
@@ -25,11 +27,14 @@ export async function sendEmail(req, res) {
       });
     }
 
-    await sendContactMail({ name, email, subject, message });
+    await sendContactMail({ name, email, subject, message, lang });
 
     return res.status(200).json({
       status: "success",
-      message: "Message envoye avec succes via Brevo.",
+      message:
+        normalizedLang === "ar"
+          ? "تم إرسال الرسالة بنجاح."
+          : "Message envoye avec succes via Brevo.",
     });
   } catch (error) {
     console.error("DETAILS DE L'ERREUR SMTP :");
@@ -45,8 +50,9 @@ export async function sendEmail(req, res) {
 }
 
 export async function subscribeNewsletter(req, res) {
-  const { firstName, email, preferences } = req.body || {};
+  const { firstName, email, preferences, lang } = req.body || {};
   const safePreferences = Array.isArray(preferences) ? preferences : [];
+  const normalizedLang = String(lang || "fr").split("-")[0];
 
   if (!firstName || !email) {
     return res
@@ -73,11 +79,20 @@ export async function subscribeNewsletter(req, res) {
       );
     }
 
-    await sendNewsletterWelcomeMail({ firstName, email, safePreferences });
+    await sendNewsletterWelcomeMail({
+      firstName,
+      email,
+      safePreferences,
+      lang,
+    });
 
-    return res
-      .status(200)
-      .json({ status: "success", message: "Inscription reussie !" });
+    return res.status(200).json({
+      status: "success",
+      message:
+        normalizedLang === "ar"
+          ? "تم الاشتراك بنجاح !"
+          : "Inscription reussie !",
+    });
   } catch (error) {
     console.error("Erreur generale:", error);
     return res.status(500).json({ status: "error", message: "Erreur serveur" });
