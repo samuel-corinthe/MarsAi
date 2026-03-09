@@ -1,6 +1,55 @@
 import { useEffect, useMemo, useState } from "react";
 
 const ZERO = { days: 0, hours: 0, minutes: 0, seconds: 0 };
+const PHASE_COUNTDOWN_COPY = {
+  fr: {
+    endPhase1: "Fin de phase 1",
+    endPhase2: "Fin de phase 2",
+    nextPhase: "Prochaine phase:",
+    phase2: "Phase 2",
+    phase3: "Phase 3",
+    phase3Active: "La phase 3 est active : le decompte est desactive.",
+    days: "J",
+    hours: "H",
+    minutes: "M",
+    seconds: "S",
+  },
+  en: {
+    endPhase1: "End of phase 1",
+    endPhase2: "End of phase 2",
+    nextPhase: "Next phase:",
+    phase2: "Phase 2",
+    phase3: "Phase 3",
+    phase3Active: "Phase 3 is active: countdown is disabled.",
+    days: "D",
+    hours: "H",
+    minutes: "M",
+    seconds: "S",
+  },
+  ar: {
+    endPhase1: "نهاية المرحلة 1",
+    endPhase2: "نهاية المرحلة 2",
+    nextPhase: "المرحلة التالية:",
+    phase2: "المرحلة 2",
+    phase3: "المرحلة 3",
+    phase3Active: "المرحلة 3 نشطة: تم ايقاف العد التنازلي.",
+    days: "يوم",
+    hours: "ساعة",
+    minutes: "دقيقة",
+    seconds: "ثانية",
+  },
+};
+
+function normalizeLanguage(language = "fr") {
+  const normalized = String(language || "").toLowerCase();
+  if (normalized.startsWith("ar")) return "ar";
+  if (normalized.startsWith("en")) return "en";
+  return "fr";
+}
+
+function getPhaseCountdownCopy(language = "fr") {
+  return PHASE_COUNTDOWN_COPY[normalizeLanguage(language)] || PHASE_COUNTDOWN_COPY.fr;
+}
 
 function toCountdownParts(remainingMs) {
   const safeMs = Math.max(0, Number(remainingMs) || 0);
@@ -13,6 +62,7 @@ function toCountdownParts(remainingMs) {
 }
 
 function resolvePhaseCountdown(sitePhase, nowTs, language) {
+  const copy = getPhaseCountdownCopy(language);
   const currentPhaseKey = String(sitePhase?.currentPhase || "phase_1").toLowerCase();
   if (currentPhaseKey === "phase_3") return null;
 
@@ -25,16 +75,16 @@ function resolvePhaseCountdown(sitePhase, nowTs, language) {
 
   if (currentPhaseKey === "phase_1" && Number.isFinite(phase1EndTs)) {
     return {
-      title: language === "en" ? "End of phase 1" : "Fin de phase 1",
-      next: "Phase 2",
+      title: copy.endPhase1,
+      next: copy.phase2,
       targetTs: phase1EndTs,
     };
   }
 
   if (currentPhaseKey === "phase_2" && Number.isFinite(phase2EndTs)) {
     return {
-      title: language === "en" ? "End of phase 2" : "Fin de phase 2",
-      next: "Phase 3",
+      title: copy.endPhase2,
+      next: copy.phase3,
       targetTs: phase2EndTs,
     };
   }
@@ -54,10 +104,6 @@ const VARIANTS = {
   callForProject: {
     phase3ClassName:
       "mb-10 rounded-2xl border border-blue-300/30 bg-blue-900/40 p-4 text-sm text-blue-100",
-    phase3Text: {
-      en: "Phase 3 is active: countdown is disabled.",
-      fr: "La phase 3 est active : le decompte est desactive.",
-    },
     wrapperClassName:
       "mb-10 rounded-2xl border border-blue-300/30 bg-blue-900/40 p-5",
     counterLabelClassName: "text-[11px] uppercase tracking-[0.2em] text-blue-200",
@@ -74,6 +120,7 @@ export default function PhaseCountdownBanner({
   const [nowTs, setNowTs] = useState(0);
   const currentPhaseKey = String(sitePhase?.currentPhase || "phase_1").toLowerCase();
   const styles = VARIANTS[variant] || VARIANTS.callForProject;
+  const copy = useMemo(() => getPhaseCountdownCopy(language), [language]);
 
   useEffect(() => {
     const immediateId = setTimeout(() => setNowTs(Date.now()), 0);
@@ -92,6 +139,28 @@ export default function PhaseCountdownBanner({
     () => (phaseCountdown ? toCountdownParts(phaseCountdown.targetTs - nowTs) : ZERO),
     [phaseCountdown, nowTs],
   );
+  const isArabic = normalizeLanguage(language) === "ar";
+  const units = useMemo(
+    () => [
+      { key: "days", label: copy.days, value: countdown.days },
+      { key: "hours", label: copy.hours, value: countdown.hours },
+      { key: "minutes", label: copy.minutes, value: countdown.minutes },
+      { key: "seconds", label: copy.seconds, value: countdown.seconds },
+    ],
+    [copy, countdown.days, countdown.hours, countdown.minutes, countdown.seconds],
+  );
+  const titleClassName = isArabic
+    ? "text-center text-sm font-black text-cyan-200"
+    : "text-center text-[11px] font-black uppercase tracking-[0.25em] sm:text-[11px]";
+  const inlineLabelClassName = isArabic
+    ? "mt-1 text-xs font-bold text-cyan-200"
+    : "mt-1 text-[11px] font-black uppercase tracking-[0.24em]";
+  const inlineNextClassName = isArabic
+    ? "mt-3 text-center text-sm text-slate-100/90"
+    : "mt-3 text-center text-[11px] uppercase tracking-[0.18em] sm:text-xs";
+  const cardLabelClassName = isArabic
+    ? "text-xs font-semibold text-blue-100"
+    : styles.counterLabelClassName;
 
   if (!sitePhase || nowTs <= 0) return null;
 
@@ -104,7 +173,7 @@ export default function PhaseCountdownBanner({
     if (useLargeInlineCountdown) return null;
     return (
       <div className={styles.phase3ClassName}>
-        {language === "en" ? styles.phase3Text.en : styles.phase3Text.fr}
+        {copy.phase3Active}
       </div>
     );
   }
@@ -127,27 +196,21 @@ export default function PhaseCountdownBanner({
     const homeNextClassName = isLight
       ? "text-slate-700"
       : "text-slate-100/90";
-    const units = [
-      { label: language === "en" ? "D" : "J", value: countdown.days },
-      { label: "H", value: countdown.hours },
-      { label: "M", value: countdown.minutes },
-      { label: "S", value: countdown.seconds },
-    ];
 
     return (
       <div className={containerClassName}>
-        <p className={`text-center text-[11px] font-black uppercase tracking-[0.25em] sm:text-[11px] ${homeTitleClassName}`}>
+        <p className={`${titleClassName} ${homeTitleClassName}`}>
           {phaseCountdown.title}
         </p>
 
-        <div className="mt-3 flex flex-wrap items-end justify-center gap-y-3 sm:gap-y-4">
+        <div dir="ltr" className="mt-3 flex flex-wrap items-end justify-center gap-y-3 sm:gap-y-4">
           {units.map((item, index) => (
-            <div key={item.label} className="flex items-end">
+            <div key={item.key} className="flex items-end">
               <div className="min-w-[68px] text-center sm:min-w-[88px]">
                 <div className={`tabular-nums text-5xl font-black leading-none tracking-tight sm:text-6xl md:text-7xl ${homeValueClassName}`}>
                   {String(item.value).padStart(2, "0")}
                 </div>
-                <div className={`mt-1 text-[11px] font-black uppercase tracking-[0.24em] ${homeLabelClassName}`}>
+                <div className={`${inlineLabelClassName} ${homeLabelClassName}`}>
                   {item.label}
                 </div>
               </div>
@@ -158,8 +221,8 @@ export default function PhaseCountdownBanner({
           ))}
         </div>
 
-        <p className={`mt-3 text-center text-[11px] uppercase tracking-[0.18em] sm:text-xs ${homeNextClassName}`}>
-          {language === "en" ? "Next phase:" : "Prochaine phase:"}{" "}
+        <p className={`${inlineNextClassName} ${homeNextClassName}`}>
+          {copy.nextPhase}{" "}
           <span className={isLight ? "font-black text-slate-900" : "font-black text-cyan-100"}>
             {phaseCountdown.next}
           </span>
@@ -170,31 +233,26 @@ export default function PhaseCountdownBanner({
 
   return (
     <div className={styles.wrapperClassName}>
-      <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-200 mb-4">
+      <p className={`${isArabic ? "text-sm font-black text-cyan-200 mb-4" : "text-xs font-black uppercase tracking-[0.2em] text-cyan-200 mb-4"}`}>
         {phaseCountdown.title}
       </p>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: "J", value: countdown.days },
-          { label: "H", value: countdown.hours },
-          { label: "M", value: countdown.minutes },
-          { label: "S", value: countdown.seconds },
-        ].map((item) => (
+      <div dir="ltr" className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {units.map((item) => (
           <div
-            key={item.label}
+            key={item.key}
             className="rounded-xl bg-white/10 border border-white/10 px-3 py-4 text-center"
           >
             <div className="text-2xl font-black text-white tabular-nums">
               {String(item.value).padStart(2, "0")}
             </div>
-            <div className={styles.counterLabelClassName}>
+            <div className={cardLabelClassName}>
               {item.label}
             </div>
           </div>
         ))}
       </div>
       <p className={styles.nextTextClassName}>
-        {language === "en" ? "Next phase:" : "Prochaine phase:"}{" "}
+        {copy.nextPhase}{" "}
         <span className="font-semibold">{phaseCountdown.next}</span>
       </p>
     </div>
