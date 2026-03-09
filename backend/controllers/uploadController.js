@@ -418,6 +418,10 @@ function buildQueuedStatusFallback(job) {
     stage: job?.stage || null,
     jobStatus: job?.status || null,
     message: job?.message || null,
+    confirmationEmailSent: typeof job?.confirmationEmailSent === "boolean"
+      ? job.confirmationEmailSent
+      : null,
+    confirmationEmailError: String(job?.confirmationEmailError || "").trim() || null,
   };
 }
 
@@ -435,6 +439,10 @@ async function resolveQueuedYoutubeStatus(job) {
           stage: job.stage || null,
           jobStatus: job.status || null,
           message: job.message || null,
+          confirmationEmailSent: typeof job?.confirmationEmailSent === "boolean"
+            ? job.confirmationEmailSent
+            : null,
+          confirmationEmailError: String(job?.confirmationEmailError || "").trim() || null,
         };
       }
     } catch (error) {

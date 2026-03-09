@@ -396,6 +396,43 @@ export default function YoutubeUpload() {
         }
     };
 
+    const syncUploadFeedbackFromJob = useCallback((statusData) => {
+        if (!statusData || typeof statusData !== 'object') return;
+
+        const safeJobStatus = String(statusData?.jobStatus || '').trim().toLowerCase();
+        if (safeJobStatus === 'failed') {
+            const failureReason = String(
+                statusData?.rejectionReason || statusData?.processingFailureReason || '',
+            ).trim();
+            setStatus({
+                type: 'error',
+                message: failureReason
+                    ? `${t('upload.errors.upload_failed')} (${failureReason})`
+                    : t('upload.errors.upload_failed')
+            });
+            return;
+        }
+
+        if (safeJobStatus !== 'succeeded') return;
+
+        const confirmationEmailSent = statusData?.confirmationEmailSent;
+        const confirmationEmailError = String(statusData?.confirmationEmailError || '').trim();
+        if (confirmationEmailSent === false) {
+            setStatus({
+                type: 'success',
+                message: `${t('upload.status.video_uploaded_email_failed')}${confirmationEmailError ? ` (${confirmationEmailError})` : ''}`
+            });
+            return;
+        }
+
+        if (confirmationEmailSent === true) {
+            setStatus({
+                type: 'success',
+                message: t('upload.status.upload_success')
+            });
+        }
+    }, [t]);
+
     const fetchYoutubeStatus = async (videoId) => {
         if (!videoId) return null;
 
@@ -406,6 +443,7 @@ export default function YoutubeUpload() {
             const payload = await fetchYoutubeUploadStatus(videoId);
             const statusData = payload.status || null;
             setYoutubeStatus(statusData);
+            syncUploadFeedbackFromJob(statusData);
             return statusData;
         } catch (error) {
             const details =
@@ -789,8 +827,6 @@ export default function YoutubeUpload() {
                 },
             );
             setProgress(100);
-            const confirmationEmailSent = responsePayload?.confirmationEmailSent !== false;
-            const confirmationEmailError = String(responsePayload?.confirmationEmailError || '').trim();
             const uploadedVideoId = String(responsePayload.videoId || '').trim();
             if (uploadedVideoId) {
                 setYoutubeVideoId(uploadedVideoId);
@@ -799,11 +835,11 @@ export default function YoutubeUpload() {
                 startYoutubeStatusPolling(uploadedVideoId);
                 setStatus({
                     type: 'success',
-                    message: confirmationEmailSent
-                        ? t('upload.status.video_uploaded_checking')
-                        : `${t('upload.status.video_uploaded_email_failed')}${confirmationEmailError ? ` (${confirmationEmailError})` : ''}`
+                    message: t('upload.status.video_uploaded_checking')
                 });
             } else {
+                const confirmationEmailSent = responsePayload?.confirmationEmailSent !== false;
+                const confirmationEmailError = String(responsePayload?.confirmationEmailError || '').trim();
                 setStatus({
                     type: 'success',
                     message: confirmationEmailSent
@@ -1871,16 +1907,6 @@ export default function YoutubeUpload() {
                                         ? t('upload.youtube_status.checking')
                                         : t('upload.youtube_status.waiting')}
                             </p>
-                            {youtubeStatus?.stage && (
-                                <p className="text-xs text-slate-500">
-                                    {t('upload.youtube_status.stage_label', 'Stage')}: {youtubeStatus.stage}
-                                </p>
-                            )}
-                            {youtubeStatus?.message && (
-                                <p className="text-xs text-slate-500">
-                                    {t('upload.youtube_status.message_label', 'Message')}: {youtubeStatus.message}
-                                </p>
-                            )}
                             {youtubeStatusError && (
                                 <p className="text-sm text-red-600">{youtubeStatusError}</p>
                             )}
