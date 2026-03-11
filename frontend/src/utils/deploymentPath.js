@@ -42,10 +42,12 @@ export function getDeploymentBasePath() {
 
 export function buildApiPath(path) {
   const safePath = String(path || "").startsWith("/") ? String(path) : `/${path || ""}`;
+  const apiOrigin = normalizeApiOrigin(import.meta.env.VITE_API_ORIGIN || "");
+  if (apiOrigin) return `${apiOrigin}${safePath}`;
+
   const basePath = getDeploymentBasePath();
   const relativePath = basePath ? `${basePath}${safePath}` : safePath;
-  const apiOrigin = normalizeApiOrigin(import.meta.env.VITE_API_ORIGIN || "");
-  return apiOrigin ? `${apiOrigin}${relativePath}` : relativePath;
+  return relativePath;
 }
 
 export function withDeploymentBase(path) {

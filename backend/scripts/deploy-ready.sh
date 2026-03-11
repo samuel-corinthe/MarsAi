@@ -13,8 +13,57 @@ export npm_config_progress=false
 export npm_config_maxsockets=3
 export npm_config_ignore_scripts=true
 
-echo "[DEPLOY] Installing npm dependencies (light mode)..."
-npm install --omit=dev --no-audit --no-fund --ignore-scripts
+DEPLOY_STATE_DIR="$APP_DIR/.deploy"
+LOCK_HASH_FILE="$DEPLOY_STATE_DIR/package-lock.sha256"
+
+hash_file() {
+  local file="$1"
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$file" | awk '{print $1}'
+    return
+  fi
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$file" | awk '{print $1}'
+    return
+  fi
+  echo "[DEPLOY] ERROR: sha256sum or shasum is required."
+  exit 1
+}
+
+install_dependencies_if_needed() {
+  local current_hash
+  local previous_hash=""
+
+  mkdir -p "$DEPLOY_STATE_DIR"
+
+  if [ ! -f "$APP_DIR/package-lock.json" ]; then
+    echo "[DEPLOY] ERROR: package-lock.json is missing."
+    exit 1
+  fi
+
+  current_hash="$(hash_file "$APP_DIR/package-lock.json")"
+
+  if [ -f "$LOCK_HASH_FILE" ]; then
+    previous_hash="$(cat "$LOCK_HASH_FILE")"
+  fi
+
+  if [ -d "$APP_DIR/node_modules" ] && [ "$current_hash" = "$previous_hash" ]; then
+    echo "[DEPLOY] Dependencies unchanged, skipping npm install."
+    return
+  fi
+
+  echo "[DEPLOY] Installing npm dependencies (light mode)..."
+  npm install \
+    --omit=dev \
+    --ignore-scripts \
+    --no-audit \
+    --no-fund \
+    --progress=false \
+    --loglevel=warn \
+    --maxsockets=1
+
+  printf '%s' "$current_hash" > "$LOCK_HASH_FILE"
+}
 
 FFMPEG_DIR="${HOME}/.local/marsai/ffmpeg"
 FFMPEG_BIN_PATH="${FFMPEG_DIR}/ffmpeg"
@@ -103,5 +152,6 @@ persist_ffmpeg_env() {
 
 install_ffmpeg_if_missing
 persist_ffmpeg_env
+install_dependencies_if_needed
 
 echo "[DEPLOY] Deploy ready complete."
