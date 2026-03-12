@@ -50,7 +50,7 @@ function extractUploadsRelativePath(rawValue) {
   const normalizedPath = pathname
     .replace(/\\/g, "/")
     .replace(/^\/+/, "/")
-    .replace(/^\/(?:MarsAi|MarsAiFestival)\//i, "/");
+    .replace(/^\/MarsAi\//i, "/");
   const marker = "/uploads/";
   const markerIndex = normalizedPath.toLowerCase().indexOf(marker);
   if (markerIndex < 0) return null;

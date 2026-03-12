@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 import fs from 'fs';
-import ffprobeStatic from 'ffprobe-static';
+import { resolveFfprobeCommand } from './mediaBinaryResolver.js';
 
 
 function parseFraction(value) {
@@ -39,7 +39,8 @@ export function analyzeVideo(filePath, timeout = 10_000) {
       filePath
     ];
 
-    const ffprobe = spawn(ffprobeStatic.path, args);
+    const ffprobeCommand = resolveFfprobeCommand();
+    const ffprobe = spawn(ffprobeCommand, args);
 
     let stdout = '';
     let stderr = '';
@@ -114,10 +115,11 @@ export function analyzeVideo(filePath, timeout = 10_000) {
       clearTimeout(timeoutId);
 
       if (error.code === 'ENOENT') {
-        reject(new Error('ffprobe introuvable. FFmpeg n\'est pas installé.'));
+        reject(new Error("ffprobe introuvable. Configurez FFPROBE_PATH ou installez ffprobe sur le systeme."));
       } else {
         reject(error);
       }
     });
   });
 }
+

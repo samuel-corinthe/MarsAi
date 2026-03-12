@@ -9,6 +9,6 @@ const router = express.Router();
 
 router.get("/:movieId/me", getMyRating);
 router.patch("/:movieId/me", patchMyRating);
-router.post("/:movieId/me/delete", deleteMyRating);
+router.delete("/:movieId/me", deleteMyRating);
 
 export default router;

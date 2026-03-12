@@ -5,6 +5,5 @@ const router = express.Router();
 
 router.post("/send-email", sendEmail);
 router.post("/subscribe-newsletter", subscribeNewsletter);
-router.post("/newsletter/subscribe", subscribeNewsletter);
 
 export default router;

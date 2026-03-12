@@ -1,17 +1,6 @@
 const WP_V2 = "/wp-json/wp/v2";
-const WORDPRESS_BASE_URL =
-  import.meta.env.VITE_WORDPRESS_URL ||
-  "https://samuel-corinthe.students-laplateforme.io/MarsAi";
+const WORDPRESS_BASE_URL = "https://samuel-corinthe.students-laplateforme.io/MarsAi";
 const WORDPRESS_V2_URL = `${WORDPRESS_BASE_URL}${WP_V2}`;
-const API_ORIGIN = String(import.meta.env.VITE_API_ORIGIN || "").trim().replace(/\/+$/, "");
-
-function withApiOrigin(url) {
-  const raw = String(url || "").trim();
-  if (!raw) return raw;
-  if (!API_ORIGIN) return raw;
-  if (!raw.startsWith("/")) return raw;
-  return `${API_ORIGIN}${raw}`;
-}
 
 function isLocalBrowserHost() {
   if (typeof window === "undefined") return false;
@@ -20,7 +9,7 @@ function isLocalBrowserHost() {
 }
 
 function appendLocalCandidates(urls) {
-  if (!isLocalBrowserHost() || API_ORIGIN) return urls;
+  if (!isLocalBrowserHost()) return urls;
 
   const extras = [
     "http://localhost:3000",
@@ -43,15 +32,11 @@ function withPrefix(prefix, path) {
 }
 
 function appendDeploymentPathCandidates(urls) {
-  if (API_ORIGIN) {
-    return [...new Set(urls.map((url) => withApiOrigin(url)))];
-  }
-
   if (typeof window === "undefined") return urls;
 
   const path = String(window.location?.pathname || "/");
   const segments = path.split("/").filter(Boolean);
-  const prefixes = new Set(["", "/MarsAi", "/MarsAiFestival", "/backend"]);
+  const prefixes = new Set(["", "/MarsAi"]);
 
   if (segments.length > 0) {
     prefixes.add(`/${segments[0]}`);
@@ -71,44 +56,22 @@ function appendDeploymentPathCandidates(urls) {
   return extended;
 }
 
-function resolveApiCandidates(urls) {
-  const normalized = [
-    ...new Set(
-      (Array.isArray(urls) ? urls : [])
-        .map((url) => String(url || "").trim())
-        .filter(Boolean),
-    ),
-  ];
-
-  const withDeploymentPaths = appendDeploymentPathCandidates(normalized);
-  return appendLocalCandidates(withDeploymentPaths);
-}
-
 export function buildDeploymentAwareApiPath(path = "/") {
   const rawPath = String(path || "").trim() || "/";
   const normalizedPath = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
-  const deploymentPrefixes = ["/MarsAi", "/MarsAiFestival", "/backend"];
 
-  if (deploymentPrefixes.some((prefix) => normalizedPath === prefix || normalizedPath.startsWith(`${prefix}/`))) {
-    return withApiOrigin(normalizedPath);
+  if (/^\/MarsAi\//i.test(normalizedPath)) {
+    return normalizedPath;
   }
 
-  if (API_ORIGIN) {
-    return withApiOrigin(normalizedPath);
-  }
-
-  if (typeof window === "undefined") return withApiOrigin(normalizedPath);
+  if (typeof window === "undefined") return normalizedPath;
 
   const pathname = String(window.location?.pathname || "").toLowerCase();
-  const activePrefix = deploymentPrefixes.find((prefix) => {
-    const lower = prefix.toLowerCase();
-    return pathname === lower || pathname.startsWith(`${lower}/`);
-  });
-  if (activePrefix) {
-    return withApiOrigin(`${activePrefix}${normalizedPath}`);
+  if (pathname === "/marsai" || pathname.startsWith("/marsai/")) {
+    return `/MarsAi${normalizedPath}`;
   }
 
-  return withApiOrigin(normalizedPath);
+  return normalizedPath;
 }
 
 function isObject(value) {
@@ -148,7 +111,8 @@ async function fetchWith404Fallback(
   errorContext = "API",
   validatePayload = null,
 ) {
-  const candidates = resolveApiCandidates(urls);
+  const withDeploymentPaths = appendDeploymentPathCandidates(urls);
+  const candidates = appendLocalCandidates(withDeploymentPaths);
 
   let lastStatus = null;
   let lastPayload = {};
@@ -210,7 +174,7 @@ async function fetchSameOriginWithFallback(
   options = {},
   errorContext = "API",
 ) {
-  const candidates = resolveApiCandidates(urls);
+  const candidates = [...new Set(urls.filter((url) => typeof url === "string" && url.startsWith("/")))];
 
   let lastStatus = null;
   let lastPayload = {};
@@ -255,39 +219,6 @@ async function fetchSameOriginWithFallback(
   throw new Error(
     lastPayload?.details || lastPayload?.error || `${errorContext} error ${fallbackStatus}`,
   );
-}
-
-async function fetchApi(path, options = {}) {
-  const candidates = resolveApiCandidates([path]);
-  let lastResponse = null;
-  let lastError = null;
-  let sawHtmlFallback = false;
-
-  for (const url of candidates) {
-    try {
-      const res = await fetch(url, options);
-      if (res.status === 404) {
-        lastResponse = res;
-        continue;
-      }
-
-      const contentType = String(res.headers.get("content-type") || "").toLowerCase();
-      if (res.ok && contentType.includes("text/html")) {
-        sawHtmlFallback = true;
-        continue;
-      }
-
-      return res;
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  if (sawHtmlFallback && !lastResponse) {
-    throw new Error("Le backend API n'est pas joignable sur les chemins testes.");
-  }
-  if (lastResponse) return lastResponse;
-  throw lastError || new Error("Impossible de joindre l'API backend.");
 }
 
 const REQUEST_CACHE_TTL_MS = 1500;
@@ -465,7 +396,7 @@ export async function getWpPostsByCategory({
 }
 
 export async function getAgendaPosts() {
-  const res = await fetch(`${WORDPRESS_V2_URL}/posts?per_page=100`);
+  const res = await fetch("/wp-json/wp/v2/posts?per_page=100");
   if (!res.ok) throw new Error(`WP error ${res.status}`);
   return await res.json();
 }
@@ -530,7 +461,7 @@ export async function getRecentAgendaEvents({ lang = "fr", limit = 5 } = {}) {
 
 export async function getPublicStats({ signal } = {}) {
   const { payload } = await fetchWith404Fallback(
-    ["/api/stats", "/MarsAi/api/stats"],
+    ["/api/stats"],
     {
       cache: "no-store",
       signal,
@@ -571,7 +502,7 @@ export async function getMoviesPaginated({
 
   const querySuffix = query.toString() ? `?${query.toString()}` : "";
   const { payload } = await fetchWith404Fallback(
-    [`/api/movies${querySuffix}`, `/api/movie${querySuffix}`],
+    [`/api/movies${querySuffix}`],
     { cache: "no-store" },
     "Movies API",
   );
@@ -600,7 +531,7 @@ export async function getMovies(options = {}) {
 
 export async function getMovieById(movieId) {
   const { payload } = await fetchWith404Fallback(
-    [`/api/movies/${movieId}`, `/api/movie/${movieId}`],
+    [`/api/movies/${movieId}`],
     { cache: "no-store" },
     "Movie details API",
     isLikelyMoviePayload,
@@ -619,7 +550,7 @@ export async function sendContactForm({
   lang = "fr",
 }) {
   const { payload } = await fetchWith404Fallback(
-    ["/api/send-email", "/send-email", "/api/mail/send-email"],
+    ["/api/send-email"],
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -638,11 +569,7 @@ export async function subscribeNewsletterForm({
   lang = "fr",
 }) {
   const { payload } = await fetchWith404Fallback(
-    [
-      "/api/subscribe-newsletter",
-      "/subscribe-newsletter",
-      "/api/newsletter/subscribe",
-    ],
+    ["/api/subscribe-newsletter"],
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -658,7 +585,7 @@ export async function loginWithWordPress({ email, username, password }) {
   clearRequestCache(currentSessionCache);
   let res;
   try {
-    res = await fetchApi("/api/auth/wordpress/login", {
+    res = await fetch("/api/auth/wordpress/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -696,7 +623,7 @@ export async function loginWithWordPress({ email, username, password }) {
 
 export async function getCurrentSessionUser({ signal } = {}) {
   const loadSession = async () => {
-    const res = await fetchApi("/api/auth/me", {
+    const res = await fetch("/api/auth/me", {
       signal,
       credentials: "include",
       cache: "no-store",
@@ -719,7 +646,7 @@ export async function getCurrentSessionUser({ signal } = {}) {
 
 export async function logoutSession() {
   clearRequestCache(currentSessionCache);
-  const res = await fetchApi("/api/auth/logout", {
+  const res = await fetch("/api/auth/logout", {
     method: "POST",
     credentials: "include",
   });
@@ -749,7 +676,7 @@ export async function updateCurrentSessionProfile({
   if (typeof bio === "string") body.bio = bio;
   if (typeof nickname === "string") body.nickname = nickname;
 
-  const res = await fetchApi("/api/auth/me/profile", {
+  const res = await fetch("/api/auth/me/profile", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -781,7 +708,7 @@ export async function updateCurrentSessionProfile({
 }
 
 export async function getAdminDashboardData({ signal } = {}) {
-  const res = await fetchApi("/api/dashboard", {
+  const res = await fetch("/api/dashboard", {
     signal,
     cache: "no-store",
     credentials: "include",
@@ -804,7 +731,7 @@ export async function getAdminDashboardData({ signal } = {}) {
 export async function getSitePhaseState({ signal } = {}) {
   const loadSitePhaseState = async () => {
     const { payload } = await fetchSameOriginWithFallback(
-      ["/api/site-phase", "/MarsAi/api/site-phase", "/MarsAiFestival/api/site-phase", "/backend/api/site-phase"],
+      ["/api/site-phase"],
       {
         signal,
         cache: "no-store",
@@ -825,7 +752,7 @@ export async function getSitePhaseState({ signal } = {}) {
 
 export async function updateSitePhaseState({ currentPhase, mode } = {}) {
   const { payload } = await fetchSameOriginWithFallback(
-    ["/api/site-phase", "/MarsAi/api/site-phase", "/MarsAiFestival/api/site-phase"],
+    ["/api/site-phase"],
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -845,11 +772,7 @@ export async function updateSitePhaseState({ currentPhase, mode } = {}) {
 export async function getPhase2SelectionStatus({ signal } = {}) {
   try {
     const { payload } = await fetchSameOriginWithFallback(
-      [
-        "/api/site-phase/phase2-selection",
-        "/MarsAi/api/site-phase/phase2-selection",
-        "/MarsAiFestival/api/site-phase/phase2-selection",
-      ],
+      ["/api/site-phase/phase2-selection"],
       {
         signal,
         cache: "no-store",
@@ -878,11 +801,7 @@ export async function getPhase2SelectionStatus({ signal } = {}) {
 
 export async function patchPhase2Selection(movieId, selected) {
   const { payload } = await fetchSameOriginWithFallback(
-    [
-      "/api/site-phase/phase2-selection",
-      "/MarsAi/api/site-phase/phase2-selection",
-      "/MarsAiFestival/api/site-phase/phase2-selection",
-    ],
+    ["/api/site-phase/phase2-selection"],
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -898,11 +817,7 @@ export async function patchPhase2Selection(movieId, selected) {
 
 export async function validatePhase2Selection() {
   const { payload } = await fetchSameOriginWithFallback(
-    [
-      "/api/site-phase/phase2-selection/validate",
-      "/MarsAi/api/site-phase/phase2-selection/validate",
-      "/MarsAiFestival/api/site-phase/phase2-selection/validate",
-    ],
+    ["/api/site-phase/phase2-selection/validate"],
     {
       method: "POST",
       credentials: "include",
@@ -917,11 +832,7 @@ export async function validatePhase2Selection() {
 export async function getPhase3SelectionStatus({ signal } = {}) {
   try {
     const { payload } = await fetchSameOriginWithFallback(
-      [
-        "/api/site-phase/phase3-selection",
-        "/MarsAi/api/site-phase/phase3-selection",
-        "/MarsAiFestival/api/site-phase/phase3-selection",
-      ],
+      ["/api/site-phase/phase3-selection"],
       {
         signal,
         cache: "no-store",
@@ -950,11 +861,7 @@ export async function getPhase3SelectionStatus({ signal } = {}) {
 
 export async function getPhase3WinnersPublic({ signal } = {}) {
   const { payload } = await fetchSameOriginWithFallback(
-    [
-      "/api/site-phase/phase3-winners",
-      "/MarsAi/api/site-phase/phase3-winners",
-      "/MarsAiFestival/api/site-phase/phase3-winners",
-    ],
+    ["/api/site-phase/phase3-winners"],
     {
       signal,
       cache: "no-store",
@@ -968,11 +875,7 @@ export async function getPhase3WinnersPublic({ signal } = {}) {
 
 export async function patchPhase3Selection(movieId, selected) {
   const { payload } = await fetchSameOriginWithFallback(
-    [
-      "/api/site-phase/phase3-selection",
-      "/MarsAi/api/site-phase/phase3-selection",
-      "/MarsAiFestival/api/site-phase/phase3-selection",
-    ],
+    ["/api/site-phase/phase3-selection"],
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -988,11 +891,7 @@ export async function patchPhase3Selection(movieId, selected) {
 
 export async function validatePhase3Selection() {
   const { payload } = await fetchSameOriginWithFallback(
-    [
-      "/api/site-phase/phase3-selection/validate",
-      "/MarsAi/api/site-phase/phase3-selection/validate",
-      "/MarsAiFestival/api/site-phase/phase3-selection/validate",
-    ],
+    ["/api/site-phase/phase3-selection/validate"],
     {
       method: "POST",
       credentials: "include",
@@ -1005,7 +904,7 @@ export async function validatePhase3Selection() {
 }
 
 export async function getMyAssignments() {
-  const res = await fetchApi("/api/assignments/my", {
+  const res = await fetch("/api/assignments/my", {
     credentials: "include",
     cache: "no-store",
   });
@@ -1018,7 +917,7 @@ export async function getMyAssignments() {
 }
 
 export async function claimMovieAssignment(movieId) {
-  const res = await fetchApi("/api/assignments/claim", {
+  const res = await fetch("/api/assignments/claim", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -1033,7 +932,7 @@ export async function claimMovieAssignment(movieId) {
 }
 
 export async function releaseMovieAssignment(movieId) {
-  const res = await fetchApi("/api/assignments/release", {
+  const res = await fetch("/api/assignments/release", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -1048,7 +947,7 @@ export async function releaseMovieAssignment(movieId) {
 }
 
 export async function autoAssignMovieReviews() {
-  const res = await fetchApi("/api/assignments/auto-assign", {
+  const res = await fetch("/api/assignments/auto-assign", {
     method: "POST",
     credentials: "include",
   });
@@ -1061,7 +960,7 @@ export async function autoAssignMovieReviews() {
 }
 
 export async function rebalanceMovieReviews() {
-  const res = await fetchApi("/api/assignments/rebalance", {
+  const res = await fetch("/api/assignments/rebalance", {
     method: "POST",
     credentials: "include",
   });
@@ -1074,7 +973,7 @@ export async function rebalanceMovieReviews() {
 }
 
 export async function getMyMovieRating(movieId) {
-  const res = await fetchApi(`/api/ratings/${movieId}/me`, {
+  const res = await fetch(`/api/ratings/${movieId}/me`, {
     credentials: "include",
     cache: "no-store",
   });
@@ -1087,7 +986,7 @@ export async function getMyMovieRating(movieId) {
 }
 
 export async function upsertMyMovieRating(movieId, score, comment = "") {
-  const res = await fetchApi(`/api/ratings/${movieId}/me`, {
+  const res = await fetch(`/api/ratings/${movieId}/me`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -1102,8 +1001,8 @@ export async function upsertMyMovieRating(movieId, score, comment = "") {
 }
 
 export async function deleteMyMovieRating(movieId) {
-  const res = await fetchApi(`/api/ratings/${movieId}/me/delete`, {
-    method: "POST",
+  const res = await fetch(`/api/ratings/${movieId}/me`, {
+    method: "DELETE",
     credentials: "include",
   });
 

@@ -73,7 +73,7 @@ function resolvePhaseCountdown(sitePhase, nowTs, language) {
     ? new Date(sitePhase.phase2EndsAt).getTime()
     : NaN;
 
-  if (currentPhaseKey === "phase_1" && Number.isFinite(phase1EndTs)) {
+  if (Number.isFinite(phase1EndTs) && nowTs < phase1EndTs) {
     return {
       title: copy.endPhase1,
       next: copy.phase2,
@@ -81,18 +81,10 @@ function resolvePhaseCountdown(sitePhase, nowTs, language) {
     };
   }
 
-  if (currentPhaseKey === "phase_2" && Number.isFinite(phase2EndTs)) {
+  if (Number.isFinite(phase2EndTs) && nowTs < phase2EndTs) {
     return {
       title: copy.endPhase2,
       next: copy.phase3,
-      targetTs: phase2EndTs,
-    };
-  }
-
-  if (currentPhaseKey === "phase_1" && Number.isFinite(phase2EndTs)) {
-    return {
-      title: language === "en" ? "End of phase 1" : "Fin de phase 1",
-      next: "Phase 2",
       targetTs: phase2EndTs,
     };
   }
@@ -118,7 +110,6 @@ export default function PhaseCountdownBanner({
   isLight = false,
 }) {
   const [nowTs, setNowTs] = useState(0);
-  const currentPhaseKey = String(sitePhase?.currentPhase || "phase_1").toLowerCase();
   const styles = VARIANTS[variant] || VARIANTS.callForProject;
   const copy = useMemo(() => getPhaseCountdownCopy(language), [language]);
 
@@ -168,8 +159,6 @@ export default function PhaseCountdownBanner({
     variant === "home" || variant === "callForProject";
 
   if (!phaseCountdown) {
-    if (currentPhaseKey === "phase_3") return null;
-
     if (useLargeInlineCountdown) return null;
     return (
       <div className={styles.phase3ClassName}>

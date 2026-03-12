@@ -7,7 +7,6 @@ import { useTranslation } from "react-i18next";
 import { getRecentAgendaEvents, getSitePhaseState } from "../api";
 import PhaseCountdownBanner from "../components/phases/PhaseCountdownBanner";
 import { useTheme } from "../context/ThemeContext";
-import { stripDeploymentPrefix, withDeploymentBase } from "../utils/deploymentPath";
 import { getLocalizedPath, normalizeLanguage } from "../utils/localizedRoutes";
 
 export default function Home({ page }) {
@@ -21,8 +20,8 @@ export default function Home({ page }) {
     `${import.meta.env.BASE_URL}models/walking_robot_mr.glb`;
   const modelPoster = import.meta.env.VITE_HOME_MODEL_POSTER_URL || "";
   const modelFallbackSrc = isLight
-    ? withDeploymentBase("/images/robot_light.png")
-    : withDeploymentBase("/images/robot_night.png");
+    ? "/images/robot_light.png"
+    : "/images/robot_night.png";
   const currentLanguage = normalizeLanguage(i18n.language);
   const isArabic = currentLanguage === "ar";
   const submitFilmPath = getLocalizedPath("submitFilm", i18n.language);
@@ -147,8 +146,10 @@ export default function Home({ page }) {
 
       let path = pathname.replace(/\/+$/, "");
       if (!path) path = "/";
-      path = stripDeploymentPrefix(path)
-        .replace(/^\/(?:en|fr)\//i, "/");
+      path = path
+        .replace(/^\/MarsAi\/en\//i, "/")
+        .replace(/^\/MarsAi\/fr\//i, "/")
+        .replace(/^\/MarsAi\//i, "/");
 
       const mappedPaths = {
         "/submit-film": submitFilmPath,

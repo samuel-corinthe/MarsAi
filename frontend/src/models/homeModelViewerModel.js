@@ -83,13 +83,13 @@ export function shouldEnableHome3D({ reduceMotion, isSmallViewport }) {
   const cores = Number(navigator.hardwareConcurrency || 0);
   const mobile = isMobileDevice();
 
-  if (memory > 0 && memory < 2 && cores > 0 && cores < 4) return false;
+  if (memory > 0 && memory < 4) return false;
+  if (cores > 0 && cores < 4) return false;
 
   if (mobile) {
-    const weakMobileMemory = memory > 0 && memory < 4;
-    const weakMobileCpu = cores > 0 && cores < 6;
-    if (weakMobileMemory && weakMobileCpu) return false;
-    if (isSmallViewport && memory > 0 && memory < 3) return false;
+    if (memory > 0 && memory < 6) return false;
+    if (cores > 0 && cores < 6) return false;
+    if (isSmallViewport && memory > 0 && memory < 8) return false;
   }
 
   return true;

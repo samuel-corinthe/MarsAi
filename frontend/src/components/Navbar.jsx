@@ -49,11 +49,6 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    setMobileMenuOpen(false);
-    setUtilityMenuOpen(false);
-  }, [location.pathname]);
-
-  useEffect(() => {
     if (!mobileMenuOpen) return undefined;
 
     const body = document.body;
@@ -444,7 +439,7 @@ export default function Navbar() {
       </div>
 
       {mobileMenuOpen && (
-        <div
+          <div
           className={`fixed inset-x-0 top-20 z-[90] border-t px-4 py-4 xl:hidden max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain ${
             isLight
               ? "border-cyan-200/80 bg-[linear-gradient(160deg,rgba(244,250,255,0.96),rgba(226,240,255,0.94))]"

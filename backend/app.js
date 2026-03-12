@@ -19,7 +19,6 @@ import { requireAuth, requireRole } from "./middlewares/authMiddleware.js";
 
 const app = express();
 app.set("trust proxy", 1);
-const deploymentBaseAliases = ["/MarsAi", "/MarsAiFestival", "/backend"];
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:5173")
   .split(",")
@@ -45,7 +44,7 @@ app.use(
       callback(null, isOriginAllowed(origin || ""));
     },
     credentials: true,
-    methods: ["GET", "POST", "PATCH"],
+    methods: ["GET", "POST", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   }),
 );
@@ -64,72 +63,56 @@ const verifyOrigin = (req, res, next) => {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+const rewritePathPrefix = (path, from, to) => {
+  if (path === from || path.startsWith(`${from}/`)) {
+    return `${to}${path.slice(from.length)}`;
+  }
+  return path;
+};
+
+const legacyRewriteRules = [
+  ["/MarsAi/uploads", "/uploads"],
+  ["/MarsAi/api", "/api"],
+];
+
+const adminGuard = [requireAuth, requireRole(["admin", "superadmin"])];
+
+const apiRouter = express.Router();
+apiRouter.use(publicRoutes);
+apiRouter.use("/movies", movieRoutes);
+apiRouter.use("/altcha", altchaRoutes);
+apiRouter.use("/upload", verifyOrigin, uploadRoutes);
+apiRouter.use("/auth", authRoutes);
+apiRouter.use("/stats", statsRoutes);
+apiRouter.use("/chatbot", chatbotRoutes);
+apiRouter.use("/dashboard", ...adminGuard, dashboardRoutes);
+apiRouter.use("/assignments", ...adminGuard, assignmentRoutes);
+apiRouter.use("/export", ...adminGuard, exportCSVRoutes);
+apiRouter.use("/ratings", ...adminGuard, ratingRoutes);
+apiRouter.use("/site-phase", sitePhaseRoutes);
+
+// Legacy URL aliases rewritten internally to keep existing clients working.
+app.use((req, res, next) => {
+  const rawUrl = String(req.url || "");
+  const queryIndex = rawUrl.indexOf("?");
+  let path = queryIndex >= 0 ? rawUrl.slice(0, queryIndex) : rawUrl;
+  const query = queryIndex >= 0 ? rawUrl.slice(queryIndex) : "";
+
+  for (const [from, to] of legacyRewriteRules) {
+    const rewritten = rewritePathPrefix(path, from, to);
+    if (rewritten !== path) {
+      path = rewritten;
+      break;
+    }
+  }
+
+  req.url = `${path}${query}`;
+  next();
+});
+
 app.use("/uploads", express.static("uploads"));
-deploymentBaseAliases.forEach((basePath) => {
-  app.use(`${basePath}/uploads`, express.static("uploads"));
-});
-
-app.get("/api/health", (req, res) => {
-  res.status(200).json({ ok: true, service: "marsai-api" });
-});
-deploymentBaseAliases.forEach((basePath) => {
-  app.get(`${basePath}/api/health`, (req, res) => {
-    res.status(200).json({ ok: true, service: "marsai-api" });
-  });
-});
-
-app.use(publicRoutes);
-app.use("/api", publicRoutes);
-app.use("/api/mail", publicRoutes);
-app.use("/api/movies", movieRoutes);
-app.use("/api/movie", movieRoutes);
-app.use("/api/altcha", altchaRoutes);
-app.use("/api/upload", verifyOrigin, uploadRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/stats", statsRoutes);
-app.use("/api/chatbot", chatbotRoutes);
-app.use("/api/dashboard", requireAuth, requireRole(["admin", "superadmin"]), dashboardRoutes);
-app.use("/api/assignments", requireAuth, requireRole(["admin", "superadmin"]), assignmentRoutes);
-app.use("/api/export", requireAuth, requireRole(["admin", "superadmin"]), exportCSVRoutes);
-app.use("/api/ratings", requireAuth, requireRole(["admin", "superadmin"]), ratingRoutes);
-app.use("/api/site-phase", sitePhaseRoutes);
-deploymentBaseAliases.forEach((basePath) => {
-  app.use(basePath, publicRoutes);
-  app.use(`${basePath}/api`, publicRoutes);
-  app.use(`${basePath}/api/mail`, publicRoutes);
-  app.use(`${basePath}/api/movies`, movieRoutes);
-  app.use(`${basePath}/api/movie`, movieRoutes);
-  app.use(`${basePath}/api/altcha`, altchaRoutes);
-  app.use(`${basePath}/api/upload`, verifyOrigin, uploadRoutes);
-  app.use(`${basePath}/api/auth`, authRoutes);
-  app.use(`${basePath}/api/stats`, statsRoutes);
-  app.use(`${basePath}/api/chatbot`, chatbotRoutes);
-  app.use(
-    `${basePath}/api/dashboard`,
-    requireAuth,
-    requireRole(["admin", "superadmin"]),
-    dashboardRoutes,
-  );
-  app.use(
-    `${basePath}/api/assignments`,
-    requireAuth,
-    requireRole(["admin", "superadmin"]),
-    assignmentRoutes,
-  );
-  app.use(
-    `${basePath}/api/ratings`,
-    requireAuth,
-    requireRole(["admin", "superadmin"]),
-    ratingRoutes,
-  );
-  app.use(
-    `${basePath}/api/export`,
-    requireAuth,
-    requireRole(["admin", "superadmin"]),
-    exportCSVRoutes,
-  );
-  app.use(`${basePath}/api/site-phase`, sitePhaseRoutes);
-});
+app.use("/api", apiRouter);
 
 app.get("/", (req, res) => {
   res.send("Serveur MarsAI operationnel");

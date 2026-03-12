@@ -12,8 +12,32 @@ import {
     fetchYoutubeUploadStatus,
     postYoutubeUpload,
 } from '../services/uploadApiService';
-import { buildApiPath, withDeploymentBase } from "../utils/deploymentPath";
 import 'altcha';
+
+function normalizeBasePath(value = '') {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const withLeadingSlash = raw.startsWith('/') ? raw : `/${raw}`;
+    return withLeadingSlash.replace(/\/+$/, '');
+}
+
+function buildApiPath(path) {
+    const safePath = path.startsWith('/') ? path : `/${path}`;
+    const configuredBasePath = normalizeBasePath(import.meta.env.VITE_API_BASE_PATH || '');
+
+    if (configuredBasePath) {
+        return `${configuredBasePath}${safePath}`;
+    }
+
+    if (typeof window !== 'undefined') {
+        const pathname = String(window.location?.pathname || '').toLowerCase();
+        if (pathname === '/marsai' || pathname.startsWith('/marsai/')) {
+            return `/MarsAi${safePath}`;
+        }
+    }
+
+    return safePath;
+}
 
 const YOUTUBE_STATUS_POLL_INTERVAL_MS = 15000;
 const YOUTUBE_STATUS_MAX_POLLS = 20;
@@ -186,7 +210,17 @@ function buildFlagAssetPath(path) {
     const raw = String(path || '').trim();
     if (!raw) return '';
     if (/^https?:\/\//i.test(raw)) return raw;
-    return withDeploymentBase(raw);
+    if (/^\/MarsAi\//i.test(raw)) return raw;
+
+    const normalizedPath = raw.startsWith('/') ? raw : `/${raw}`;
+    if (typeof window !== 'undefined') {
+        const pathname = String(window.location?.pathname || '').toLowerCase();
+        if (pathname === '/marsai' || pathname.startsWith('/marsai/')) {
+            return `/MarsAi${normalizedPath}`;
+        }
+    }
+
+    return normalizedPath;
 }
 
 function isTerminalYoutubeStatus(status) {

@@ -1,8 +1,8 @@
 import { spawn } from 'child_process';
-import ffmpegPath from 'ffmpeg-static';
 import { promises as fs } from 'fs';
 import { existsSync } from 'fs';
 import path from 'path';
+import { resolveFfmpegCommand } from './mediaBinaryResolver.js';
 
 
 export function cleanMetadata(filePath, timeout = 30_000) {
@@ -29,7 +29,8 @@ export function cleanMetadata(filePath, timeout = 30_000) {
       cleanedPath
     ];
 
-    const ffmpeg = spawn(ffmpegPath, args);
+    const ffmpegCommand = resolveFfmpegCommand();
+    const ffmpeg = spawn(ffmpegCommand, args);
 
     let stderr = '';
 
@@ -65,7 +66,7 @@ export function cleanMetadata(filePath, timeout = 30_000) {
       clearTimeout(timeoutId);
 
       if (error.code === 'ENOENT') {
-        reject(new Error('ffmpeg introuvable. Installez ffmpeg-static.'));
+        reject(new Error('ffmpeg introuvable. Configurez FFMPEG_PATH ou installez ffmpeg sur le systeme.'));
       } else {
         reject(error);
       }

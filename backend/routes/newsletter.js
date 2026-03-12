@@ -1,7 +1,8 @@
-const express = require("express");
+import express from "express";
+
 const router = express.Router();
-const newsletterController = require("../controllers/newsletter");
 
-router.post("/subscribe", newsletterController.subscribe);
+// Deprecated file intentionally kept empty.
+// Canonical endpoint: POST /api/subscribe-newsletter (routes/public.js).
 
-module.exports = router;
+export default router;

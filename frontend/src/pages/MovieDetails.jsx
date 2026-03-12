@@ -6,7 +6,6 @@ import { MovieSchema, BreadcrumbSchema } from "../components/Schema";
 import MascotCameraPlayer from "../components/MascotCameraPlayer";
 import SocialIcon from "../components/ui/SocialIcon";
 import { useTheme } from "../context/ThemeContext";
-import { buildApiPath, withDeploymentBase } from "../utils/deploymentPath";
 import {
   getLocalizedMoviePath,
   getLocalizedPath,
@@ -78,7 +77,17 @@ function toFlagAssetPath(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
   if (/^https?:\/\//i.test(raw)) return raw;
-  return withDeploymentBase(raw);
+  if (/^\/MarsAi\//i.test(raw)) return raw;
+
+  const withLeadingSlash = raw.startsWith("/") ? raw : `/${raw}`;
+  if (typeof window !== "undefined") {
+    const pathname = String(window.location?.pathname || "").toLowerCase();
+    if (pathname === "/marsai" || pathname.startsWith("/marsai/")) {
+      return `/MarsAi${withLeadingSlash}`;
+    }
+  }
+
+  return withLeadingSlash;
 }
 
 function toNonEmptyString(...values) {
@@ -180,7 +189,7 @@ function toDirectPreviewVideoUrl(...values) {
     if (!raw) continue;
     if (/^https?:\/\/s3\.[^/]+\.scw\.cloud\/.+/i.test(raw)) return raw;
     if (/^https?:\/\/[^?#]+\.(mp4)(?:[?#].*)?$/i.test(raw)) return raw;
-    if (/^\/(?:(?:MarsAi|MarsAiFestival)\/)?uploads\/videos\/[^?#]+\.(mp4)(?:[?#].*)?$/i.test(raw)) return raw;
+    if (/^\/(?:MarsAi\/)?uploads\/videos\/[^?#]+\.(mp4)(?:[?#].*)?$/i.test(raw)) return raw;
   }
   return "";
 }
@@ -198,7 +207,13 @@ function buildMovieDownloadPath(movieId) {
   if (!Number.isFinite(Number(movieId)) || Number(movieId) <= 0) {
     return "";
   }
-  return buildApiPath(`/api/movies/${movieId}/download`);
+  if (typeof window !== "undefined") {
+    const pathname = String(window.location?.pathname || "").toLowerCase();
+    if (pathname === "/marsai" || pathname.startsWith("/marsai/")) {
+      return `/MarsAi/api/movies/${movieId}/download`;
+    }
+  }
+  return `/api/movies/${movieId}/download`;
 }
 
 function getSocialEntries(movie) {
