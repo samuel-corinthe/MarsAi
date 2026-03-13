@@ -95,6 +95,10 @@ export async function subscribeNewsletter(req, res) {
     });
   } catch (error) {
     console.error("Erreur generale:", error);
-    return res.status(500).json({ status: "error", message: "Erreur serveur" });
+    return res.status(500).json({
+      status: "error",
+      message: "Erreur serveur",
+      details: process.env.NODE_ENV === "production" ? undefined : error?.message,
+    });
   }
 }

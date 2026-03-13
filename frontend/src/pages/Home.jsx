@@ -8,6 +8,7 @@ import { getRecentAgendaEvents, getSitePhaseState } from "../api";
 import PhaseCountdownBanner from "../components/phases/PhaseCountdownBanner";
 import { useTheme } from "../context/ThemeContext";
 import { getLocalizedPath, normalizeLanguage } from "../utils/localizedRoutes";
+import { resolvePublicAssetPath } from "../utils/assetUrl";
 
 export default function Home({ page }) {
   const { i18n, t } = useTranslation();
@@ -20,8 +21,8 @@ export default function Home({ page }) {
     `${import.meta.env.BASE_URL}models/walking_robot_mr.glb`;
   const modelPoster = import.meta.env.VITE_HOME_MODEL_POSTER_URL || "";
   const modelFallbackSrc = isLight
-    ? "/images/robot_light.png"
-    : "/images/robot_night.png";
+    ? resolvePublicAssetPath("/images/robot_light.png")
+    : resolvePublicAssetPath("/images/robot.png");
   const currentLanguage = normalizeLanguage(i18n.language);
   const isArabic = currentLanguage === "ar";
   const submitFilmPath = getLocalizedPath("submitFilm", i18n.language);

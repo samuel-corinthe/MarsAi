@@ -6,6 +6,16 @@ const SESSION_COOKIE_NAME = process.env.SESSION_COOKIE_NAME || "marsai_sid";
 const SESSION_TTL_SECONDS = Number(process.env.SESSION_TTL_SECONDS || 60 * 60 * 8);
 const WP_BASE_URL = (process.env.WP_BASE_URL || "").replace(/\/+$/, "");
 const IS_PROD = process.env.NODE_ENV === "production";
+const RAW_SESSION_COOKIE_SAMESITE = String(process.env.SESSION_COOKIE_SAMESITE || "").trim().toLowerCase();
+const SESSION_COOKIE_SAMESITE = ["lax", "strict", "none"].includes(RAW_SESSION_COOKIE_SAMESITE)
+  ? RAW_SESSION_COOKIE_SAMESITE
+  : (IS_PROD ? "none" : "lax");
+const SESSION_COOKIE_SECURE = (() => {
+  const raw = String(process.env.SESSION_COOKIE_SECURE || "").trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(raw)) return true;
+  if (["0", "false", "no", "off"].includes(raw)) return false;
+  return IS_PROD;
+})();
 const SESSION_SECRET =
   process.env.SESSION_SECRET ||
   process.env.JWT_SECRET ||
@@ -866,8 +876,8 @@ function setSessionCookie(res, payload) {
 
   res.cookie(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
-    sameSite: "lax",
-    secure: IS_PROD,
+    sameSite: SESSION_COOKIE_SAMESITE,
+    secure: SESSION_COOKIE_SECURE,
     maxAge: SESSION_TTL_SECONDS * 1000,
     path: "/",
   });
@@ -876,8 +886,8 @@ function setSessionCookie(res, payload) {
 function clearSessionCookie(res) {
   res.clearCookie(SESSION_COOKIE_NAME, {
     httpOnly: true,
-    sameSite: "lax",
-    secure: IS_PROD,
+    sameSite: SESSION_COOKIE_SAMESITE,
+    secure: SESSION_COOKIE_SECURE,
     path: "/",
   });
 }

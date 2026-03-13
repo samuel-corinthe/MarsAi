@@ -7,6 +7,7 @@ import { getPageBySlug } from "../api";
 import PageLoader from "../components/ui/PageLoader";
 import { useTheme } from "../context/ThemeContext";
 import { getLocalizedPath, normalizeLanguage } from "../utils/localizedRoutes";
+import { resolvePublicAssetPath } from "../utils/assetUrl";
 
 function containsArabicText(value = "") {
   return /[\u0600-\u06FF]/.test(String(value || ""));
@@ -201,7 +202,7 @@ export default function About() {
 
             <aside className="space-y-4">
               <img
-                src="/images/marsai-illustration.png"
+                src={resolvePublicAssetPath("/images/marsai-illustration.png")}
                 alt="MarsAI"
                 className={`w-full rounded-[28px] border object-cover ${theme.imageBorder}`}
                 onError={(event) => {

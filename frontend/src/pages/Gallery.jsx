@@ -14,6 +14,7 @@ import {
   getLocalizedPath,
   normalizeLanguage,
 } from "../utils/localizedRoutes";
+import { resolvePublicAssetPath } from "../utils/assetUrl";
 import {
   getCurrentSessionUser,
   getMovies,
@@ -29,20 +30,7 @@ const TOP_CAROUSEL_PREVIEW_SECONDS = 5;
 const TOP_CAROUSEL_ROTATION_MS = 5200;
 
 function toFlagAssetPath(value) {
-  const raw = String(value || "").trim();
-  if (!raw) return "";
-  if (/^https?:\/\//i.test(raw)) return raw;
-  if (/^\/MarsAi\//i.test(raw)) return raw;
-
-  const withLeadingSlash = raw.startsWith("/") ? raw : `/${raw}`;
-  if (typeof window !== "undefined") {
-    const pathname = String(window.location?.pathname || "").toLowerCase();
-    if (pathname === "/marsai" || pathname.startsWith("/marsai/")) {
-      return `/MarsAi${withLeadingSlash}`;
-    }
-  }
-
-  return withLeadingSlash;
+  return resolvePublicAssetPath(value);
 }
 
 function toDirectPreviewVideoUrl(...values) {

@@ -156,14 +156,23 @@ async function sendWithBrevoApi({
 }
 
 export async function validateEmailAddress(email) {
-  return validate({
-    email,
-    validateRegex: true,
-    validateMX: true,
-    validateTypo: false,
-    validateDisposable: true,
-    validateSMTP: false,
-  });
+  try {
+    return await validate({
+      email,
+      validateRegex: true,
+      validateMX: true,
+      validateTypo: false,
+      validateDisposable: true,
+      validateSMTP: false,
+    });
+  } catch (error) {
+    const fallbackValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
+    return {
+      valid: fallbackValid,
+      reason: "validator_unavailable",
+      details: String(error?.message || "deep-email-validator failed"),
+    };
+  }
 }
 
 function resolveMailLanguage(lang = "fr") {
@@ -197,27 +206,33 @@ export async function sendContactMail({
   };
 
   const { subject: mailSubject, text } = templates[normalized] || templates.fr;
+  const senderCandidates = getSenderCandidates();
 
   if (hasBrevoApiKey()) {
-    await sendWithBrevoApi({
-      senderName: name,
-      toEmail: senderAddress,
-      replyToEmail: email,
-      subject: mailSubject,
-      textContent: text,
-    });
-    return;
+    try {
+      await sendWithBrevoApi({
+        senderName: name,
+        toEmail: senderAddress,
+        replyToEmail: email,
+        subject: mailSubject,
+        textContent: text,
+      });
+      return;
+    } catch (error) {
+      if (!hasSmtpCredentials()) throw error;
+    }
   }
 
-  const mailOptions = {
-    from: `"${name}" <${senderAddress}>`,
-    replyTo: email,
-    to: senderAddress,
+  await sendWithSmtpCandidates({
+    senderName: name,
+    senderCandidates: senderCandidates.length
+      ? senderCandidates
+      : [String(senderAddress || "").trim()],
+    toEmail: senderAddress,
+    replyToEmail: email,
     subject: mailSubject,
-    text,
-  };
-
-  await createSmtpTransporter().sendMail(mailOptions);
+    textContent: text,
+  });
 }
 export async function sendUploadSuccessMail({
   toEmail,
@@ -360,6 +375,7 @@ export async function sendNewsletterWelcomeMail({
   const senderAddress = getSenderAddress();
   const normalized = resolveMailLanguage(lang);
   const prefs = safePreferences.join(", ");
+  const senderCandidates = getSenderCandidates();
 
   const templates = {
     fr: {
@@ -381,22 +397,28 @@ export async function sendNewsletterWelcomeMail({
   const { subject, text, html } = templates[normalized] || templates.fr;
 
   if (hasBrevoApiKey()) {
-    await sendWithBrevoApi({
-      senderName: "marsAI Festival",
-      toEmail: email,
-      subject,
-      textContent: text,
-      htmlContent: html,
-    });
-    return;
+    try {
+      await sendWithBrevoApi({
+        senderName: "marsAI Festival",
+        toEmail: email,
+        subject,
+        textContent: text,
+        htmlContent: html,
+      });
+      return;
+    } catch (error) {
+      if (!hasSmtpCredentials()) throw error;
+    }
   }
 
-  const mailOptions = {
-    from: `"marsAI Festival" <${senderAddress}>`,
-    to: email,
+  await sendWithSmtpCandidates({
+    senderName: "marsAI Festival",
+    senderCandidates: senderCandidates.length
+      ? senderCandidates
+      : [String(senderAddress || "").trim()],
+    toEmail: email,
     subject,
-    html,
-  };
-
-  await createSmtpTransporter().sendMail(mailOptions);
+    textContent: text,
+    htmlContent: html,
+  });
 }

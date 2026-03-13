@@ -11,6 +11,7 @@ import {
   getLocalizedPath,
   normalizeLanguage,
 } from "../utils/localizedRoutes";
+import { resolvePublicAssetPath } from "../utils/assetUrl";
 import {
   deleteMyMovieRating,
   getCurrentSessionUser,
@@ -19,6 +20,7 @@ import {
   getSitePhaseState,
   upsertMyMovieRating,
 } from "../api";
+import { resolveApiRequestUrl } from "../utils/apiUrl";
 
 const SOCIAL_LINK_ORDER = [
   { key: "instagram", label: "Instagram" },
@@ -74,20 +76,7 @@ function toExternalUrl(value) {
 }
 
 function toFlagAssetPath(value) {
-  const raw = String(value || "").trim();
-  if (!raw) return "";
-  if (/^https?:\/\//i.test(raw)) return raw;
-  if (/^\/MarsAi\//i.test(raw)) return raw;
-
-  const withLeadingSlash = raw.startsWith("/") ? raw : `/${raw}`;
-  if (typeof window !== "undefined") {
-    const pathname = String(window.location?.pathname || "").toLowerCase();
-    if (pathname === "/marsai" || pathname.startsWith("/marsai/")) {
-      return `/MarsAi${withLeadingSlash}`;
-    }
-  }
-
-  return withLeadingSlash;
+  return resolvePublicAssetPath(value);
 }
 
 function toNonEmptyString(...values) {
@@ -207,13 +196,7 @@ function buildMovieDownloadPath(movieId) {
   if (!Number.isFinite(Number(movieId)) || Number(movieId) <= 0) {
     return "";
   }
-  if (typeof window !== "undefined") {
-    const pathname = String(window.location?.pathname || "").toLowerCase();
-    if (pathname === "/marsai" || pathname.startsWith("/marsai/")) {
-      return `/MarsAi/api/movies/${movieId}/download`;
-    }
-  }
-  return `/api/movies/${movieId}/download`;
+  return resolveApiRequestUrl(`/api/movies/${movieId}/download`);
 }
 
 function getSocialEntries(movie) {

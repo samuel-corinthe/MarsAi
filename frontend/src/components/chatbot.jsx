@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../context/ThemeContext";
+import { resolveApiRequestUrl } from "../utils/apiUrl";
 
 const UI_COPY = {
   fr: {
@@ -314,7 +315,7 @@ export default function FaqChatbot() {
     ]);
 
     try {
-      const response = await fetch("/api/chatbot/ask", {
+      const response = await fetch(resolveApiRequestUrl("/api/chatbot/ask"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: candidate, language }),

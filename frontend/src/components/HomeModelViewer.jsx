@@ -1,8 +1,11 @@
 import { useState } from "react";
 import useHomeModelViewerController from "../controllers/useHomeModelViewerController";
+import { resolvePublicAssetPath } from "../utils/assetUrl";
+
+const DEFAULT_ROBOT_IMAGE = resolvePublicAssetPath("/images/robot.png");
 
 function SafeFallbackImage({ src, alt }) {
-  const [resolvedSrc, setResolvedSrc] = useState(src || "/images/robot.png");
+  const [resolvedSrc, setResolvedSrc] = useState(src || DEFAULT_ROBOT_IMAGE);
 
   return (
     <img
@@ -11,8 +14,8 @@ function SafeFallbackImage({ src, alt }) {
       loading="lazy"
       decoding="async"
       onError={() => {
-        if (resolvedSrc !== "/images/robot.png") {
-          setResolvedSrc("/images/robot.png");
+        if (resolvedSrc !== DEFAULT_ROBOT_IMAGE) {
+          setResolvedSrc(DEFAULT_ROBOT_IMAGE);
         }
       }}
       className="h-full w-full rounded-2xl border border-cyan-300/30 object-cover shadow-[0_20px_80px_rgba(0,0,0,0.45)]"
@@ -23,7 +26,7 @@ function SafeFallbackImage({ src, alt }) {
 export default function HomeModelViewer({
   src,
   poster,
-  fallbackSrc = "/images/robot.png",
+  fallbackSrc = DEFAULT_ROBOT_IMAGE,
   className = "",
   alt = "Objet 3D",
   only = "all",
@@ -36,7 +39,7 @@ export default function HomeModelViewer({
     canAutoRotate,
     interactionPrompt,
   } = useHomeModelViewerController({ src, only });
-  const primaryFallbackSrc = fallbackSrc || "/images/robot.png";
+  const primaryFallbackSrc = fallbackSrc || DEFAULT_ROBOT_IMAGE;
 
   if (!src && !fallbackSrc) return null;
   if (!shouldRender) return null;

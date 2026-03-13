@@ -1,3 +1,5 @@
+﻿import { resolveApiRequestUrl } from "./utils/apiUrl";
+
 const WP_V2 = "/wp-json/wp/v2";
 const WORDPRESS_BASE_URL = "https://samuel-corinthe.students-laplateforme.io/MarsAi";
 const WORDPRESS_V2_URL = `${WORDPRESS_BASE_URL}${WP_V2}`;
@@ -60,18 +62,18 @@ export function buildDeploymentAwareApiPath(path = "/") {
   const rawPath = String(path || "").trim() || "/";
   const normalizedPath = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
 
-  if (/^\/MarsAi\//i.test(normalizedPath)) {
-    return normalizedPath;
+  return resolveApiRequestUrl(normalizedPath);
+}
+
+function withDefaultCredentials(options = {}) {
+  if (Object.prototype.hasOwnProperty.call(options, "credentials")) {
+    return options;
   }
+  return { ...options, credentials: "include" };
+}
 
-  if (typeof window === "undefined") return normalizedPath;
-
-  const pathname = String(window.location?.pathname || "").toLowerCase();
-  if (pathname === "/marsai" || pathname.startsWith("/marsai/")) {
-    return `/MarsAi${normalizedPath}`;
-  }
-
-  return normalizedPath;
+function fetchBackend(path, options = {}) {
+  return fetch(resolveApiRequestUrl(path), withDefaultCredentials(options));
 }
 
 function isObject(value) {
@@ -120,7 +122,7 @@ async function fetchWith404Fallback(
 
   for (const url of candidates) {
     try {
-      const res = await fetch(url, options);
+      const res = await fetch(resolveApiRequestUrl(url), withDefaultCredentials(options));
       const contentType = String(res.headers.get("content-type") || "").toLowerCase();
       const rawBody = await res.text();
       let payload = {};
@@ -182,7 +184,7 @@ async function fetchSameOriginWithFallback(
 
   for (const url of candidates) {
     try {
-      const res = await fetch(url, options);
+      const res = await fetch(resolveApiRequestUrl(url), withDefaultCredentials(options));
       const rawBody = await res.text();
       let payload = {};
 
@@ -585,7 +587,7 @@ export async function loginWithWordPress({ email, username, password }) {
   clearRequestCache(currentSessionCache);
   let res;
   try {
-    res = await fetch("/api/auth/wordpress/login", {
+    res = await fetchBackend("/api/auth/wordpress/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -623,7 +625,7 @@ export async function loginWithWordPress({ email, username, password }) {
 
 export async function getCurrentSessionUser({ signal } = {}) {
   const loadSession = async () => {
-    const res = await fetch("/api/auth/me", {
+    const res = await fetchBackend("/api/auth/me", {
       signal,
       credentials: "include",
       cache: "no-store",
@@ -646,7 +648,7 @@ export async function getCurrentSessionUser({ signal } = {}) {
 
 export async function logoutSession() {
   clearRequestCache(currentSessionCache);
-  const res = await fetch("/api/auth/logout", {
+  const res = await fetchBackend("/api/auth/logout", {
     method: "POST",
     credentials: "include",
   });
@@ -676,7 +678,7 @@ export async function updateCurrentSessionProfile({
   if (typeof bio === "string") body.bio = bio;
   if (typeof nickname === "string") body.nickname = nickname;
 
-  const res = await fetch("/api/auth/me/profile", {
+  const res = await fetchBackend("/api/auth/me/profile", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -708,7 +710,7 @@ export async function updateCurrentSessionProfile({
 }
 
 export async function getAdminDashboardData({ signal } = {}) {
-  const res = await fetch("/api/dashboard", {
+  const res = await fetchBackend("/api/dashboard", {
     signal,
     cache: "no-store",
     credentials: "include",
@@ -904,7 +906,7 @@ export async function validatePhase3Selection() {
 }
 
 export async function getMyAssignments() {
-  const res = await fetch("/api/assignments/my", {
+  const res = await fetchBackend("/api/assignments/my", {
     credentials: "include",
     cache: "no-store",
   });
@@ -917,7 +919,7 @@ export async function getMyAssignments() {
 }
 
 export async function claimMovieAssignment(movieId) {
-  const res = await fetch("/api/assignments/claim", {
+  const res = await fetchBackend("/api/assignments/claim", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -932,7 +934,7 @@ export async function claimMovieAssignment(movieId) {
 }
 
 export async function releaseMovieAssignment(movieId) {
-  const res = await fetch("/api/assignments/release", {
+  const res = await fetchBackend("/api/assignments/release", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -947,7 +949,7 @@ export async function releaseMovieAssignment(movieId) {
 }
 
 export async function autoAssignMovieReviews() {
-  const res = await fetch("/api/assignments/auto-assign", {
+  const res = await fetchBackend("/api/assignments/auto-assign", {
     method: "POST",
     credentials: "include",
   });
@@ -960,7 +962,7 @@ export async function autoAssignMovieReviews() {
 }
 
 export async function rebalanceMovieReviews() {
-  const res = await fetch("/api/assignments/rebalance", {
+  const res = await fetchBackend("/api/assignments/rebalance", {
     method: "POST",
     credentials: "include",
   });
@@ -973,7 +975,7 @@ export async function rebalanceMovieReviews() {
 }
 
 export async function getMyMovieRating(movieId) {
-  const res = await fetch(`/api/ratings/${movieId}/me`, {
+  const res = await fetchBackend(`/api/ratings/${movieId}/me`, {
     credentials: "include",
     cache: "no-store",
   });
@@ -986,7 +988,7 @@ export async function getMyMovieRating(movieId) {
 }
 
 export async function upsertMyMovieRating(movieId, score, comment = "") {
-  const res = await fetch(`/api/ratings/${movieId}/me`, {
+  const res = await fetchBackend(`/api/ratings/${movieId}/me`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -1001,7 +1003,7 @@ export async function upsertMyMovieRating(movieId, score, comment = "") {
 }
 
 export async function deleteMyMovieRating(movieId) {
-  const res = await fetch(`/api/ratings/${movieId}/me`, {
+  const res = await fetchBackend(`/api/ratings/${movieId}/me`, {
     method: "DELETE",
     credentials: "include",
   });
@@ -1012,3 +1014,4 @@ export async function deleteMyMovieRating(movieId) {
   }
   return payload;
 }
+

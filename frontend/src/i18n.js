@@ -11,9 +11,28 @@ function normalizeLanguageCode(value = "fr") {
   return "fr";
 }
 
+function normalizeBasePath(value = "/") {
+  const raw = String(value || "").trim();
+  if (!raw || raw === "/") return "/";
+  const prefixed = raw.startsWith("/") ? raw : `/${raw}`;
+  return prefixed.replace(/\/+$/, "");
+}
+
+function stripBasePath(pathname = "/") {
+  const normalizedPath = String(pathname || "/") || "/";
+  const basePath = normalizeBasePath(import.meta.env.BASE_URL || "/");
+
+  if (basePath === "/") return normalizedPath;
+  if (normalizedPath === basePath) return "/";
+  if (normalizedPath.startsWith(`${basePath}/`)) {
+    return normalizedPath.slice(basePath.length) || "/";
+  }
+  return normalizedPath;
+}
+
 function getLanguageFromPathname() {
   if (typeof window === "undefined") return null;
-  const pathname = String(window.location?.pathname || "").toLowerCase();
+  const pathname = stripBasePath(String(window.location?.pathname || "/")).toLowerCase();
   if (pathname === "/ar" || pathname.startsWith("/ar/")) return "ar";
   if (pathname === "/en" || pathname.startsWith("/en/")) return "en";
   return null;

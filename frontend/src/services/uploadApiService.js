@@ -1,28 +1,9 @@
 import axios from "axios";
-
-function normalizeBasePath(value = "") {
-  const raw = String(value || "").trim();
-  if (!raw) return "";
-  const withLeadingSlash = raw.startsWith("/") ? raw : `/${raw}`;
-  return withLeadingSlash.replace(/\/+$/, "");
-}
+import { resolveApiRequestUrl } from "../utils/apiUrl";
 
 function buildApiPath(path) {
   const safePath = path.startsWith("/") ? path : `/${path}`;
-  const configuredBasePath = normalizeBasePath(import.meta.env.VITE_API_BASE_PATH || "");
-
-  if (configuredBasePath) {
-    return `${configuredBasePath}${safePath}`;
-  }
-
-  if (typeof window !== "undefined") {
-    const pathname = String(window.location?.pathname || "").toLowerCase();
-    if (pathname === "/marsai" || pathname.startsWith("/marsai/")) {
-      return `/MarsAi${safePath}`;
-    }
-  }
-
-  return safePath;
+  return resolveApiRequestUrl(safePath);
 }
 
 export async function fetchAltchaChallenge() {

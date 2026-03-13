@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Seo from "../components/Seo";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import FilmRow from "../components/dashboard/FilmRow";
 import PageLoader from "../components/ui/PageLoader";
@@ -70,6 +70,7 @@ function extractMovieYear(movie) {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const translation = useTranslation();
   const i18n = translation?.i18n ?? { language: "fr" };
   const t =
@@ -539,7 +540,7 @@ export default function Dashboard() {
     setLogoutPending(true);
     try {
       await logoutSession();
-      window.location.assign("/dashboard");
+      navigate("/dashboard", { replace: true });
     } catch (error) {
       setLogoutError(error?.message || "Déconnexion impossible.");
       setLogoutPending(false);
@@ -1628,7 +1629,7 @@ export default function Dashboard() {
             Films
           </button>
 
-          <button onClick={() => (window.location.href = homePath)}>Home</button>
+          <button onClick={() => navigate(homePath)}>Home</button>
         </div>
 
         {isFilmFilterModalOpen && (
