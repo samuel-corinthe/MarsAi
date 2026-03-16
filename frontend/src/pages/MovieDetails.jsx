@@ -18,6 +18,7 @@ import {
   getMovieById,
   getMyMovieRating,
   getSitePhaseState,
+  updateMovieYoutubeUrl,
   upsertMyMovieRating,
 } from "../api";
 import { resolveApiRequestUrl } from "../utils/apiUrl";
@@ -127,13 +128,13 @@ function extractDurationMinutes(value) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-function toYoutubeEmbedUrl(value) {
+function extractYoutubeVideoId(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
 
   const directIdMatch = raw.match(/^[a-zA-Z0-9_-]{11}$/);
   if (directIdMatch) {
-    return `https://www.youtube.com/embed/${directIdMatch[0]}`;
+    return directIdMatch[0];
   }
 
   try {
@@ -142,14 +143,18 @@ function toYoutubeEmbedUrl(value) {
     const pathname = String(url.pathname || "");
 
     if (host.includes("youtu.be")) {
-      const id = pathname.replace(/^\/+/, "").split("/")[0];
-      if (id) return `https://www.youtube.com/embed/${id}`;
+      return pathname.replace(/^\/+/, "").split("/")[0] || "";
     }
 
-    if (host.includes("youtube.com")) {
-      if (pathname.startsWith("/embed/")) return raw;
-      const v = url.searchParams.get("v");
-      if (v) return `https://www.youtube.com/embed/${v}`;
+    if (host.includes("youtube.com") || host.includes("youtube-nocookie.com")) {
+      if (pathname.startsWith("/watch")) {
+        return String(url.searchParams.get("v") || "").trim();
+      }
+
+      const pathParts = pathname.split("/").filter(Boolean);
+      if (pathParts[0] === "embed" || pathParts[0] === "shorts") {
+        return pathParts[1] || "";
+      }
     }
   } catch {
     return "";
@@ -158,23 +163,20 @@ function toYoutubeEmbedUrl(value) {
   return "";
 }
 
+function normalizeYoutubeUrlInput(value) {
+  const videoId = extractYoutubeVideoId(value);
+  if (!videoId) return "";
+  return `https://www.youtube.com/watch?v=${videoId}`;
+}
+
+function toYoutubeEmbedUrl(value) {
+  const videoId = extractYoutubeVideoId(value);
+  if (!videoId) return "";
+  return `https://www.youtube.com/embed/${videoId}`;
+}
+
 function toYouTubeWatchUrl(value) {
-  const raw = String(value || "").trim();
-  if (!raw) return null;
-
-  if (/youtube\.com\/watch/i.test(raw)) return raw;
-
-  const embedMatch = raw.match(/youtube\.com\/embed\/([^?&/]+)/i);
-  if (embedMatch) {
-    return `https://www.youtube.com/watch?v=${embedMatch[1]}`;
-  }
-
-  const shortMatch = raw.match(/youtu\.be\/([^?&/]+)/i);
-  if (shortMatch) {
-    return `https://www.youtube.com/watch?v=${shortMatch[1]}`;
-  }
-
-  return null;
+  return normalizeYoutubeUrlInput(value) || null;
 }
 
 function toDirectPreviewVideoUrl(...values) {
@@ -263,6 +265,10 @@ const MovieDetails = () => {
   const [ratingError, setRatingError] = useState("");
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
   const [activeSitePhase, setActiveSitePhase] = useState("phase_1");
+  const [youtubeUrlDraft, setYoutubeUrlDraft] = useState("");
+  const [youtubeUrlSaving, setYoutubeUrlSaving] = useState(false);
+  const [youtubeUrlError, setYoutubeUrlError] = useState("");
+  const [youtubeUrlSuccess, setYoutubeUrlSuccess] = useState("");
   const heroVideoRef = useRef(null);
 
   const movieId = Number.parseInt(id, 10);
@@ -276,6 +282,12 @@ const MovieDetails = () => {
   useEffect(() => {
     setIsPlayerOpen(false);
   }, [movieId]);
+
+  useEffect(() => {
+    setYoutubeUrlDraft(String(movie?.youtubeUrl || "").trim());
+    setYoutubeUrlError("");
+    setYoutubeUrlSuccess("");
+  }, [movie?.id, movie?.youtubeUrl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -480,6 +492,46 @@ const MovieDetails = () => {
     }
   };
 
+  const handleSaveYoutubeUrl = async () => {
+    if (!isAdmin || !movie?.id) return;
+
+    const normalizedYoutubeUrl = normalizeYoutubeUrlInput(youtubeUrlDraft);
+    if (!normalizedYoutubeUrl) {
+      setYoutubeUrlError(
+        t(
+          "movie_details.admin_youtube_invalid",
+          "Collez un lien YouTube valide (watch, youtu.be, embed, shorts ou identifiant video).",
+        ),
+      );
+      setYoutubeUrlSuccess("");
+      return;
+    }
+
+    setYoutubeUrlSaving(true);
+    setYoutubeUrlError("");
+    setYoutubeUrlSuccess("");
+
+    try {
+      const payload = await updateMovieYoutubeUrl(movie.id, normalizedYoutubeUrl);
+      const savedYoutubeUrl = String(payload?.youtubeUrl || normalizedYoutubeUrl).trim();
+
+      setMovie((prev) => (prev ? { ...prev, youtubeUrl: savedYoutubeUrl } : prev));
+      setYoutubeUrlDraft(savedYoutubeUrl);
+      setYoutubeUrlSuccess(
+        payload?.updated === false
+          ? t("movie_details.admin_youtube_already_current", "Le lien YouTube est deja a jour.")
+          : t("movie_details.admin_youtube_saved", "Lien YouTube mis a jour pour ce film."),
+      );
+    } catch (error) {
+      setYoutubeUrlError(
+        error?.message
+          || t("movie_details.admin_youtube_save_error", "Impossible de mettre a jour le lien YouTube."),
+      );
+    } finally {
+      setYoutubeUrlSaving(false);
+    }
+  };
+
   const handleNativeShare = async () => {
     const url = toYouTubeWatchUrl(movie?.youtubeUrl) || (typeof window !== "undefined" ? window.location.href : "");
     const shareData = {
@@ -574,9 +626,10 @@ const MovieDetails = () => {
   const uploaderMailtoUrl = canContactUploader
     ? buildUploaderMailtoUrl({ email: uploaderEmail, movieTitle: movie.title, t })
     : "";
+  const currentYoutubeWatchUrl = toYouTubeWatchUrl(movie.youtubeUrl) || "";
   const youtubeEmbedUrl = toYoutubeEmbedUrl(movie.youtubeUrl);
   const shareUrl =
-    toYouTubeWatchUrl(movie.youtubeUrl)
+    currentYoutubeWatchUrl
     || (typeof window !== "undefined" ? window.location.href : "");
   const canWatchMovie = shouldUseYoutubePlayer
     ? Boolean(youtubeEmbedUrl)
@@ -622,17 +675,26 @@ const MovieDetails = () => {
       shareLabel: "text-slate-500",
       shareChip:
         "border-slate-300 bg-white/95 text-slate-700 hover:border-sky-400 hover:text-sky-700",
-      contactCard:
-        "mt-8 rounded-[32px] border border-sky-200 bg-gradient-to-br from-sky-50 via-white to-indigo-50 p-5 shadow-sm",
-      contactEyebrow: "text-sky-700",
-      contactTitle: "text-slate-900",
-      contactHint: "text-slate-600",
-      contactLink:
-        "group mt-4 flex items-center gap-3 rounded-2xl border border-sky-200 bg-white/95 px-4 py-3 transition hover:border-sky-400 hover:bg-white hover:shadow-lg",
-      contactIcon:
+      techExtrasWrap: "mt-8 border-t border-slate-200 pt-6 space-y-6",
+      techExtraEyebrow: "text-sky-700",
+      techExtraTitle: "text-slate-900",
+      techExtraHint: "text-slate-600",
+      techInfoLine: "rounded-2xl border border-slate-200 bg-slate-50/90 px-4 py-3",
+      techActionLink:
+        "group flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/90 px-4 py-3 transition hover:border-sky-400 hover:bg-white",
+      techActionIcon:
         "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-600 text-white shadow-lg shadow-sky-500/20",
-      contactAction: "text-sky-700",
-      contactValue: "text-slate-900",
+      techActionMeta: "text-sky-700",
+      techActionValue: "text-slate-900",
+      techInput:
+        "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-sky-400",
+      techPrimaryButton: "bg-sky-600 text-white hover:bg-sky-500",
+      techSecondaryButton:
+        "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50",
+      techGhostButton:
+        "border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700",
+      techSuccess: "text-emerald-700",
+      techError: "text-rose-700",
     }
     : {
       page: "bg-blue-950 text-white",
@@ -656,17 +718,26 @@ const MovieDetails = () => {
       shareLabel: "text-slate-400",
       shareChip:
         "border-white/20 bg-white/10 text-white hover:bg-white hover:text-blue-950",
-      contactCard:
-        "mt-8 rounded-[32px] border border-blue-900/10 bg-blue-950 p-5 shadow-xl shadow-blue-950/20",
-      contactEyebrow: "text-cyan-300",
-      contactTitle: "text-white",
-      contactHint: "text-slate-300",
-      contactLink:
-        "group mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-cyan-300 hover:bg-white/10",
-      contactIcon:
+      techExtrasWrap: "mt-8 border-t border-slate-200 pt-6 space-y-6",
+      techExtraEyebrow: "text-cyan-700",
+      techExtraTitle: "text-slate-900",
+      techExtraHint: "text-slate-600",
+      techInfoLine: "rounded-2xl border border-slate-200 bg-white px-4 py-3",
+      techActionLink:
+        "group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 transition hover:border-cyan-500 hover:bg-cyan-50/70",
+      techActionIcon:
         "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-cyan-400 text-blue-950 shadow-lg shadow-cyan-500/20",
-      contactAction: "text-cyan-300",
-      contactValue: "text-white",
+      techActionMeta: "text-cyan-700",
+      techActionValue: "text-slate-900",
+      techInput:
+        "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-500",
+      techPrimaryButton: "bg-cyan-500 text-blue-950 hover:bg-cyan-400",
+      techSecondaryButton:
+        "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-100",
+      techGhostButton:
+        "border-slate-300 bg-white text-slate-700 hover:border-cyan-500 hover:text-cyan-700",
+      techSuccess: "text-emerald-700",
+      techError: "text-rose-700",
     };
 
   return (
@@ -957,7 +1028,7 @@ const MovieDetails = () => {
                             alt={person.name || t("movie_details.casting")}
                           />
                           <div>
-                            <p className="font-black text-blue-900 leading-tight uppercase tracking-tighter">
+                            <p className="font-black text-blue-700 leading-tight uppercase tracking-tighter">
                               {person.name || t("movie_details.unknown_person")}
                             </p>
                             <p className="text-sm text-slate-400 font-bold uppercase tracking-wider">
@@ -1038,54 +1109,167 @@ const MovieDetails = () => {
                     last
                   />
                 </div>
-                {canContactUploader && (
-                  <div className={theme.contactCard}>
-                    <p className={`text-[11px] font-black uppercase tracking-[0.22em] ${theme.contactEyebrow}`}>
-                      {t("movie_details.uploader_contact_eyebrow", "Contact upload")}
-                    </p>
-                    <h4 className={`mt-2 text-lg font-black uppercase tracking-tight ${theme.contactTitle}`}>
-                      {t("movie_details.uploader_contact_title", "Contacter l auteur du film")}
-                    </h4>
-                    <p className={`mt-2 text-sm leading-relaxed ${theme.contactHint}`}>
-                      {t(
-                        "movie_details.uploader_contact_hint",
-                        "Cette adresse provient du formulaire d upload et ouvre directement votre messagerie.",
-                      )}
-                    </p>
-                    <a
-                      href={uploaderMailtoUrl}
-                      className={theme.contactLink}
-                      aria-label={t("movie_details.uploader_contact_aria", {
-                        email: uploaderEmail,
-                        defaultValue: `Envoyer un email a ${uploaderEmail}`,
-                      })}
-                      title={uploaderEmail}
-                    >
-                      <span className={theme.contactIcon}>
-                        <SocialIcon network="email" className="h-5 w-5" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className={`block text-[11px] font-black uppercase tracking-[0.18em] ${theme.contactAction}`}>
-                          {t("movie_details.uploader_contact_cta", "Envoyer un email")}
-                        </span>
-                        <span className={`mt-1 block break-all text-sm font-semibold normal-case ${theme.contactValue}`}>
-                          {uploaderEmail}
-                        </span>
-                      </span>
-                      <svg
-                        className={`h-4 w-4 shrink-0 ${theme.contactAction}`}
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M5 12h14" />
-                        <path d="m12 5 7 7-7 7" />
-                      </svg>
-                    </a>
+                {(canContactUploader || (sessionChecked && isAdmin)) && (
+                  <div className={theme.techExtrasWrap}>
+                    {canContactUploader && (
+                      <div className="space-y-3">
+                        <p className={`text-[11px] font-black uppercase tracking-[0.22em] ${theme.techExtraEyebrow}`}>
+                          {t("movie_details.uploader_contact_eyebrow", "Contact upload")}
+                        </p>
+                        <h4 className={`text-base font-black uppercase tracking-tight ${theme.techExtraTitle}`}>
+                          {t("movie_details.uploader_contact_title", "Contacter l auteur du film")}
+                        </h4>
+                        <p className={`text-sm leading-relaxed ${theme.techExtraHint}`}>
+                          {t(
+                            "movie_details.uploader_contact_hint",
+                            "Cette adresse provient du formulaire d upload et ouvre directement votre messagerie.",
+                          )}
+                        </p>
+                        <a
+                          href={uploaderMailtoUrl}
+                          className={theme.techActionLink}
+                          aria-label={t("movie_details.uploader_contact_aria", {
+                            email: uploaderEmail,
+                            defaultValue: `Envoyer un email a ${uploaderEmail}`,
+                          })}
+                          title={uploaderEmail}
+                        >
+                          <span className={theme.techActionIcon}>
+                            <SocialIcon network="email" className="h-5 w-5" />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className={`block text-[11px] font-black uppercase tracking-[0.18em] ${theme.techActionMeta}`}>
+                              {t("movie_details.uploader_contact_cta", "Envoyer un email")}
+                            </span>
+                            <span className={`mt-1 block break-all text-sm font-semibold normal-case ${theme.techActionValue}`}>
+                              {uploaderEmail}
+                            </span>
+                          </span>
+                          <svg
+                            className={`h-4 w-4 shrink-0 ${theme.techActionMeta}`}
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M5 12h14" />
+                            <path d="m12 5 7 7-7 7" />
+                          </svg>
+                        </a>
+                      </div>
+                    )}
+
+                    {sessionChecked && isAdmin && (
+                      <div className="space-y-4">
+                        <div className="space-y-3">
+                          <p className={`text-[11px] font-black uppercase tracking-[0.22em] ${theme.techExtraEyebrow}`}>
+                            {t("movie_details.admin_youtube_eyebrow", "Lien public")}
+                          </p>
+                          <h4 className={`text-base font-black uppercase tracking-tight ${theme.techExtraTitle}`}>
+                            {t("movie_details.admin_youtube_title", "Modifier le lien YouTube")}
+                          </h4>
+                          <p className={`text-sm leading-relaxed ${theme.techExtraHint}`}>
+                            {t(
+                              "movie_details.admin_youtube_hint",
+                              "Ce lien pilote le lecteur YouTube en phase 2 et phase 3, ainsi que le partage de ce film.",
+                            )}
+                          </p>
+                        </div>
+
+                        <div className={theme.techInfoLine}>
+                          <p className={`text-[11px] font-black uppercase tracking-[0.18em] ${theme.techExtraHint}`}>
+                            {t("movie_details.admin_youtube_current", "Lien actuel")}
+                          </p>
+                          {currentYoutubeWatchUrl ? (
+                            <a
+                              href={currentYoutubeWatchUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`mt-2 block break-all text-sm font-semibold transition ${theme.techActionMeta}`}
+                            >
+                              {currentYoutubeWatchUrl}
+                            </a>
+                          ) : (
+                            <p className={`mt-2 text-sm ${theme.techExtraHint}`}>
+                              {t("movie_details.admin_youtube_empty", "Aucun lien YouTube n est enregistre pour ce film.")}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <label
+                            htmlFor="movie-youtube-url"
+                            className={`block text-[11px] font-black uppercase tracking-[0.18em] ${theme.techExtraHint}`}
+                          >
+                            {t("movie_details.admin_youtube_field", "Nouveau lien YouTube")}
+                          </label>
+                          <input
+                            id="movie-youtube-url"
+                            type="url"
+                            value={youtubeUrlDraft}
+                            onChange={(event) => {
+                              setYoutubeUrlDraft(event.target.value);
+                              if (youtubeUrlError) setYoutubeUrlError("");
+                              if (youtubeUrlSuccess) setYoutubeUrlSuccess("");
+                            }}
+                            placeholder="https://www.youtube.com/watch?v=..."
+                            className={theme.techInput}
+                          />
+                        </div>
+
+                        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                          <button
+                            type="button"
+                            onClick={handleSaveYoutubeUrl}
+                            disabled={youtubeUrlSaving}
+                            className={`inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-black uppercase tracking-[0.16em] transition disabled:opacity-60 ${theme.techPrimaryButton}`}
+                          >
+                            {youtubeUrlSaving
+                              ? t("movie_details.admin_youtube_saving", "Enregistrement...")
+                              : t("movie_details.admin_youtube_save", "Enregistrer le lien")}
+                          </button>
+
+                          {youtubeUrlDraft !== String(movie.youtubeUrl || "").trim() && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setYoutubeUrlDraft(String(movie.youtubeUrl || "").trim());
+                                setYoutubeUrlError("");
+                                setYoutubeUrlSuccess("");
+                              }}
+                              className={`inline-flex items-center justify-center rounded-2xl border px-5 py-3 text-sm font-black uppercase tracking-[0.16em] transition ${theme.techSecondaryButton}`}
+                            >
+                              {t("movie_details.admin_youtube_reset", "Reinitialiser")}
+                            </button>
+                          )}
+
+                          {currentYoutubeWatchUrl && (
+                            <a
+                              href={currentYoutubeWatchUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`inline-flex items-center justify-center rounded-2xl border px-5 py-3 text-sm font-black uppercase tracking-[0.16em] transition ${theme.techGhostButton}`}
+                            >
+                              {t("movie_details.admin_youtube_open", "Ouvrir le lien")}
+                            </a>
+                          )}
+                        </div>
+
+                        {youtubeUrlSuccess && (
+                          <p className={`text-sm font-semibold ${theme.techSuccess}`}>
+                            {youtubeUrlSuccess}
+                          </p>
+                        )}
+                        {youtubeUrlError && (
+                          <p className={`text-sm font-semibold ${theme.techError}`}>
+                            {youtubeUrlError}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1168,7 +1352,7 @@ const DetailRow = ({ label, value, isStar, last }) => (
     <span className="text-[11px] uppercase font-black text-slate-400 tracking-widest mb-1">
       {label}
     </span>
-    <span className="font-bold text-blue-900 uppercase flex items-center gap-2">
+    <span className="font-bold text-sky-700 uppercase flex items-center gap-2">
       {isStar && <span className="text-yellow-500 text-lg">&#9733;</span>}
       {value}
     </span>

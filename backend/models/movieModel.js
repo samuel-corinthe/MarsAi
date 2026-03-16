@@ -56,6 +56,20 @@ export async function findMovieById(pool, movieId) {
   return rows[0] || null;
 }
 
+export async function updateMovieYoutubeUrl(pool, movieId, youtubeUrl) {
+  const [result] = await pool.query(
+    `
+      UPDATE movies
+      SET youtube_url = ?
+      WHERE id = ?
+      LIMIT 1
+    `,
+    [youtubeUrl, movieId],
+  );
+
+  return Number(result?.affectedRows || 0);
+}
+
 export async function findCastByMovieId(pool, movieId) {
   const [rows] = await pool.query(
     `

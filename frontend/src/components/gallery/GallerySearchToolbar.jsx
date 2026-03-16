@@ -160,7 +160,7 @@ export default function GallerySearchToolbar({
           className={`mt-4 rounded-2xl border px-4 py-3 text-xs font-black uppercase tracking-wider ${
             isLight
               ? "border-cyan-200/80 bg-cyan-100/70 text-cyan-900"
-              : "border-blue-100 bg-blue-50 text-blue-900"
+              : "border-blue-100 bg-blue-50 text-blue-700"
           }`}
         >
           {canManagePhase2Selection

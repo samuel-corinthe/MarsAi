@@ -2,7 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
-import { getMovieDetails, listMovies, toMovieId } from "../services/movieService.js";
+import {
+  getMovieDetails,
+  listMovies,
+  toMovieId,
+  updateMovieYoutubeUrl,
+} from "../services/movieService.js";
 import { getPhase2SelectionStatus, getSitePhaseState } from "../services/sitePhaseService.js";
 import { getSessionFromRequest } from "../services/authService.js";
 import {
@@ -240,6 +245,31 @@ export async function getMovieById(req, res) {
     console.error("[MOVIES] details error:", error.message);
     return res.status(500).json({
       error: "Impossible de charger les details du film.",
+      details: error.message,
+    });
+  }
+}
+
+export async function patchMovieYoutubeUrl(req, res) {
+  const movieId = toMovieId(req.params.id);
+  if (!movieId) {
+    return res.status(400).json({ error: "movieId invalide." });
+  }
+
+  try {
+    const payload = await updateMovieYoutubeUrl({
+      movieId,
+      youtubeUrl: req.body?.youtubeUrl,
+    });
+
+    return res.json({ ok: true, ...payload });
+  } catch (error) {
+    if (error?.statusCode) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+    console.error("[MOVIES] patch youtube url error:", error.message);
+    return res.status(500).json({
+      error: "Impossible de mettre a jour le lien YouTube.",
       details: error.message,
     });
   }

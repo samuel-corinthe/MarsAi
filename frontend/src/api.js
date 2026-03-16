@@ -544,6 +544,22 @@ export async function getMovieById(movieId) {
   return null;
 }
 
+export async function updateMovieYoutubeUrl(movieId, youtubeUrl) {
+  const res = await fetchBackend(`/api/movies/${movieId}/youtube-url`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ youtubeUrl }),
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(payload?.details || payload?.error || `Movie API error ${res.status}`);
+  }
+
+  return payload;
+}
+
 export async function sendContactForm({
   name,
   email,

@@ -4,6 +4,7 @@ import {
   findMovieById,
   findCastByMovieId,
   findCastByMovieIds,
+  updateMovieYoutubeUrl as updateMovieYoutubeUrlInDb,
 } from "../models/movieModel.js";
 import {
   isObjectStorageConfigured,
@@ -28,6 +29,53 @@ function decodeHtmlEntities(value) {
 function normalizeEmailAddress(value) {
   const raw = String(value || "").trim().toLowerCase();
   return raw || "";
+}
+
+function extractYoutubeVideoId(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  const directIdMatch = raw.match(/^[a-zA-Z0-9_-]{11}$/);
+  if (directIdMatch) {
+    return directIdMatch[0];
+  }
+
+  try {
+    const url = new URL(raw);
+    const host = String(url.hostname || "").toLowerCase();
+    const pathname = String(url.pathname || "");
+
+    if (host.includes("youtu.be")) {
+      return pathname.replace(/^\/+/, "").split("/")[0] || "";
+    }
+
+    if (host.includes("youtube.com") || host.includes("youtube-nocookie.com")) {
+      if (pathname.startsWith("/watch")) {
+        return String(url.searchParams.get("v") || "").trim();
+      }
+
+      const pathParts = pathname.split("/").filter(Boolean);
+      if (pathParts[0] === "embed" || pathParts[0] === "shorts") {
+        return pathParts[1] || "";
+      }
+    }
+  } catch {
+    return "";
+  }
+
+  return "";
+}
+
+function normalizeYoutubeUrl(value) {
+  const videoId = extractYoutubeVideoId(value);
+  if (!videoId) return "";
+  return `https://www.youtube.com/watch?v=${videoId}`;
+}
+
+function createHttpError(statusCode, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
 }
 
 function toArray(value) {
@@ -361,4 +409,51 @@ export async function getMovieDetails({ movieId, includeSubmitterEmail = false }
 
   const castRows = await loadCastByMovieId(pool, movieId);
   return mapMovieRowWithCast(row, castRows, { includeSubmitterEmail });
+}
+
+export async function updateMovieYoutubeUrl({ movieId, youtubeUrl }) {
+  const safeMovieId = toMovieId(movieId);
+  if (!safeMovieId) {
+    throw createHttpError(400, "movieId invalide.");
+  }
+
+  const normalizedYoutubeUrl = normalizeYoutubeUrl(youtubeUrl);
+  if (!normalizedYoutubeUrl) {
+    throw createHttpError(
+      400,
+      "Lien YouTube invalide. Utilise un lien watch, youtu.be, embed, shorts ou directement l identifiant video.",
+    );
+  }
+
+  const pool = getDbPool();
+  const movie = await findMovieById(pool, safeMovieId);
+  if (!movie) {
+    throw createHttpError(404, "Film introuvable.");
+  }
+
+  const currentYoutubeUrl = String(movie.youtube_url || "").trim();
+  if (currentYoutubeUrl === normalizedYoutubeUrl) {
+    return {
+      movieId: safeMovieId,
+      title: decodeHtmlEntities(movie.title || "Sans titre"),
+      youtubeUrl: normalizedYoutubeUrl,
+      updated: false,
+    };
+  }
+
+  try {
+    await updateMovieYoutubeUrlInDb(pool, safeMovieId, normalizedYoutubeUrl);
+  } catch (error) {
+    if (error?.code === "ER_DUP_ENTRY") {
+      throw createHttpError(409, "Ce lien YouTube est deja utilise par un autre film.");
+    }
+    throw error;
+  }
+
+  return {
+    movieId: safeMovieId,
+    title: decodeHtmlEntities(movie.title || "Sans titre"),
+    youtubeUrl: normalizedYoutubeUrl,
+    updated: true,
+  };
 }
