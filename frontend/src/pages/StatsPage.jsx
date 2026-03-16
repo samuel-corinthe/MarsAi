@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import AdminUtilityBar from "../components/dashboard/AdminUtilityBar";
 import Seo from "../components/Seo";
 import PageLoader from "../components/ui/PageLoader";
 import { getPublicStats } from "../api";
@@ -501,13 +502,14 @@ export default function StatsPage({ dashboardMode = false }) {
                 {content.errorBody}
               </p>
               <p className="text-sm text-rose-300">{error || content.noData}</p>
-              <div className="flex flex-wrap gap-3">
+              <div className={dashboardMode ? "dash-header-actions" : "flex flex-wrap gap-3"}>
                 <Link
                   to={backPath}
                   className={dashboardMode ? "btn-ghost rounded-full px-4 py-2 border border-white/10" : "site-btn-secondary"}
                 >
                   {backLabel}
                 </Link>
+                {dashboardMode ? <AdminUtilityBar /> : null}
               </div>
             </div>
           </div>
@@ -556,7 +558,7 @@ export default function StatsPage({ dashboardMode = false }) {
       <main className={wrapperClass} dir={dir}>
         <div className={containerClass}>
           <header className={heroClass}>
-            <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className={dashboardMode ? "dash-header-main" : "flex flex-wrap items-start justify-between gap-4"}>
               <div className="max-w-3xl">
                 <span className={dashboardMode ? "pill pill-cyan stats-dashboard-kicker" : "site-kicker stats-public-kicker"}>
                   {content.badge}
@@ -569,13 +571,14 @@ export default function StatsPage({ dashboardMode = false }) {
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-3">
+              <div className={dashboardMode ? "dash-header-actions" : "flex flex-wrap gap-3"}>
                 <Link
                   to={backPath}
                   className={dashboardMode ? "btn-ghost rounded-full px-4 py-2 border border-white/10" : "site-btn-secondary"}
                 >
                   {backLabel}
                 </Link>
+                {dashboardMode ? <AdminUtilityBar /> : null}
               </div>
             </div>
           </header>

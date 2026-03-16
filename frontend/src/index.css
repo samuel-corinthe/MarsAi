@@ -155,6 +155,18 @@
   }
   .dash-subtitle { @apply mt-2 text-sm font-medium text-slate-300/90; }
 
+  .dash-header-main {
+    @apply flex flex-wrap items-start justify-between gap-4;
+  }
+
+  .dash-header-actions {
+    @apply flex flex-wrap items-center gap-3;
+  }
+
+  .dash-utility-group {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
   .pill {
     @apply inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide;
     background: rgba(255,255,255,0.06);
@@ -313,6 +325,24 @@
       letter-spacing: 0.04em;
       padding: 0.35rem 0.25rem;
       border-radius: 0.65rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .dash-header-actions {
+      width: 100%;
+      align-items: stretch;
+    }
+
+    .dash-header-actions > .btn-primary,
+    .dash-header-actions > .btn-ghost {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .dash-utility-group {
+      width: 100%;
+      justify-content: flex-end;
     }
   }
 
