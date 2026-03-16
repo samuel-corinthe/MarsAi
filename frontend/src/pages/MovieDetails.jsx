@@ -1246,16 +1246,6 @@ const MovieDetails = () => {
                             </button>
                           )}
 
-                          {currentYoutubeWatchUrl && (
-                            <a
-                              href={currentYoutubeWatchUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={`inline-flex items-center justify-center rounded-2xl border px-5 py-3 text-sm font-black uppercase tracking-[0.16em] transition ${theme.techGhostButton}`}
-                            >
-                              {t("movie_details.admin_youtube_open", "Ouvrir le lien")}
-                            </a>
-                          )}
                         </div>
 
                         {youtubeUrlSuccess && (
