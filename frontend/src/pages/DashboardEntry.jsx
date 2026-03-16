@@ -26,6 +26,11 @@ export default function DashboardEntry() {
     password: "",
   });
 
+  const handleSessionCleared = () => {
+    setAuthenticated(false);
+    setSessionUser(null);
+  };
+
   useEffect(() => {
     let cancelled = false;
 
@@ -76,7 +81,7 @@ export default function DashboardEntry() {
   }
 
   if (authenticated) {
-    return isStatsRoute ? <StatsPage dashboardMode /> : <Dashboard />;
+    return isStatsRoute ? <StatsPage dashboardMode /> : <Dashboard onSessionCleared={handleSessionCleared} />;
   }
   const panelClass = isLight ? "bg-white/92" : "site-panel-solid";
   const titleClass = isLight ? "text-slate-900" : "text-white";

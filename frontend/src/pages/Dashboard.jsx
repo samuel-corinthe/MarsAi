@@ -69,7 +69,7 @@ function extractMovieYear(movie) {
   return Number(match?.[0] || 0);
 }
 
-export default function Dashboard() {
+export default function Dashboard({ onSessionCleared = null }) {
   const navigate = useNavigate();
   const translation = useTranslation();
   const i18n = translation?.i18n ?? { language: "fr" };
@@ -540,6 +540,9 @@ export default function Dashboard() {
     setLogoutPending(true);
     try {
       await logoutSession();
+      if (typeof onSessionCleared === "function") {
+        onSessionCleared();
+      }
       navigate("/dashboard", { replace: true });
     } catch (error) {
       setLogoutError(error?.message || "Déconnexion impossible.");
