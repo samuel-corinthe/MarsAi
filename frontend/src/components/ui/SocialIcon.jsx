@@ -80,6 +80,15 @@ export default function SocialIcon({ network, className = "h-4 w-4" }) {
     );
   }
 
+  if (key === "email" || key === "mail") {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+        <rect x="3" y="5" width="18" height="14" rx="2.5" strokeWidth="1.8" />
+        <path d="m4.5 7 7.5 6 7.5-6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
   if (key === "share") {
     return (
       <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">

@@ -25,6 +25,11 @@ function decodeHtmlEntities(value) {
     .replace(/&#39;/g, "'");
 }
 
+function normalizeEmailAddress(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  return raw || "";
+}
+
 function toArray(value) {
   if (Array.isArray(value)) {
     return value
@@ -271,13 +276,17 @@ function toPosterUrl(row) {
   return `${FALLBACK_POSTER_PREFIX}${seed}/600/900`;
 }
 
-function mapMovieRow(row) {
+function mapMovieRow(row, options = {}) {
+  const { includeSubmitterEmail = false } = options;
   const movieId = Number(row.id);
   const countryCode = String(row.country_alpha2 || "").trim().toUpperCase();
   const countryFlagPath = toCountryFlagPath(row.country_flag_path, countryCode);
   const localVideoUrl = String(row.video_url || "").trim();
   const youtubeUrl = String(row.youtube_url || "").trim();
   const playbackVideoUrl = isDirectPlayableVideoUrl(localVideoUrl) ? localVideoUrl : "";
+  const submitterEmail = includeSubmitterEmail
+    ? normalizeEmailAddress(row.submitter_email || row.submitterEmail)
+    : "";
 
   return {
     id: Number.isFinite(movieId) && movieId > 0 ? movieId : 0,
@@ -303,6 +312,7 @@ function mapMovieRow(row) {
     rating: Number.isFinite(Number(row.avg_rating)) ? Number(row.avg_rating) : 0,
     notesCount: Number.isFinite(Number(row.notes_count)) ? Number(row.notes_count) : 0,
     submittedBy: decodeHtmlEntities(row.submitted_by || ""),
+    submitterEmail: submitterEmail || null,
     submissionStatus: String(row.submission_status || ""),
     videoUrl: playbackVideoUrl,
     youtubeUrl,
@@ -310,8 +320,8 @@ function mapMovieRow(row) {
   };
 }
 
-function mapMovieRowWithCast(row, castOverride = null) {
-  const base = mapMovieRow(row);
+function mapMovieRowWithCast(row, castOverride = null, options = {}) {
+  const base = mapMovieRow(row, options);
   if (!Array.isArray(castOverride) || castOverride.length === 0) {
     return base;
   }
@@ -343,12 +353,12 @@ export async function listMovies() {
   });
 }
 
-export async function getMovieDetails({ movieId }) {
+export async function getMovieDetails({ movieId, includeSubmitterEmail = false }) {
   const pool = getDbPool();
   const row = await findMovieById(pool, movieId);
   if (!row) return null;
   if (!isS3BackedMovieRow(row)) return null;
 
   const castRows = await loadCastByMovieId(pool, movieId);
-  return mapMovieRowWithCast(row, castRows);
+  return mapMovieRowWithCast(row, castRows, { includeSubmitterEmail });
 }

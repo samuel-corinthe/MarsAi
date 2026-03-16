@@ -1307,6 +1307,13 @@ const extraTranslations = {
       share_whatsapp_aria: "Partager via WhatsApp (une nouvelle fenêtre va s'ouvrir)",
       share_email_label: "Email / Partager via…",
       share_email_aria: "Partager par email ou via une application (une nouvelle page va s'ouvrir)",
+      uploader_contact_eyebrow: "Contact upload",
+      uploader_contact_title: "Contacter l auteur du film",
+      uploader_contact_hint: "Cette adresse provient du formulaire d upload et ouvre directement votre messagerie.",
+      uploader_contact_cta: "Envoyer un email",
+      uploader_contact_aria: "Envoyer un email a {{email}}",
+      contact_email_subject: "MarsAI - {{title}}",
+      contact_email_body: "Bonjour,\n\nJe vous contacte au sujet du film \"{{title}}\".\n\n",
     },
     contact: {
       form: {
@@ -1389,6 +1396,13 @@ const extraTranslations = {
       share_whatsapp_aria: "Share via WhatsApp (a new window will open)",
       share_email_label: "Email / Share via…",
       share_email_aria: "Share via email or another app (a new window will open)",
+      uploader_contact_eyebrow: "Uploader contact",
+      uploader_contact_title: "Contact the film uploader",
+      uploader_contact_hint: "This address comes from the upload form and opens your mail app directly.",
+      uploader_contact_cta: "Send an email",
+      uploader_contact_aria: "Send an email to {{email}}",
+      contact_email_subject: "MarsAI - {{title}}",
+      contact_email_body: "Hello,\n\nI am contacting you about the film \"{{title}}\".\n\n",
     },
     contact: {
       form: {
@@ -1523,6 +1537,13 @@ const extraTranslations = {
       share_whatsapp_aria: "المشاركة عبر واتساب (ستفتح نافذة جديدة)",
       share_email_label: "البريد / مشاركة عبر…",
       share_email_aria: "المشاركة عبر البريد الإلكتروني أو تطبيق آخر (ستفتح نافذة جديدة)",
+      uploader_contact_eyebrow: "تواصل الرفع",
+      uploader_contact_title: "تواصل مع رافع الفيلم",
+      uploader_contact_hint: "هذا العنوان مأخوذ من نموذج الرفع ويفتح بريدك مباشرة.",
+      uploader_contact_cta: "إرسال بريد",
+      uploader_contact_aria: "إرسال بريد إلى {{email}}",
+      contact_email_subject: "MarsAI - {{title}}",
+      contact_email_body: "مرحبا،\n\nأتواصل معك بخصوص الفيلم \"{{title}}\".\n\n",
     },
     contact: {
       form: {

@@ -73,6 +73,11 @@ function toSafeExternalUrl(value) {
   return `https://${raw}`;
 }
 
+function normalizeEmailAddress(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  return raw || null;
+}
+
 function parseSocialLinks(rawValue) {
   if (!rawValue) return {};
 
@@ -318,6 +323,7 @@ async function processQueuedYoutubeUpload({ jobId, payload }) {
     setUploadJobStage(jobId, "database_save", "Enregistrement de la soumission...");
     const submittedBy = `${String(fields?.firstName || "").trim()} ${String(fields?.lastName || "").trim()}`
       .trim() || "Utilisateur";
+    const submitterEmail = normalizeEmailAddress(fields?.email);
     const countryAlpha2 = String(fields?.countryAlpha2 || "").trim().toUpperCase();
     const language = String(fields?.language || "").trim();
     const aiTools = String(fields?.aiTools || "").trim();
@@ -346,6 +352,7 @@ async function processQueuedYoutubeUpload({ jobId, payload }) {
       youtubeUrl,
       viewCount: 0,
       submittedBy,
+      submitterEmail,
       submissionStatus: "en cours",
     });
 
@@ -367,7 +374,7 @@ async function processQueuedYoutubeUpload({ jobId, payload }) {
     try {
       await withTimeout(
         sendUploadSuccessMail({
-          toEmail: String(fields?.email || "").trim(),
+          toEmail: submitterEmail || "",
           firstName: String(fields?.firstName || "").trim(),
           lastName: String(fields?.lastName || "").trim(),
           movieTitle: title || "Sans titre",

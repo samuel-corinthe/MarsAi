@@ -220,8 +220,9 @@ export async function getMovieById(req, res) {
 
   try {
     await enforceMovieAccessForCurrentPhase(req);
+    const session = getSessionFromRequest(req);
     const [movie, visibility] = await Promise.all([
-      getMovieDetails({ movieId }),
+      getMovieDetails({ movieId, includeSubmitterEmail: Boolean(session) }),
       getVisibleMovieIdsForCurrentPhase(),
     ]);
     if (!movie) {

@@ -32,12 +32,13 @@ export async function createMovieRecord({
   youtubeUrl,
   viewCount,
   submittedBy,
+  submitterEmail,
   submissionStatus,
 }) {
   const [insertResult] = await pool.query(
     `INSERT INTO movies
-      (title, age, bio, social_links, synopsis, duration, release_year, country_id, language, subtitle_language, ai_tools, poster_url, video_url, youtube_url, view_count, submitted_by, submission_status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (title, age, bio, social_links, synopsis, duration, release_year, country_id, language, subtitle_language, ai_tools, poster_url, video_url, youtube_url, view_count, submitted_by, submitter_email, submission_status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       title,
       age,
@@ -55,6 +56,7 @@ export async function createMovieRecord({
       youtubeUrl,
       viewCount,
       submittedBy,
+      submitterEmail,
       submissionStatus,
     ],
   );

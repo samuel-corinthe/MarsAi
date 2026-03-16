@@ -88,6 +88,11 @@ function toNonEmptyString(...values) {
   return "";
 }
 
+function normalizeEmailAddress(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  return raw || "";
+}
+
 function toDurationDisplay(value, fallbackLabel) {
   if (value == null) return fallbackLabel;
 
@@ -197,6 +202,22 @@ function buildMovieDownloadPath(movieId) {
     return "";
   }
   return resolveApiRequestUrl(`/api/movies/${movieId}/download`);
+}
+
+function buildUploaderMailtoUrl({ email, movieTitle, t }) {
+  const safeEmail = normalizeEmailAddress(email);
+  if (!safeEmail) return "";
+
+  const subject = t("movie_details.contact_email_subject", {
+    title: movieTitle,
+    defaultValue: `MarsAI - ${movieTitle}`,
+  });
+  const body = t("movie_details.contact_email_body", {
+    title: movieTitle,
+    defaultValue: `Bonjour,\n\nJe vous contacte au sujet du film "${movieTitle}".\n\n`,
+  });
+
+  return `mailto:${safeEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 function getSocialEntries(movie) {
@@ -546,6 +567,13 @@ const MovieDetails = () => {
   const releaseDateDisplay =
     toNonEmptyString(movie.releaseDate, movie.release_date, movie.release_year) || fallbackNa;
   const durationDisplay = toDurationDisplay(movie.duration, fallbackNa);
+  const uploaderEmail = normalizeEmailAddress(
+    toNonEmptyString(movie.submitterEmail, movie.submitter_email),
+  );
+  const canContactUploader = sessionChecked && hasSession && Boolean(uploaderEmail);
+  const uploaderMailtoUrl = canContactUploader
+    ? buildUploaderMailtoUrl({ email: uploaderEmail, movieTitle: movie.title, t })
+    : "";
   const youtubeEmbedUrl = toYoutubeEmbedUrl(movie.youtubeUrl);
   const shareUrl =
     toYouTubeWatchUrl(movie.youtubeUrl)
@@ -594,6 +622,17 @@ const MovieDetails = () => {
       shareLabel: "text-slate-500",
       shareChip:
         "border-slate-300 bg-white/95 text-slate-700 hover:border-sky-400 hover:text-sky-700",
+      contactCard:
+        "mt-8 rounded-[32px] border border-sky-200 bg-gradient-to-br from-sky-50 via-white to-indigo-50 p-5 shadow-sm",
+      contactEyebrow: "text-sky-700",
+      contactTitle: "text-slate-900",
+      contactHint: "text-slate-600",
+      contactLink:
+        "group mt-4 flex items-center gap-3 rounded-2xl border border-sky-200 bg-white/95 px-4 py-3 transition hover:border-sky-400 hover:bg-white hover:shadow-lg",
+      contactIcon:
+        "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-600 text-white shadow-lg shadow-sky-500/20",
+      contactAction: "text-sky-700",
+      contactValue: "text-slate-900",
     }
     : {
       page: "bg-blue-950 text-white",
@@ -617,6 +656,17 @@ const MovieDetails = () => {
       shareLabel: "text-slate-400",
       shareChip:
         "border-white/20 bg-white/10 text-white hover:bg-white hover:text-blue-950",
+      contactCard:
+        "mt-8 rounded-[32px] border border-blue-900/10 bg-blue-950 p-5 shadow-xl shadow-blue-950/20",
+      contactEyebrow: "text-cyan-300",
+      contactTitle: "text-white",
+      contactHint: "text-slate-300",
+      contactLink:
+        "group mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 transition hover:border-cyan-300 hover:bg-white/10",
+      contactIcon:
+        "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-cyan-400 text-blue-950 shadow-lg shadow-cyan-500/20",
+      contactAction: "text-cyan-300",
+      contactValue: "text-white",
     };
 
   return (
@@ -988,6 +1038,56 @@ const MovieDetails = () => {
                     last
                   />
                 </div>
+                {canContactUploader && (
+                  <div className={theme.contactCard}>
+                    <p className={`text-[11px] font-black uppercase tracking-[0.22em] ${theme.contactEyebrow}`}>
+                      {t("movie_details.uploader_contact_eyebrow", "Contact upload")}
+                    </p>
+                    <h4 className={`mt-2 text-lg font-black uppercase tracking-tight ${theme.contactTitle}`}>
+                      {t("movie_details.uploader_contact_title", "Contacter l auteur du film")}
+                    </h4>
+                    <p className={`mt-2 text-sm leading-relaxed ${theme.contactHint}`}>
+                      {t(
+                        "movie_details.uploader_contact_hint",
+                        "Cette adresse provient du formulaire d upload et ouvre directement votre messagerie.",
+                      )}
+                    </p>
+                    <a
+                      href={uploaderMailtoUrl}
+                      className={theme.contactLink}
+                      aria-label={t("movie_details.uploader_contact_aria", {
+                        email: uploaderEmail,
+                        defaultValue: `Envoyer un email a ${uploaderEmail}`,
+                      })}
+                      title={uploaderEmail}
+                    >
+                      <span className={theme.contactIcon}>
+                        <SocialIcon network="email" className="h-5 w-5" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className={`block text-[11px] font-black uppercase tracking-[0.18em] ${theme.contactAction}`}>
+                          {t("movie_details.uploader_contact_cta", "Envoyer un email")}
+                        </span>
+                        <span className={`mt-1 block break-all text-sm font-semibold normal-case ${theme.contactValue}`}>
+                          {uploaderEmail}
+                        </span>
+                      </span>
+                      <svg
+                        className={`h-4 w-4 shrink-0 ${theme.contactAction}`}
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M5 12h14" />
+                        <path d="m12 5 7 7-7 7" />
+                      </svg>
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           </div>
