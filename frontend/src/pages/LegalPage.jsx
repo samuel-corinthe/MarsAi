@@ -69,13 +69,31 @@ const VARIANTS = {
 
 const normalizeText = (value = "") => String(value || "").replace(/\s+/g, " ").trim();
 
+const containsArabicText = (value = "") => /[\u0600-\u06FF]/.test(String(value || ""));
+
+const isLastUpdatedText = (value = "") => {
+  const text = normalizeText(value);
+  const normalizedLatin = text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  return (
+    text.startsWith("آخر تحديث") ||
+    normalizedLatin.startsWith("last updated") ||
+    normalizedLatin.startsWith("updated on") ||
+    normalizedLatin.startsWith("derniere mise a jour") ||
+    normalizedLatin.startsWith("mise a jour")
+  );
+};
+
 const isNumericToken = (value = "") => {
   const text = normalizeText(value);
   if (!text) return true;
   return /^[\d\u0660-\u0669\u06F0-\u06F9().\-:،\s]+$/.test(text);
 };
 
-const sanitizeSectionTitle = (rawTitle = "", fallback = "Section") => {
+const sanitizeSectionTitle = (rawTitle = "", fallback = "Section", { isArabic = false } = {}) => {
   let title = normalizeText(rawTitle);
   if (!title) return fallback;
 
@@ -83,6 +101,13 @@ const sanitizeSectionTitle = (rawTitle = "", fallback = "Section") => {
   title = title.replace(/^\s*\(([^)]+)\)\s*[\d\u0660-\u0669\u06F0-\u06F9]+\s*[.)\-:،]?\s*/u, "($1) ");
   title = title.replace(/^\s*([\d\u0660-\u0669\u06F0-\u06F9]+)\s+\1\s*[.)\-:،]?\s*/u, "");
   title = title.replace(/^\s*[\d\u0660-\u0669\u06F0-\u06F9]+\s*[.)\-:،]?\s*/u, "");
+
+  if (isArabic) {
+    title = title.replace(/^\(\s*([A-Za-z0-9./-]+)\s*\)\s*(.+)$/u, (_, token, rest) => {
+      const safeRest = normalizeText(rest);
+      return containsArabicText(safeRest) ? `${safeRest} (${token})` : `(${token}) ${safeRest}`;
+    });
+  }
 
   return normalizeText(title) || fallback;
 };
@@ -99,7 +124,145 @@ const nodeToHtml = (node) => {
   return "";
 };
 
-const parseSections = (html) => {
+const isLikelyStandaloneSectionTitle = (value = "", { isArabic = false } = {}) => {
+  const text = normalizeText(value);
+  if (!text || text.length > 120) return false;
+  if (/[.!?؟]/.test(text)) return false;
+  if (/<|>/.test(text)) return false;
+  return isArabic ? containsArabicText(text) : true;
+};
+
+const escapeHtml = (value = "") =>
+  String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const RTL_SAFE_PATTERNS = [
+  /https?:\/\/[^\s<>"')]+/gi,
+  /[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g,
+  /\b(?:SIRET|GDPR|IP|Cookies|CGU|CGV|OVH|Hostinger)\b/g,
+  /\b\d+(?:[./:-]\d+)*(?:\/\d+)?\b/g,
+];
+
+const isPlainLatinLinkText = (value = "") => /^(https?:\/\/|www\.|[\w.+-]+@)/i.test(normalizeText(value));
+
+const normalizeArabicLegalText = (value = "") => {
+  let text = String(value || "");
+
+  text = text.replace(/^\(\s*([A-Za-z0-9./-]+)\s*\)\s*(.+)$/u, (_, token, rest) => {
+    const safeRest = normalizeText(rest);
+    return containsArabicText(safeRest) ? `${safeRest} (${token})` : `(${token}) ${safeRest}`;
+  });
+  text = text.replace(
+    /(?:\[[^\]]+\]\s*:?\s*)?\(?\s*SIRET\s*\)?\s*(رقم(?:\s+[^\s:()]+){0,4})/giu,
+    "$1 (SIRET)",
+  );
+  text = text.replace(
+    /(رقم(?:\s+[^\s:()]+){0,4})\s*[:：]?\s*\(?\s*SIRET\s*\)?/giu,
+    "$1 (SIRET)",
+  );
+
+  return text;
+};
+
+const toRtlSafeTextHtml = (value = "") => {
+  const text = normalizeArabicLegalText(value);
+  if (!text) return "";
+
+  const matches = [];
+  RTL_SAFE_PATTERNS.forEach((pattern) => {
+    pattern.lastIndex = 0;
+    let match = pattern.exec(text);
+    while (match) {
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        value: match[0],
+      });
+      match = pattern.exec(text);
+    }
+  });
+
+  matches.sort((a, b) => a.start - b.start || b.end - a.end);
+
+  const merged = [];
+  matches.forEach((match) => {
+    const previous = merged[merged.length - 1];
+    if (previous && match.start < previous.end) return;
+    merged.push(match);
+  });
+
+  if (!merged.length) return escapeHtml(text);
+
+  let cursor = 0;
+  let html = "";
+
+  merged.forEach((match) => {
+    if (match.start > cursor) {
+      html += escapeHtml(text.slice(cursor, match.start));
+    }
+    html += `&lrm;<bdo class="legal-ltr-token" dir="ltr">${escapeHtml(match.value)}</bdo>&lrm;`;
+    cursor = match.end;
+  });
+
+  if (cursor < text.length) {
+    html += escapeHtml(text.slice(cursor));
+  }
+
+  return html;
+};
+
+const normalizeLegalContentHtml = (html, { isArabic = false } = {}) => {
+  if (!html || typeof window === "undefined" || !isArabic) return html;
+
+  const doc = new DOMParser().parseFromString(`<div>${html}</div>`, "text/html");
+  const root = doc.body.firstElementChild;
+  if (!root) return html;
+
+  const textNodes = [];
+  const collectTextNodes = (node) => {
+    Array.from(node.childNodes || []).forEach((child) => {
+      if (child.nodeType === 3) {
+        if (normalizeText(child.textContent || "")) textNodes.push(child);
+        return;
+      }
+      if (child.nodeType === 1) {
+        if (/^a$/i.test(child.tagName || "")) return;
+        collectTextNodes(child);
+      }
+    });
+  };
+
+  collectTextNodes(root);
+
+  textNodes.forEach((textNode) => {
+    const replacementHtml = toRtlSafeTextHtml(textNode.textContent || "");
+    if (!replacementHtml) return;
+
+    const wrapper = doc.createElement("span");
+    wrapper.innerHTML = replacementHtml;
+    const fragment = doc.createDocumentFragment();
+    while (wrapper.firstChild) {
+      fragment.appendChild(wrapper.firstChild);
+    }
+    textNode.parentNode?.replaceChild(fragment, textNode);
+  });
+
+  root.querySelectorAll("a").forEach((link) => {
+    link.setAttribute("dir", "ltr");
+    const linkText = normalizeText(link.textContent || "");
+    if (isPlainLatinLinkText(linkText)) {
+      link.innerHTML = `&lrm;<bdo class="legal-ltr-token" dir="ltr">${escapeHtml(linkText)}</bdo>&lrm;`;
+    }
+  });
+
+  return root.innerHTML;
+};
+
+const parseSections = (html, { isArabic = false } = {}) => {
   if (!html || typeof window === "undefined") return [];
 
   const doc = new DOMParser().parseFromString(html, "text/html");
@@ -115,45 +278,77 @@ const parseSections = (html) => {
 
   const sections = [];
   let current = null;
+  let pendingSectionNumber = false;
 
   const closeCurrentSection = () => {
     if (!current) return;
     if (normalizeText(current.title) || normalizeText(current.content)) {
-      sections.push(current);
+      sections.push({
+        ...current,
+        content: normalizeLegalContentHtml(current.content, { isArabic }),
+      });
     }
     current = null;
+    pendingSectionNumber = false;
   };
 
-  const ensureCurrentSection = (title = "Introduction") => {
+  const ensureCurrentSection = (title = isArabic ? "مقدمة" : "Introduction") => {
     if (!current) {
-      current = { title: sanitizeSectionTitle(title, title), content: "" };
+      current = { title: sanitizeSectionTitle(title, title, { isArabic }), content: "" };
     }
   };
 
   nodes.forEach((node) => {
+    const nodeText = normalizeText(node.textContent || "");
+    if (!nodeText) return;
+
+    if (!current && sections.length === 0 && isLastUpdatedText(nodeText)) {
+      pendingSectionNumber = false;
+      return;
+    }
+
     const isHeading = node.nodeType === 1 && /^h[1-6]$/i.test(node.tagName || "");
     if (isHeading) {
       closeCurrentSection();
       current = {
-        title: sanitizeSectionTitle(node.textContent || "", "Section"),
+        title: sanitizeSectionTitle(
+          node.textContent || "",
+          isArabic ? "قسم" : "Section",
+          { isArabic },
+        ),
         content: "",
       };
       return;
     }
 
-    const nodeText = normalizeText(node.textContent || "");
-    if (!nodeText) return;
-
     // Remove orphan numbering blocks that create duplicates like "1" + "1. Title".
-    if (isNumericToken(nodeText)) return;
-
-    if (!hasHeadings) {
-      ensureCurrentSection("Introduction");
-    } else {
-      ensureCurrentSection("Introduction");
+    if (isNumericToken(nodeText)) {
+      pendingSectionNumber = true;
+      return;
     }
 
+    if (
+      !hasHeadings &&
+      pendingSectionNumber &&
+      isLikelyStandaloneSectionTitle(nodeText, { isArabic })
+    ) {
+      closeCurrentSection();
+      current = {
+        title: sanitizeSectionTitle(
+          nodeText,
+          isArabic ? "قسم" : "Section",
+          { isArabic },
+        ),
+        content: "",
+      };
+      pendingSectionNumber = false;
+      return;
+    }
+
+    ensureCurrentSection(isArabic ? "مقدمة" : "Introduction");
+
     current.content += nodeToHtml(node);
+    pendingSectionNumber = false;
   });
 
   closeCurrentSection();
@@ -185,8 +380,8 @@ export default function LegalPage({ page, variant = "cgv" }) {
   }, [variant]);
 
   const sections = useMemo(
-    () => parseSections(page?.content?.rendered),
-    [page?.content?.rendered],
+    () => parseSections(page?.content?.rendered, { isArabic }),
+    [isArabic, page?.content?.rendered],
   );
 
   const locale = currentLanguage === "fr" ? "fr-FR" : currentLanguage === "ar" ? "ar" : "en-GB";
@@ -380,6 +575,15 @@ export default function LegalPage({ page, variant = "cgv" }) {
             color: ${theme.linkColor};
             text-decoration: underline;
             text-underline-offset: 3px;
+          }
+          .legal-content .legal-ltr-token,
+          .legal-content a[dir="ltr"] {
+            direction: ltr;
+            unicode-bidi: isolate;
+            max-width: 100%;
+            text-align: left;
+            overflow-wrap: anywhere;
+            word-break: break-word;
           }
           .legal-content strong {
             color: ${theme.strongColor};

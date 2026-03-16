@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import usePhaseAccessController from "../controllers/usePhaseAccessController";
 import { getLocalizedPath } from "../utils/localizedRoutes";
+import { resolveCountryFlagPath } from "../utils/countryFlags";
 import {
     fetchAltchaChallenge,
     fetchUploadCountries,
@@ -187,23 +188,6 @@ async function normalizePosterFile(file) {
     };
 }
 
-function buildFlagAssetPath(path) {
-    const raw = String(path || '').trim();
-    if (!raw) return '';
-    if (/^https?:\/\//i.test(raw)) return raw;
-    if (/^\/MarsAi\//i.test(raw)) return raw;
-
-    const normalizedPath = raw.startsWith('/') ? raw : `/${raw}`;
-    if (typeof window !== 'undefined') {
-        const pathname = String(window.location?.pathname || '').toLowerCase();
-        if (pathname === '/marsai' || pathname.startsWith('/marsai/')) {
-            return `/MarsAi${normalizedPath}`;
-        }
-    }
-
-    return normalizedPath;
-}
-
 function isTerminalYoutubeStatus(status) {
     const processingStatus = status?.processingStatus;
     const uploadStatus = status?.uploadStatus;
@@ -328,7 +312,7 @@ export default function YoutubeUpload() {
                             alpha2,
                             nameFr: String(row?.nameFr || row?.name_fr || '').trim(),
                             nameEn: String(row?.nameEn || row?.name_eng || '').trim(),
-                            flagPath: buildFlagAssetPath(row?.flagPath || row?.flag_path || ''),
+                            flagPath: resolveCountryFlagPath(row?.flagPath || row?.flag_path || '', alpha2),
                         };
                     })
                     .filter(Boolean);
@@ -960,6 +944,9 @@ export default function YoutubeUpload() {
     const headerClass = isLight
         ? 'border-slate-200/90 text-slate-900'
         : 'border-slate-500/35 text-white';
+    const headerBadgeClass = isLight
+        ? 'border-sky-300/60 bg-sky-100 text-sky-700'
+        : 'border-cyan-300/45 bg-cyan-400/10 text-cyan-200';
     const headerSubtitleClass = isLight ? 'text-slate-600' : 'text-slate-300';
     const stepPanelClass = isLight
         ? 'border-slate-200/90 bg-slate-50/90'
@@ -998,7 +985,7 @@ export default function YoutubeUpload() {
 
             <div className={`upload-modern-shell relative mx-auto max-w-2xl overflow-hidden rounded-2xl border ${shellClass}`}>
                 <div className={`border-b p-8 ${headerClass}`}>
-                    <p className="inline-flex rounded-full border border-cyan-300/45 bg-cyan-400/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-cyan-200">
+                    <p className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] ${headerBadgeClass}`}>
                         Upload
                     </p>
                     <h1 className="text-3xl font-bold">{t('upload.page_title')}</h1>

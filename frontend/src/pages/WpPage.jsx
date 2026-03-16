@@ -185,6 +185,58 @@ const matchesAgendaArticleStartsAt = (article, rawStartsAt) => {
   return articleMinute === targetMinute;
 };
 
+const buildAgendaArticleSearch = (article, rawSearch = "") => {
+  const params = new URLSearchParams(rawSearch);
+  const articleQueryValue = buildAgendaArticleQueryValue(article);
+  const articleStartsAt = String(
+    article?.startMinuteKey || article?.startsAt || "",
+  )
+    .trim()
+    .slice(0, 16);
+  let changed = false;
+
+  if (articleQueryValue) {
+    if (params.get("article") !== articleQueryValue) {
+      params.set("article", articleQueryValue);
+      changed = true;
+    }
+  } else if (params.has("article")) {
+    params.delete("article");
+    changed = true;
+  }
+
+  if (articleStartsAt) {
+    if (params.get("articleAt") !== articleStartsAt) {
+      params.set("articleAt", articleStartsAt);
+      changed = true;
+    }
+  } else if (params.has("articleAt")) {
+    params.delete("articleAt");
+    changed = true;
+  }
+
+  return {
+    changed,
+    search: params.toString(),
+  };
+};
+
+const clearAgendaArticleSearch = (rawSearch = "") => {
+  const params = new URLSearchParams(rawSearch);
+  const hadArticleParams = params.has("article") || params.has("articleAt");
+  if (hadArticleParams) {
+    params.delete("article");
+    params.delete("articleAt");
+  }
+  return {
+    changed: hadArticleParams,
+    search: params.toString(),
+  };
+};
+
+const toLocationStateObject = (value) =>
+  value && typeof value === "object" && !Array.isArray(value) ? { ...value } : {};
+
 const findPreferredLanguageItem = (items, targetLanguage, predicate) => {
   if (!Array.isArray(items) || items.length === 0 || typeof predicate !== "function") {
     return null;
@@ -457,6 +509,12 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
   const [agendaItems, setAgendaItems] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedArticle, setSelectedArticle] = useState(null);
+  const [hadAgendaArticleQuery, setHadAgendaArticleQuery] = useState(() =>
+    Boolean(
+      new URLSearchParams(location.search).get("article")
+      || new URLSearchParams(location.search).get("articleAt"),
+    ),
+  );
   const isCallForProjectRoute = slug === "appel-a-projet" || slug === "call-for-project";
   const requestedAgendaArticle = useMemo(() => {
     const value = new URLSearchParams(location.search).get("article");
@@ -806,49 +864,19 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
 
   useEffect(() => {
     if (pageKey !== "agenda") return;
-    if (!selectedArticle) return;
 
-    const articleQueryValue = buildAgendaArticleQueryValue(selectedArticle);
-    const articleStartsAt = String(
-      selectedArticle?.startMinuteKey || selectedArticle?.startsAt || "",
-    )
-      .trim()
-      .slice(0, 16);
-
-    const params = new URLSearchParams(location.search);
-    let changed = false;
-
-    if (articleQueryValue) {
-      if (params.get("article") !== articleQueryValue) {
-        params.set("article", articleQueryValue);
-        changed = true;
-      }
-    } else if (params.has("article")) {
-      params.delete("article");
-      changed = true;
+    const hasAgendaQuery = Boolean(requestedAgendaArticle || requestedAgendaStartsAt);
+    if (!hasAgendaQuery && hadAgendaArticleQuery && selectedArticle) {
+      setSelectedArticle(null);
     }
-
-    if (articleStartsAt) {
-      if (params.get("articleAt") !== articleStartsAt) {
-        params.set("articleAt", articleStartsAt);
-        changed = true;
-      }
-    } else if (params.has("articleAt")) {
-      params.delete("articleAt");
-      changed = true;
+    if (hadAgendaArticleQuery !== hasAgendaQuery) {
+      setHadAgendaArticleQuery(hasAgendaQuery);
     }
-
-    if (!changed) return;
-
-    const nextSearch = params.toString();
-    const nextUrl = `${location.pathname}${nextSearch ? `?${nextSearch}` : ""}${location.hash || ""}`;
-    navigate(nextUrl, { replace: true });
   }, [
-    location.hash,
-    location.pathname,
-    location.search,
-    navigate,
+    hadAgendaArticleQuery,
     pageKey,
+    requestedAgendaArticle,
+    requestedAgendaStartsAt,
     selectedArticle,
   ]);
 
@@ -877,6 +905,24 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
       setSelectedArticle(mapped);
     }
   }, [agendaItems, currentLanguage, loading, selectedArticle]);
+
+  const handleOpenAgendaArticle = (article) => {
+    const { changed, search: nextSearch } = buildAgendaArticleSearch(
+      article,
+      location.search,
+    );
+    const nextUrl = `${location.pathname}${nextSearch ? `?${nextSearch}` : ""}${location.hash || ""}`;
+    const nextState = {
+      ...toLocationStateObject(location.state),
+      agendaArticleFromAgenda: true,
+    };
+
+    setSelectedArticle(article);
+    navigate(nextUrl, {
+      replace: !changed,
+      state: nextState,
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -990,6 +1036,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
       cardText: "text-slate-700",
       cta: "text-cyan-700 hover:text-cyan-600",
       dateCardText: "text-slate-700",
+      monthLabel: "text-cyan-700",
     }
     : {
       page: "from-[#020617] via-[#0b1732] to-[#020617] text-slate-100",
@@ -1008,6 +1055,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
       cardText: "text-slate-300",
       cta: "text-cyan-200 hover:text-cyan-100",
       dateCardText: "text-white",
+      monthLabel: "text-cyan-200",
     };
 
   if (pageKey === "call") {
@@ -1299,14 +1347,25 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                 <button
                   onClick={() => {
                     setSelectedArticle(null);
-                    const params = new URLSearchParams(location.search);
-                    if (!params.has("article") && !params.has("articleAt")) return;
-                    params.delete("article");
-                    params.delete("articleAt");
-                    const nextSearch = params.toString();
+                    if (location.state?.agendaArticleFromAgenda) {
+                      navigate(-1);
+                      return;
+                    }
+
+                    const { changed, search: nextSearch } = clearAgendaArticleSearch(
+                      location.search,
+                    );
+                    if (!changed) return;
+
+                    const nextState = toLocationStateObject(location.state);
+                    delete nextState.agendaArticleFromAgenda;
+
                     navigate(
-                      `${currentPagePath}${nextSearch ? `?${nextSearch}` : ""}`,
-                      { replace: true },
+                      `${location.pathname}${nextSearch ? `?${nextSearch}` : ""}`,
+                      {
+                        replace: true,
+                        state: Object.keys(nextState).length ? nextState : null,
+                      },
                     );
                   }}
                   className={`mb-6 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] transition ${agendaTheme.backBtn}`}
@@ -1446,7 +1505,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                       <span className={`mt-1 block text-xs font-black uppercase tracking-[0.2em] ${agendaTheme.subtitle}`}>
                         {selectedParts.weekday}
                       </span>
-                      <span className={`mt-1 block text-[11px] font-black uppercase tracking-[0.16em] ${agendaTheme.badge.includes("text-sky") ? "text-sky-700" : "text-cyan-200"}`}>
+                      <span className={`mt-1 block text-[11px] font-black uppercase tracking-[0.16em] ${agendaTheme.monthLabel}`}>
                         {selectedParts.monthLong}
                       </span>
                     </div>
@@ -1509,7 +1568,7 @@ export default function WpPage({ isHome = false, fixedSlug = null }) {
                         </div>
 
                         <button
-                          onClick={() => setSelectedArticle(ev)}
+                          onClick={() => handleOpenAgendaArticle(ev)}
                           className={`mt-4 inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] transition ${agendaTheme.cta}`}
                         >
                           <span>{t("agenda.read_article")}</span>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Seo from "../components/Seo";
 import { BreadcrumbSchema } from "../components/Schema";
@@ -23,6 +23,21 @@ export default function Newsletter() {
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [flashMessage, setFlashMessage] = useState(null);
+  const flashMessageRef = useRef(null);
+
+  useEffect(() => {
+    if (!flashMessage || typeof window === "undefined") return undefined;
+
+    const frameId = window.requestAnimationFrame(() => {
+      flashMessageRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [flashMessage, isSubmitted]);
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
@@ -41,6 +56,7 @@ export default function Newsletter() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setIsLoading(true);
+    setFlashMessage(null);
 
     try {
       await subscribeNewsletterForm({
@@ -48,12 +64,24 @@ export default function Newsletter() {
         lang: i18n.language,
       });
       setIsSubmitted(true);
+      setFlashMessage({
+        type: "success",
+        title: t("newsletter.form.success_title"),
+        message: t("newsletter.form.success_msg"),
+        hint: t("newsletter.form.success_hint"),
+      });
       setTimeout(() => {
         setIsSubmitted(false);
+        setFlashMessage(null);
         setFormData({ firstName: "", email: "", preferences: [] });
       }, 5000);
     } catch (error) {
-      alert(error?.message || t("newsletter.errors.server"));
+      setFlashMessage({
+        type: "error",
+        title: t("common.error", "Erreur"),
+        message: error?.message || t("newsletter.errors.server"),
+        hint: "",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -158,6 +186,9 @@ export default function Newsletter() {
       successTitle: "text-emerald-700",
       successText: "text-emerald-800",
       successHint: "text-emerald-700/90",
+      error: "border-rose-300/70 bg-rose-50",
+      errorTitle: "text-rose-700",
+      errorText: "text-rose-800",
       sectionBorder: "border-sky-200/80",
       sectionTitle: "text-slate-900",
       sectionSubtitle: "text-slate-600",
@@ -190,6 +221,9 @@ export default function Newsletter() {
       successTitle: "text-white",
       successText: "text-slate-300",
       successHint: "text-slate-400",
+      error: "border-rose-500/30 bg-gradient-to-br from-rose-500/10 to-red-500/10",
+      errorTitle: "text-white",
+      errorText: "text-slate-300",
       sectionBorder: "border-slate-800/80",
       sectionTitle: "text-white",
       sectionSubtitle: "text-slate-400",
@@ -252,6 +286,22 @@ export default function Newsletter() {
 
         <section className="px-4 py-20">
           <div className="mx-auto max-w-2xl">
+            {flashMessage && !isSubmitted ? (
+              <div
+                ref={flashMessageRef}
+                className={`mb-6 scroll-mt-32 rounded-3xl border p-6 text-center md:p-8 ${theme.error}`}
+                role="alert"
+                aria-live="assertive"
+              >
+                <h3 className={`mb-3 text-2xl font-black uppercase md:text-3xl ${theme.errorTitle}`}>
+                  {flashMessage.title}
+                </h3>
+                <p className={`text-base md:text-lg ${theme.errorText}`}>
+                  {flashMessage.message}
+                </p>
+              </div>
+            ) : null}
+
             {!isSubmitted ? (
               <div className={`rounded-3xl border p-6 shadow-2xl md:p-12 ${theme.panel}`}>
                 <div className="mb-8 text-center">
@@ -336,15 +386,20 @@ export default function Newsletter() {
                 </form>
               </div>
             ) : (
-              <div className={`animate-fadeIn rounded-3xl border p-6 text-center md:p-12 ${theme.success}`}>
+              <div
+                ref={flashMessageRef}
+                className={`animate-fadeIn scroll-mt-32 rounded-3xl border p-6 text-center md:p-12 ${theme.success}`}
+                role="status"
+                aria-live="polite"
+              >
                 <h3 className={`mb-4 text-3xl font-black uppercase md:text-4xl ${theme.successTitle}`}>
-                  {t("newsletter.form.success_title")}
+                  {flashMessage?.title || t("newsletter.form.success_title")}
                 </h3>
                 <p className={`mb-6 text-lg ${theme.successText}`}>
-                  {t("newsletter.form.success_msg")}
+                  {flashMessage?.message || t("newsletter.form.success_msg")}
                 </p>
                 <p className={`text-sm ${theme.successHint}`}>
-                  {t("newsletter.form.success_hint")}
+                  {flashMessage?.hint || t("newsletter.form.success_hint")}
                 </p>
               </div>
             )}

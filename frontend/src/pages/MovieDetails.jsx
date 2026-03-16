@@ -11,7 +11,7 @@ import {
   getLocalizedPath,
   normalizeLanguage,
 } from "../utils/localizedRoutes";
-import { resolvePublicAssetPath } from "../utils/assetUrl";
+import { resolveCountryFlagPath } from "../utils/countryFlags";
 import {
   deleteMyMovieRating,
   getCurrentSessionUser,
@@ -74,10 +74,6 @@ function toExternalUrl(value) {
   if (!raw) return "";
   if (/^https?:\/\//i.test(raw)) return raw;
   return `https://${raw}`;
-}
-
-function toFlagAssetPath(value) {
-  return resolvePublicAssetPath(value);
 }
 
 function toNonEmptyString(...values) {
@@ -500,7 +496,9 @@ const MovieDetails = () => {
       setYoutubeUrlError(
         t(
           "movie_details.admin_youtube_invalid",
-          "Collez un lien YouTube valide (watch, youtu.be, embed, shorts ou identifiant video).",
+          isArabic
+            ? "ألصق رابط YouTube صالحًا (watch أو youtu.be أو embed أو shorts أو معرّف فيديو)."
+            : "Collez un lien YouTube valide (watch, youtu.be, embed, shorts ou identifiant video).",
         ),
       );
       setYoutubeUrlSuccess("");
@@ -519,13 +517,22 @@ const MovieDetails = () => {
       setYoutubeUrlDraft(savedYoutubeUrl);
       setYoutubeUrlSuccess(
         payload?.updated === false
-          ? t("movie_details.admin_youtube_already_current", "Le lien YouTube est deja a jour.")
-          : t("movie_details.admin_youtube_saved", "Lien YouTube mis a jour pour ce film."),
+          ? t(
+            "movie_details.admin_youtube_already_current",
+            isArabic ? "رابط YouTube محدّث بالفعل." : "Le lien YouTube est deja a jour.",
+          )
+          : t(
+            "movie_details.admin_youtube_saved",
+            isArabic ? "تم تحديث رابط YouTube لهذا الفيلم." : "Lien YouTube mis a jour pour ce film.",
+          ),
       );
     } catch (error) {
       setYoutubeUrlError(
         error?.message
-          || t("movie_details.admin_youtube_save_error", "Impossible de mettre a jour le lien YouTube."),
+          || t(
+            "movie_details.admin_youtube_save_error",
+            isArabic ? "تعذّر تحديث رابط YouTube." : "Impossible de mettre a jour le lien YouTube.",
+          ),
       );
     } finally {
       setYoutubeUrlSaving(false);
@@ -615,7 +622,7 @@ const MovieDetails = () => {
   const rawCountryFlagPath =
     toNonEmptyString(movie.countryFlagPath, movie.country_flag_path) ||
     (countryAlpha2 ? `/images/flags/${countryAlpha2}.png` : "");
-  const countryFlagPath = toFlagAssetPath(rawCountryFlagPath);
+  const countryFlagPath = resolveCountryFlagPath(rawCountryFlagPath, countryAlpha2);
   const releaseDateDisplay =
     toNonEmptyString(movie.releaseDate, movie.release_date, movie.release_year) || fallbackNa;
   const durationDisplay = toDurationDisplay(movie.duration, fallbackNa);
@@ -1116,15 +1123,6 @@ const MovieDetails = () => {
                         <p className={`text-[11px] font-black uppercase tracking-[0.22em] ${theme.techExtraEyebrow}`}>
                           {t("movie_details.uploader_contact_eyebrow", "Contact upload")}
                         </p>
-                        <h4 className={`text-base font-black uppercase tracking-tight ${theme.techExtraTitle}`}>
-                          {t("movie_details.uploader_contact_title", "Contacter l auteur du film")}
-                        </h4>
-                        <p className={`text-sm leading-relaxed ${theme.techExtraHint}`}>
-                          {t(
-                            "movie_details.uploader_contact_hint",
-                            "Cette adresse provient du formulaire d upload et ouvre directement votre messagerie.",
-                          )}
-                        </p>
                         <a
                           href={uploaderMailtoUrl}
                           className={theme.techActionLink}
@@ -1146,7 +1144,7 @@ const MovieDetails = () => {
                             </span>
                           </span>
                           <svg
-                            className={`h-4 w-4 shrink-0 ${theme.techActionMeta}`}
+                            className={`h-4 w-4 shrink-0 ${theme.techActionMeta} ${isArabic ? "rotate-180" : ""}`}
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
@@ -1166,22 +1164,13 @@ const MovieDetails = () => {
                       <div className="space-y-4">
                         <div className="space-y-3">
                           <p className={`text-[11px] font-black uppercase tracking-[0.22em] ${theme.techExtraEyebrow}`}>
-                            {t("movie_details.admin_youtube_eyebrow", "Lien public")}
-                          </p>
-                          <h4 className={`text-base font-black uppercase tracking-tight ${theme.techExtraTitle}`}>
-                            {t("movie_details.admin_youtube_title", "Modifier le lien YouTube")}
-                          </h4>
-                          <p className={`text-sm leading-relaxed ${theme.techExtraHint}`}>
-                            {t(
-                              "movie_details.admin_youtube_hint",
-                              "Ce lien pilote le lecteur YouTube en phase 2 et phase 3, ainsi que le partage de ce film.",
-                            )}
+                            {t("movie_details.admin_youtube_eyebrow", isArabic ? "الرابط العام" : "Lien public")}
                           </p>
                         </div>
 
                         <div className={theme.techInfoLine}>
                           <p className={`text-[11px] font-black uppercase tracking-[0.18em] ${theme.techExtraHint}`}>
-                            {t("movie_details.admin_youtube_current", "Lien actuel")}
+                            {t("movie_details.admin_youtube_current", isArabic ? "الرابط الحالي" : "Lien actuel")}
                           </p>
                           {currentYoutubeWatchUrl ? (
                             <a
@@ -1194,7 +1183,10 @@ const MovieDetails = () => {
                             </a>
                           ) : (
                             <p className={`mt-2 text-sm ${theme.techExtraHint}`}>
-                              {t("movie_details.admin_youtube_empty", "Aucun lien YouTube n est enregistre pour ce film.")}
+                              {t(
+                                "movie_details.admin_youtube_empty",
+                                isArabic ? "لا يوجد رابط YouTube محفوظ لهذا الفيلم." : "Aucun lien YouTube n est enregistre pour ce film.",
+                              )}
                             </p>
                           )}
                         </div>
@@ -1204,7 +1196,7 @@ const MovieDetails = () => {
                             htmlFor="movie-youtube-url"
                             className={`block text-[11px] font-black uppercase tracking-[0.18em] ${theme.techExtraHint}`}
                           >
-                            {t("movie_details.admin_youtube_field", "Nouveau lien YouTube")}
+                            {t("movie_details.admin_youtube_field", isArabic ? "رابط YouTube جديد" : "Nouveau lien YouTube")}
                           </label>
                           <input
                             id="movie-youtube-url"
@@ -1228,8 +1220,8 @@ const MovieDetails = () => {
                             className={`inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-black uppercase tracking-[0.16em] transition disabled:opacity-60 ${theme.techPrimaryButton}`}
                           >
                             {youtubeUrlSaving
-                              ? t("movie_details.admin_youtube_saving", "Enregistrement...")
-                              : t("movie_details.admin_youtube_save", "Enregistrer le lien")}
+                              ? t("movie_details.admin_youtube_saving", isArabic ? "جارٍ الحفظ..." : "Enregistrement...")
+                              : t("movie_details.admin_youtube_save", isArabic ? "حفظ الرابط" : "Enregistrer le lien")}
                           </button>
 
                           {youtubeUrlDraft !== String(movie.youtubeUrl || "").trim() && (
@@ -1242,7 +1234,7 @@ const MovieDetails = () => {
                               }}
                               className={`inline-flex items-center justify-center rounded-2xl border px-5 py-3 text-sm font-black uppercase tracking-[0.16em] transition ${theme.techSecondaryButton}`}
                             >
-                              {t("movie_details.admin_youtube_reset", "Reinitialiser")}
+                              {t("movie_details.admin_youtube_reset", isArabic ? "إعادة الضبط" : "Reinitialiser")}
                             </button>
                           )}
 

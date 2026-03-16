@@ -14,7 +14,7 @@ import {
   getLocalizedPath,
   normalizeLanguage,
 } from "../utils/localizedRoutes";
-import { resolvePublicAssetPath } from "../utils/assetUrl";
+import { resolveCountryFlagPath } from "../utils/countryFlags";
 import {
   getCurrentSessionUser,
   getMovies,
@@ -28,10 +28,6 @@ import {
 
 const TOP_CAROUSEL_PREVIEW_SECONDS = 5;
 const TOP_CAROUSEL_ROTATION_MS = 5200;
-
-function toFlagAssetPath(value) {
-  return resolvePublicAssetPath(value);
-}
 
 function toDirectPreviewVideoUrl(...values) {
   for (const value of values) {
@@ -587,11 +583,9 @@ const Gallery = () => {
                     const countryCode = String(
                       movie.countryCode || movie.countryAlpha2 || "",
                     ).trim().toLowerCase();
-                    const fallbackFlagPath = countryCode
-                      ? `/images/flags/${countryCode}.png`
-                      : "";
-                    const flagSrc = toFlagAssetPath(
-                      movie.countryFlagPath || fallbackFlagPath,
+                    const flagSrc = resolveCountryFlagPath(
+                      movie.countryFlagPath || movie.country_flag_path,
+                      countryCode,
                     );
                     const flagAlt = countryCode ? countryCode.toUpperCase() : (movie.country || "pays");
                     const movieId = Number(movie.id);

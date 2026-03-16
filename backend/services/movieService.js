@@ -10,6 +10,7 @@ import {
   isObjectStorageConfigured,
   isPublicObjectStorageUrl,
 } from "./objectStorageService.js";
+import { resolveCountryFlagPath } from "./countryFlagPath.js";
 
 const FALLBACK_POSTER_PREFIX = "https://picsum.photos/seed/marsai-movie-";
 
@@ -158,23 +159,6 @@ function toSocialLinks(value) {
   if (x) normalized.x = x;
 
   return normalized;
-}
-
-function toCountryFlagPath(flagPath, alpha2) {
-  const alpha2Value = String(alpha2 || "").trim().toLowerCase();
-  const fallbackPath = alpha2Value ? `/images/flags/${alpha2Value}.png` : "";
-  const raw = String(flagPath || "").trim();
-  if (!raw) return fallbackPath;
-  if (/^https?:\/\//i.test(raw)) return raw;
-
-  let normalized = raw.startsWith("/") ? raw : `/${raw}`;
-  normalized = normalized.replace(/\/images\/flags\/png100px\//i, "/images/flags/");
-
-  if (!/\.(png|jpg|jpeg|webp|svg)$/i.test(normalized) && alpha2Value) {
-    normalized = `/images/flags/${alpha2Value}.png`;
-  }
-
-  return normalized || fallbackPath;
 }
 
 function isDirectPlayableVideoUrl(value) {
@@ -328,7 +312,7 @@ function mapMovieRow(row, options = {}) {
   const { includeSubmitterEmail = false } = options;
   const movieId = Number(row.id);
   const countryCode = String(row.country_alpha2 || "").trim().toUpperCase();
-  const countryFlagPath = toCountryFlagPath(row.country_flag_path, countryCode);
+  const countryFlagPath = resolveCountryFlagPath(row.country_flag_path, countryCode);
   const localVideoUrl = String(row.video_url || "").trim();
   const youtubeUrl = String(row.youtube_url || "").trim();
   const playbackVideoUrl = isDirectPlayableVideoUrl(localVideoUrl) ? localVideoUrl : "";

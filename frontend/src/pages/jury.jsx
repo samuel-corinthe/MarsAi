@@ -164,6 +164,113 @@ const toArabicNameFromSlug = (value = "") => {
 
 const hasArabicChars = (value = "") => /[\u0600-\u06FF]/.test(String(value || ""));
 
+const normalizeInlineSpacing = (value = "") => String(value || "").replace(/\s+/g, " ").trim();
+
+const decodeHtmlText = (value = "") => {
+  const source = String(value || "");
+  if (!source) return "";
+
+  if (typeof window === "undefined") {
+    return normalizeInlineSpacing(source.replace(/<[^>]*>/g, " "));
+  }
+
+  const doc = new DOMParser().parseFromString(`<div>${source}</div>`, "text/html");
+  return normalizeInlineSpacing(doc.body.textContent || "");
+};
+
+const escapeHtml = (value = "") =>
+  String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const RTL_INLINE_TOKEN_PATTERN =
+  /https?:\/\/[^\s<>"')]+|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}|[A-Za-z0-9]+(?:[./:_-][A-Za-z0-9]+)*/g;
+
+const toRtlSafeInlineHtml = (value = "") => {
+  const text = String(value || "");
+  if (!text) return "";
+
+  const matches = Array.from(text.matchAll(RTL_INLINE_TOKEN_PATTERN));
+  if (!matches.length) return escapeHtml(text);
+
+  let cursor = 0;
+  let html = "";
+
+  matches.forEach((match) => {
+    const token = match[0];
+    const start = match.index ?? 0;
+    if (start > cursor) {
+      html += escapeHtml(text.slice(cursor, start));
+    }
+    html += `<bdi class="jury-ltr-token" dir="ltr">${escapeHtml(token)}</bdi>`;
+    cursor = start + token.length;
+  });
+
+  if (cursor < text.length) {
+    html += escapeHtml(text.slice(cursor));
+  }
+
+  return html;
+};
+
+const normalizeRtlInlineHtml = (html = "", { isArabic = false } = {}) => {
+  if (!html || !isArabic || typeof window === "undefined") return html;
+
+  const doc = new DOMParser().parseFromString(`<div>${html}</div>`, "text/html");
+  const root = doc.body.firstElementChild;
+  if (!root) return html;
+
+  const textNodes = [];
+  const collectTextNodes = (node) => {
+    Array.from(node.childNodes || []).forEach((child) => {
+      if (child.nodeType === 3) {
+        if (hasArabicChars(child.textContent || "") && /[A-Za-z0-9]/.test(child.textContent || "")) {
+          textNodes.push(child);
+        }
+        return;
+      }
+      if (child.nodeType === 1) {
+        collectTextNodes(child);
+      }
+    });
+  };
+
+  collectTextNodes(root);
+
+  textNodes.forEach((textNode) => {
+    const wrapper = doc.createElement("span");
+    wrapper.innerHTML = toRtlSafeInlineHtml(textNode.textContent || "");
+    const fragment = doc.createDocumentFragment();
+    while (wrapper.firstChild) {
+      fragment.appendChild(wrapper.firstChild);
+    }
+    textNode.parentNode?.replaceChild(fragment, textNode);
+  });
+
+  return root.innerHTML;
+};
+
+const splitLeadingLtrTitle = (value = "", { isArabic = false } = {}) => {
+  if (!isArabic) return null;
+
+  const text = decodeHtmlText(value);
+  if (!text || !hasArabicChars(text)) return null;
+
+  const match = text.match(
+    /^\s*([A-Za-z0-9][A-Za-z0-9./:_-]*(?:\s+[A-Za-z0-9][A-Za-z0-9./:_-]*)*)\s*(?=[\u0600-\u06FF])(.+)$/u,
+  );
+
+  if (!match) return null;
+
+  return {
+    prefix: normalizeInlineSpacing(match[1]),
+    rest: normalizeInlineSpacing(match[2]),
+  };
+};
+
 const getForcedJuryPostId = ({ lang = "fr", slug = "", name = "" } = {}) => {
   const safeLang = normalizeLangCode(lang);
   const byLang = FORCED_JURY_POST_IDS[safeLang];
@@ -313,7 +420,7 @@ function GavelIcon({ theme }) {
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
+        viewBox="0 0 64 64"
         fill="none"
         stroke="currentColor"
         strokeWidth="2"
@@ -321,25 +428,11 @@ function GavelIcon({ theme }) {
         strokeLinejoin="round"
         className={`h-8 w-8 ${theme.iconColor}`}
       >
-        <rect
-          x="11.25"
-          y="3.5"
-          width="6.5"
-          height="3.5"
-          rx="0.75"
-          transform="rotate(45 14.5 5.25)"
-        />
-        <rect
-          x="8"
-          y="6.75"
-          width="6.5"
-          height="3.5"
-          rx="0.75"
-          transform="rotate(45 11.25 8.5)"
-        />
-        <path d="M11.5 11.5 18 18" />
-        <path d="M8.5 14.5 5 18" />
-        <path d="M3 21h8" />
+        <path d="M36.618 31.688 6.278 62.028c-.781.781-2.038.79-2.81.02l-1.452-1.453c-.771-.771-.762-2.028.019-2.81l30.34-30.339" />
+        <path d="M43.601 38.847 25.216 20.462" />
+        <path d="m37.943 7.734 18.385 18.385" />
+        <path d="m28.044 19.049-2.828 2.827c-.781.781-2.048.781-2.828 0l-2.829-2.828c-.78-.781-.78-2.048 0-2.828L33.702 2.077c.781-.78 2.047-.78 2.828 0l2.828 2.829c.781.78.781 2.047.001 2.828l-2.771 2.77" />
+        <path d="m53.559 27.475 2.77-2.77c.781-.781 2.048-.781 2.829 0l2.828 2.828c.781.781.781 2.047 0 2.828L47.843 44.504c-.78.781-2.047.781-2.828 0l-2.828-2.828c-.781-.781-.781-2.048 0-2.829l2.827-2.827" />
       </svg>
     </div>
   );
@@ -563,6 +656,14 @@ export default function JuryWpage({ page }) {
 
   const title = page?.title?.rendered || t("jury.jury_title");
   const seoTitle = page?.title?.rendered || t("jury.jury_title");
+  const titleParts = useMemo(
+    () => splitLeadingLtrTitle(title, { isArabic }),
+    [isArabic, title],
+  );
+  const displayTitle = useMemo(
+    () => normalizeRtlInlineHtml(title, { isArabic }),
+    [isArabic, title],
+  );
   const seoDescription = t(
     "jury.jury_subtitle",
     "Rencontrez les experts visionnaires de notre selection officielle.",
@@ -592,8 +693,16 @@ export default function JuryWpage({ page }) {
 
             <h1
               className={`text-3xl font-black uppercase tracking-tight sm:text-5xl ${theme.title}`}
-              dangerouslySetInnerHTML={{ __html: title }}
-            />
+            >
+              {titleParts ? (
+                <span className="jury-title-inline" dir="ltr">
+                  <span className="jury-title-prefix" dir="ltr">{titleParts.prefix}</span>
+                  <span className="jury-title-rest" dir="rtl">{titleParts.rest}</span>
+                </span>
+              ) : (
+                <span dangerouslySetInnerHTML={{ __html: displayTitle }} />
+              )}
+            </h1>
             <p className={`mx-auto mt-3 max-w-3xl text-sm leading-relaxed sm:text-base ${theme.subtitle}`}>
               {seoDescription}
             </p>
@@ -664,7 +773,9 @@ export default function JuryWpage({ page }) {
                   </p>
                   <h3
                     className={`mt-2 text-xl font-black uppercase tracking-tight sm:text-3xl ${theme.modalTitle}`}
-                    dangerouslySetInnerHTML={{ __html: selected.title.rendered }}
+                    dangerouslySetInnerHTML={{
+                      __html: normalizeRtlInlineHtml(selected.title.rendered, { isArabic }),
+                    }}
                   />
                 </div>
 
@@ -705,6 +816,26 @@ export default function JuryWpage({ page }) {
             </article>
           </div>
         )}
+
+        <style>{`
+          .jury-title-inline {
+            display: inline-flex;
+            flex-direction: row-reverse;
+            align-items: baseline;
+            gap: 0.45rem;
+          }
+          .jury-title-prefix,
+          .jury-title-rest,
+          .jury-ltr-token {
+            unicode-bidi: isolate;
+          }
+          .jury-title-prefix {
+            direction: ltr;
+          }
+          .jury-title-rest {
+            direction: rtl;
+          }
+        `}</style>
       </main>
     </>
   );

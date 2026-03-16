@@ -359,7 +359,7 @@ export async function createOrUpdateBrevoContact({
     PRENOM: firstName,
     PREFERENCES: safePreferences.join(", "),
   };
-  contact.listIds = [3];
+  contact.listIds = [7];
   contact.updateEnabled = true;
 
   await contactsApi.createContact(contact);
