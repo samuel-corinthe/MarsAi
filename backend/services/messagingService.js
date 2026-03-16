@@ -13,6 +13,15 @@ function getBrevoApiKey() {
   return String(process.env.BREVO_API_KEY || "").trim();
 }
 
+function getBrevoNewsletterListId() {
+  const raw = String(process.env.BREVO_NEWSLETTER_LIST_ID || "").trim();
+  const parsed = Number(raw);
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
+  }
+  return 3;
+}
+
 function ensureBrevoClientsConfigured() {
   const brevoApiKey = getBrevoApiKey();
   if (!brevoApiKey) {
@@ -353,16 +362,28 @@ export async function createOrUpdateBrevoContact({
     );
   }
 
-  const contact = new SibApiV3Sdk.CreateContact();
-  contact.email = email;
-  contact.attributes = {
-    PRENOM: firstName,
-    PREFERENCES: safePreferences.join(", "),
+  const preferences = Array.isArray(safePreferences) ? safePreferences : [];
+  const createContact = {
+    email: String(email || "").trim(),
+    attributes: {
+      PRENOM: String(firstName || "").trim(),
+      PREFERENCES: preferences.join(", "),
+    },
+    listIds: [getBrevoNewsletterListId()],
+    updateEnabled: true,
   };
-  contact.listIds = [7];
-  contact.updateEnabled = true;
 
-  await contactsApi.createContact(contact);
+  try {
+    const data = await contactsApi.createContact(createContact);
+    console.log("[BREVO][newsletter] contact cree/mis a jour avec succes.");
+    return data;
+  } catch (error) {
+    console.error(
+      "[BREVO][newsletter] erreur detaillee:",
+      error?.response?.body || error?.message || error,
+    );
+    throw error;
+  }
 }
 
 export async function sendNewsletterWelcomeMail({
