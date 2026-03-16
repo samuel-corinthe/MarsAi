@@ -72,13 +72,14 @@ function extractMovieYear(movie) {
 export default function Dashboard({ onSessionCleared = null }) {
   const navigate = useNavigate();
   const translation = useTranslation();
-  const i18n = translation?.i18n ?? { language: "fr" };
+  const i18n = translation?.i18n ?? {};
   const t =
-    typeof translation?.t === "function"
-      ? translation.t
+    typeof i18n?.getFixedT === "function"
+      ? i18n.getFixedT("fr")
       : (key, defaultValue) => defaultValue ?? key;
-  const homePath = getLocalizedPath("home", i18n.language);
-  const filmsBasePath = getLocalizedPath("films", i18n.language);
+  const dashboardLanguage = "fr";
+  const homePath = getLocalizedPath("home", dashboardLanguage);
+  const filmsBasePath = getLocalizedPath("films", dashboardLanguage);
   const dashboardStatsPath = "/dashboard/stats";
   const dashboardMoviesCsvExportPath = buildDeploymentAwareApiPath("/api/export/movies");
   const [adminData, setAdminData] = useState(null);
@@ -904,7 +905,7 @@ export default function Dashboard({ onSessionCleared = null }) {
   return (
     <>
       <Seo title="Dashboard" description="Espace administration marsAI." noIndex />
-      <div className="dash-page">
+      <div className="dash-page" dir="ltr">
       <div className="dash-shell dash-layout">
         <div className="flex gap-5 items-start">
           {/* Sidebar desktop */}

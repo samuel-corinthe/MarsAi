@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import Seo from "../components/Seo";
 import PageLoader from "../components/ui/PageLoader";
 import { getPublicStats } from "../api";
-import { normalizeLanguage } from "../utils/localizedRoutes";
 
 const COPY = {
   fr: {
@@ -435,11 +433,10 @@ function CountriesModal({
 }
 
 export default function StatsPage({ dashboardMode = false }) {
-  const { i18n } = useTranslation();
-  const language = normalizeLanguage(i18n.language);
-  const content = COPY[language] || COPY.fr;
+  const language = "fr";
+  const content = COPY.fr;
   const locale = resolveLocale(language);
-  const dir = i18n.dir(language);
+  const dir = "ltr";
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -496,9 +493,13 @@ export default function StatsPage({ dashboardMode = false }) {
         <main className={wrapperClass} dir={dir}>
           <div className={containerClass}>
             <div className={panelClass}>
-              <span className={dashboardMode ? "pill pill-cyan" : "site-kicker"}>{content.badge}</span>
+              <span className={dashboardMode ? "pill pill-blue stats-dashboard-kicker" : "site-kicker"}>
+                {content.badge}
+              </span>
               <h1 className={dashboardMode ? "dash-title text-white" : "site-title"}>{content.errorTitle}</h1>
-              <p className={dashboardMode ? "dash-subtitle" : "site-subtitle"}>{content.errorBody}</p>
+              <p className={dashboardMode ? "dash-subtitle stats-dashboard-subtitle" : "site-subtitle"}>
+                {content.errorBody}
+              </p>
               <p className="text-sm text-rose-300">{error || content.noData}</p>
               <div className="flex flex-wrap gap-3">
                 <Link
@@ -557,13 +558,13 @@ export default function StatsPage({ dashboardMode = false }) {
           <header className={heroClass}>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="max-w-3xl">
-                <span className={dashboardMode ? "pill pill-cyan" : "site-kicker"}>
+                <span className={dashboardMode ? "pill pill-cyan stats-dashboard-kicker" : "site-kicker stats-public-kicker"}>
                   {content.badge}
                 </span>
                 <h1 className={dashboardMode ? "dash-title mt-4 text-white" : "site-title mt-5"}>
                   {dashboardMode ? content.titleDashboard : content.titlePublic}
                 </h1>
-                <p className={dashboardMode ? "dash-subtitle" : "site-subtitle"}>
+                <p className={dashboardMode ? "dash-subtitle stats-dashboard-subtitle" : "site-subtitle stats-public-subtitle"}>
                   {content.subtitle}
                 </p>
               </div>
@@ -725,6 +726,28 @@ export default function StatsPage({ dashboardMode = false }) {
             </SectionPanel>
           </section>
         </div>
+
+        <style>{`
+          body[data-theme="light"] .stats-dashboard-kicker {
+            border-color: rgba(59, 130, 246, 0.5) !important;
+            color: #1d4ed8 !important;
+            background: rgba(219, 234, 254, 0.88) !important;
+          }
+
+          body[data-theme="light"] .stats-dashboard-subtitle {
+            color: #1e293b !important;
+          }
+
+          body[data-theme="light"] .stats-public-kicker {
+            border-color: rgba(59, 130, 246, 0.5) !important;
+            color: #1d4ed8 !important;
+            background: rgba(219, 234, 254, 0.88) !important;
+          }
+
+          body[data-theme="light"] .stats-public-subtitle {
+            color: #1e293b !important;
+          }
+        `}</style>
       </main>
     </>
   );

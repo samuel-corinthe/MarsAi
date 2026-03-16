@@ -6,14 +6,12 @@ import StatsPage from "./StatsPage";
 import { getCurrentSessionUser, loginWithWordPress } from "../api";
 import PageLoader from "../components/ui/PageLoader";
 import { useTheme } from "../context/ThemeContext";
-import { useTranslation } from "react-i18next";
 
 const WP_LOGIN_URL =
   import.meta.env.VITE_WP_LOGIN_URL ||
   "https://samuel-corinthe.students-laplateforme.io/MarsAi/wp-login.php";
 
 export default function DashboardEntry() {
-  const { t } = useTranslation();
   const { isLight } = useTheme();
   const location = useLocation();
   const [loadingSession, setLoadingSession] = useState(true);
@@ -77,7 +75,7 @@ export default function DashboardEntry() {
     || location.pathname.startsWith("/dashboard/statistiques");
 
   if (loadingSession) {
-    return <PageLoader message={t("ui.loading_admin_session", "Checking admin session...")} />;
+    return <PageLoader message="Vérification de la session admin..." />;
   }
 
   if (authenticated) {
@@ -99,7 +97,7 @@ export default function DashboardEntry() {
   return (
     <>
       <Seo title="Connexion Dashboard" description="Acces dashboard via compte WordPress." noIndex />
-      <main className="site-page py-14">
+      <main className="site-page py-14" dir="ltr">
         <div className="site-container">
           <div className={`site-panel mx-auto max-w-xl space-y-5 ${panelClass}`}>
             <p className="site-kicker">Dashboard</p>
