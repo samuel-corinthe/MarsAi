@@ -39,7 +39,7 @@ export const FORM_CONSTRAINTS = {
     MIN_LENGTH: 5,
     MAX_LENGTH: 250,
     PATTERN: /^[\p{L}\p{N}\p{M}\p{P}\p{Z}\n]*$/u,
-    ERROR_MSG: "La description ne doit pas depasser 250 caracteres",
+    ERROR_MSG: "La description contient des caracteres invalides",
   },
 
   COUNTRY_ALPHA2: {
@@ -169,6 +169,19 @@ export const validateField = (fieldName, value, t) => {
   }
 
   if (constraint.MIN_LENGTH && cleaned.length < constraint.MIN_LENGTH) {
+    if (fieldName === "DESCRIPTION") {
+      return {
+        isValid: false,
+        error: translate(
+          t,
+          "upload.validation.description_too_short",
+          `La description doit contenir au moins ${constraint.MIN_LENGTH} caracteres.`,
+          { min: constraint.MIN_LENGTH },
+        ),
+        cleaned,
+      };
+    }
+
     return {
       isValid: false,
       error: translate(t, FIELD_ERROR_KEYS[fieldName], constraint.ERROR_MSG),
@@ -177,6 +190,19 @@ export const validateField = (fieldName, value, t) => {
   }
 
   if (constraint.MAX_LENGTH && cleaned.length > constraint.MAX_LENGTH) {
+    if (fieldName === "DESCRIPTION") {
+      return {
+        isValid: false,
+        error: translate(
+          t,
+          "upload.validation.description_too_long",
+          `La description ne doit pas depasser ${constraint.MAX_LENGTH} caracteres.`,
+          { max: constraint.MAX_LENGTH },
+        ),
+        cleaned,
+      };
+    }
+
     return {
       isValid: false,
       error: translate(t, FIELD_ERROR_KEYS[fieldName], constraint.ERROR_MSG),

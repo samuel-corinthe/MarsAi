@@ -345,6 +345,13 @@ i18n.use(initReactI18next).init({
             cast_avatar_invalid: "URL avatar invalide (https:// obligatoire)",
             summary_title: "Veuillez corriger les champs suivants :",
           },
+          validation: {
+            description_too_short:
+              "La description doit contenir au moins {{min}} caracteres.",
+            description_too_long:
+              "La description ne doit pas depasser {{max}} caracteres.",
+            description_invalid: "La description contient des caracteres invalides.",
+          },
         },
         altcha: {
           label: "Je ne suis pas un robot",
@@ -1479,7 +1486,9 @@ const extraTranslations = {
         title_required: "Title is required.",
         title_invalid:
           "Title must contain between 2 and 100 characters (letters, numbers and basic punctuation).",
-        description_invalid: "Description must not exceed 250 characters.",
+        description_too_short: "Description must contain at least {{min}} characters.",
+        description_too_long: "Description must not exceed {{max}} characters.",
+        description_invalid: "Description contains invalid characters.",
         country_required: "Country code is required.",
         country_invalid:
           "Invalid country code (2 uppercase letters, e.g. FR).",
@@ -1660,7 +1669,9 @@ const extraTranslations = {
         age_min: "يجب أن يكون عمرك 18 عاما على الأقل للمشاركة.",
         title_required: "عنوان الفيلم إلزامي.",
         title_invalid: "العنوان يجب أن يكون بين 2 و100 حرفا.",
-        description_invalid: "الوصف يجب ألا يتجاوز 250 حرفا.",
+        description_too_short: "يجب أن يحتوي الوصف على {{min}} أحرف على الأقل.",
+        description_too_long: "الوصف يجب ألا يتجاوز {{max}} حرفا.",
+        description_invalid: "الوصف يحتوي على أحرف غير صالحة.",
         country_required: "رمز الدولة إلزامي.",
         country_invalid: "رمز الدولة غير صحيح (حرفان كبيران مثل FR).",
         language_required: "لغة الفيلم إلزامية.",

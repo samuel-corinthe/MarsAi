@@ -89,4 +89,29 @@ describe("formvalidation utils", () => {
     expect(exceedsMaxLength("TITLE", "x".repeat(101))).toBe(true);
     expect(exceedsMaxLength("TITLE", "x".repeat(100))).toBe(false);
   });
+
+  it("validateForm remonte le bon message si la description est trop courte", () => {
+    const result = validateForm({
+      email: "user@example.com",
+      firstName: "Jeanne",
+      lastName: "Martin",
+      age: "24",
+      title: "Mon Film IA",
+      description: "abcd",
+      countryAlpha2: "FR",
+      language: "Francais",
+      aiTools: "Runway",
+      bio: "",
+      socialWebsite: "",
+      socialInstagram: "",
+      socialFacebook: "",
+      socialX: "",
+      castMembers: [],
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors.description).toBe(
+      "La description doit contenir au moins 5 caracteres.",
+    );
+  });
 });
