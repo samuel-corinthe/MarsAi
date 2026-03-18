@@ -191,6 +191,7 @@ export default function FaqChatbot() {
   const { i18n } = useTranslation();
   const { isLight } = useTheme();
   const language = normalizeUiLanguage(i18n.language);
+  const previousLanguageRef = useRef(language);
   const ui = UI_COPY[language];
   const isRtl = language === "ar";
   const theme = useMemo(
@@ -273,6 +274,18 @@ export default function FaqChatbot() {
       setActiveCategoryId(fallback);
     }
   }, [flows, activeCategoryId]);
+
+  useEffect(() => {
+    if (previousLanguageRef.current === language) {
+      return;
+    }
+
+    previousLanguageRef.current = language;
+    setMessages([]);
+    setAskedQuestions([]);
+    setIsLoading(false);
+    setActiveCategoryId(getDefaultCategoryId(flows));
+  }, [language, flows]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
