@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getLocalizedMoviePath } from "../../utils/localizedRoutes";
+import { applyMoviePosterFallback, resolveMoviePosterSrc } from "../../utils/moviePoster";
 
 export default function GalleryMovieCard({
   movie,
@@ -16,6 +17,7 @@ export default function GalleryMovieCard({
   onToggleSelection,
 }) {
   const { t, i18n } = useTranslation();
+  const posterSrc = resolveMoviePosterSrc(movie.img, movie.id || movie.title);
 
   return (
     <div className="group space-y-3">
@@ -28,9 +30,12 @@ export default function GalleryMovieCard({
           }`}
         >
           <img
-            src={movie.img}
+            src={posterSrc}
             alt={movie.title}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+            onError={(event) => {
+              applyMoviePosterFallback(event, movie.id || movie.title);
+            }}
           />
         </div>
         <div className="px-2">

@@ -11,6 +11,7 @@ import {
   getObjectStorageMissingEnv,
   uploadFileToObjectStorage,
 } from "../services/objectStorageService.js";
+import { getDefaultMoviePosterUrl } from "../utils/defaultPoster.js";
 import { listCountriesForUpload } from "../models/countryModel.js";
 import {
   findCountryIdByAlpha2,
@@ -297,7 +298,7 @@ async function processQueuedYoutubeUpload({ jobId, payload }) {
     });
     const videoStorageUrl = storedVideo.url;
 
-    let posterUrl = `https://picsum.photos/seed/${slug}-${youtubeId}/600/900`;
+    let posterUrl = getDefaultMoviePosterUrl(`${slug}-${youtubeId}`);
     if (posterFile?.path) {
       const posterExt = path.extname(posterFile.originalname || "").toLowerCase() || ".jpg";
       const posterName = `${slug}-${youtubeId}${posterExt}`;

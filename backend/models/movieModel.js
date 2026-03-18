@@ -6,6 +6,7 @@ export async function findAllMovies(pool) {
         c.alpha2 AS country_alpha2,
         c.name_fr AS country_name_fr,
         c.name_eng AS country_name_eng,
+        c.name_ar AS country_name_ar,
         c.flag_path AS country_flag_path,
         COALESCE(r.avg_rating, 0) AS avg_rating,
         COALESCE(r.notes_count, 0) AS notes_count
@@ -34,6 +35,7 @@ export async function findMovieById(pool, movieId) {
         c.alpha2 AS country_alpha2,
         c.name_fr AS country_name_fr,
         c.name_eng AS country_name_eng,
+        c.name_ar AS country_name_ar,
         c.flag_path AS country_flag_path,
         COALESCE(r.avg_rating, 0) AS avg_rating,
         COALESCE(r.notes_count, 0) AS notes_count

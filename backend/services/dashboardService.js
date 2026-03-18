@@ -9,9 +9,12 @@ import {
   fetchAdminLogs,
   fetchNewsletterCount,
 } from "../models/dashboardModel.js";
+import {
+  getDefaultMoviePosterUrl,
+  isLegacyGeneratedPosterUrl,
+} from "../utils/defaultPoster.js";
 
 const STATUS_ORDER = ["en cours", "accepte", "selectionne", "refuse"];
-const DASHBOARD_POSTER_FALLBACK_PREFIX = "https://picsum.photos/seed/marsai-dashboard-";
 
 const navItems = [
   { label: "Vue admin", href: "admin-top" },
@@ -50,11 +53,11 @@ function toSlug(value) {
 
 function toDashboardPosterUrl(row) {
   const rawPoster = String(row.poster_url || row.posterUrl || row.img || "").trim();
-  if (rawPoster) return rawPoster;
+  if (rawPoster && !isLegacyGeneratedPosterUrl(rawPoster)) return rawPoster;
 
   const movieId = Number(row.id);
   const seed = Number.isFinite(movieId) && movieId > 0 ? movieId : "fallback";
-  return `${DASHBOARD_POSTER_FALLBACK_PREFIX}${seed}/600/900`;
+  return getDefaultMoviePosterUrl(seed);
 }
 
 function mapMovieStatus(rawStatus, isSelected) {

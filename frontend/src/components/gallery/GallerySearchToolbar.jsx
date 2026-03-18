@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { getLocalizedMoviePath } from "../../utils/localizedRoutes";
+import { applyMoviePosterFallback, resolveMoviePosterSrc } from "../../utils/moviePoster";
 
 export default function GallerySearchToolbar({
   searchRef,
@@ -72,7 +73,9 @@ export default function GallerySearchToolbar({
                   : "border-slate-100 bg-white"
               }`}
             >
-              {suggestions.map((movie) => (
+              {suggestions.map((movie) => {
+                const posterSrc = resolveMoviePosterSrc(movie.img, movie.id || movie.title);
+                return (
                 <Link
                   key={movie.id}
                   to={getLocalizedMoviePath(movie.id, language)}
@@ -84,9 +87,12 @@ export default function GallerySearchToolbar({
                   }`}
                 >
                   <img
-                    src={movie.img}
+                    src={posterSrc}
                     alt=""
                     className="w-16 h-9 object-cover rounded-lg shadow-md"
+                    onError={(event) => {
+                      applyMoviePosterFallback(event, movie.id || movie.title);
+                    }}
                   />
                   <div>
                     <p
@@ -98,7 +104,8 @@ export default function GallerySearchToolbar({
                     </p>
                   </div>
                 </Link>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

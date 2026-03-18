@@ -12,6 +12,8 @@ import {
   normalizeLanguage,
 } from "../utils/localizedRoutes";
 import { resolveCountryFlagPath } from "../utils/countryFlags";
+import { applyMoviePosterFallback, resolveMoviePosterSrc } from "../utils/moviePoster";
+import { resolvePublicAssetPath } from "../utils/assetUrl";
 import {
   deleteMyMovieRating,
   getCurrentSessionUser,
@@ -68,6 +70,7 @@ const SHARE_PLATFORMS = [
       `https://wa.me/?text=${encodeURIComponent(`${title} ${url}`)}`,
   },
 ];
+const DEFAULT_CAST_PROFILE_SRC = resolvePublicAssetPath("/images/profile-default.png");
 
 function toExternalUrl(value) {
   const raw = String(value || "").trim();
@@ -83,6 +86,49 @@ function toNonEmptyString(...values) {
     if (normalized) return normalized;
   }
   return "";
+}
+
+function normalizeRatingScore(value) {
+  const score = Number(value);
+  if (!Number.isInteger(score) || score < 1 || score > 5) {
+    return null;
+  }
+  return score;
+}
+
+function getLocalizedCountryName(movie, language, fallbackLabel) {
+  const normalizedLanguage = normalizeLanguage(language);
+
+  if (normalizedLanguage === "ar") {
+    return (
+      toNonEmptyString(
+        movie?.country_name_ar,
+        movie?.country_name_eng,
+        movie?.country_name_fr,
+        movie?.country,
+      ) || fallbackLabel
+    );
+  }
+
+  if (normalizedLanguage === "en") {
+    return (
+      toNonEmptyString(
+        movie?.country_name_eng,
+        movie?.country_name_fr,
+        movie?.country_name_ar,
+        movie?.country,
+      ) || fallbackLabel
+    );
+  }
+
+  return (
+    toNonEmptyString(
+      movie?.country_name_fr,
+      movie?.country_name_eng,
+      movie?.country_name_ar,
+      movie?.country,
+    ) || fallbackLabel
+  );
 }
 
 function normalizeEmailAddress(value) {
@@ -268,10 +314,11 @@ const MovieDetails = () => {
   const heroVideoRef = useRef(null);
 
   const movieId = Number.parseInt(id, 10);
+  const moviePosterSrc = resolveMoviePosterSrc(movie?.img, movieId || "movie");
 
   const seoTitle = movie?.title || t("movie_details.not_found");
   const seoDescription = movie?.description || t("movie_details.back_to_gallery");
-  const seoImage = movie?.img || null;
+  const seoImage = moviePosterSrc || null;
   const seoUrl = typeof window !== "undefined" ? window.location.href : undefined;
   const seoVideo = movie?.videoUrl || movie?.rawVideoUrl || movie?.youtubeUrl || null;
 
@@ -417,9 +464,9 @@ const MovieDetails = () => {
         try {
           const ratingPayload = await getMyMovieRating(movieId);
           if (cancelled) return;
-          const myScore = Number(ratingPayload?.myScore);
+          const myScore = normalizeRatingScore(ratingPayload?.myScore);
           const myComment = String(ratingPayload?.myComment || "");
-          setOfficialRating(Number.isFinite(myScore) ? myScore : null);
+          setOfficialRating(myScore);
           setOfficialComment(myComment);
         } catch (error) {
           if (!cancelled) {
@@ -461,7 +508,7 @@ const MovieDetails = () => {
     try {
       const normalizedComment = String(tempComment || "").trim();
       await upsertMyMovieRating(movieId, tempRating, normalizedComment);
-      setOfficialRating(tempRating);
+      setOfficialRating(normalizeRatingScore(tempRating));
       setOfficialComment(normalizedComment);
       setIsModalOpen(false);
     } catch (error) {
@@ -610,11 +657,7 @@ const MovieDetails = () => {
     movie.submittedBy,
     movie.submitted_by,
   ) || fallbackNa;
-  const countryName = toNonEmptyString(
-    movie.country,
-    movie.country_name_fr,
-    movie.country_name_eng,
-  ) || fallbackNa;
+  const countryName = getLocalizedCountryName(movie, i18n.language, fallbackNa);
   const countryAlpha2 = toNonEmptyString(
     movie.countryAlpha2,
     movie.country_alpha2,
@@ -762,7 +805,7 @@ const MovieDetails = () => {
         description={movie.description || seoDescription}
         director={directorName}
         datePublished={releaseDateDisplay}
-        image={movie.img}
+        image={moviePosterSrc}
         duration={movieSchemaDurationMinutes}
         genre={movieGenreList}
       />
@@ -812,9 +855,12 @@ const MovieDetails = () => {
             <div className="flex flex-col md:flex-row gap-10 md:gap-16 items-center md:items-start">
               <div className="w-64 h-70 md:w-80 shrink-0 shadow-2xl rounded-[40px] overflow-hidden border-4 border-white/10">
                 <img
-                  src={movie.img}
+                  src={moviePosterSrc}
                   alt={movie.title}
                   className="w-full h-auto object-cover aspect-[2/3]"
+                  onError={(event) => {
+                    applyMoviePosterFallback(event, movieId || movie.title);
+                  }}
                 />
               </div>
 
@@ -885,7 +931,7 @@ const MovieDetails = () => {
                   {SHARE_PLATFORMS.map(({ key, label, ariaKey, getUrl }) => (
                     <a
                       key={key}
-                      href={getUrl(shareUrl, movie.title, movie.img || "")}
+                      href={getUrl(shareUrl, movie.title, moviePosterSrc || "")}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={t(ariaKey)}
@@ -1030,9 +1076,14 @@ const MovieDetails = () => {
                           className="flex items-center gap-4 p-5 rounded-[30px] bg-slate-50 border border-slate-100 group hover:bg-white hover:shadow-xl transition-all"
                         >
                           <img
-                            src={person.img || `https://i.pravatar.cc/150?u=cast-${movie.id}-${index}`}
+                            src={person.img || DEFAULT_CAST_PROFILE_SRC}
                             className="w-16 h-16 rounded-2xl object-cover shadow-md"
                             alt={person.name || t("movie_details.casting")}
+                            onError={(event) => {
+                              if (event.currentTarget.src !== DEFAULT_CAST_PROFILE_SRC) {
+                                event.currentTarget.src = DEFAULT_CAST_PROFILE_SRC;
+                              }
+                            }}
                           />
                           <div>
                             <p className="font-black text-blue-700 leading-tight uppercase tracking-tighter">
@@ -1309,7 +1360,7 @@ const MovieDetails = () => {
                 >
                   {ratingLoading ? "..." : t("movie_details.modal_confirm")}
                 </button>
-                {officialRating && (
+                {officialRating !== null && (
                   <button
                     onClick={handleDeleteVote}
                     className="text-red-500 font-bold uppercase text-xs tracking-widest py-2 disabled:opacity-60"

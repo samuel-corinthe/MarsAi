@@ -11,8 +11,10 @@ import {
   isPublicObjectStorageUrl,
 } from "./objectStorageService.js";
 import { resolveCountryFlagPath } from "./countryFlagPath.js";
-
-const FALLBACK_POSTER_PREFIX = "https://picsum.photos/seed/marsai-movie-";
+import {
+  getDefaultMoviePosterUrl,
+  isLegacyGeneratedPosterUrl,
+} from "../utils/defaultPoster.js";
 
 function decodeHtmlEntities(value) {
   const raw = String(value ?? "");
@@ -301,11 +303,11 @@ function toGenreList(row) {
 function toPosterUrl(row) {
   const rawPoster = row.poster_url || row.posterUrl || row.img || row.image;
   const poster = typeof rawPoster === "string" ? rawPoster.trim() : "";
-  if (poster) return poster;
+  if (poster && !isLegacyGeneratedPosterUrl(poster)) return poster;
 
   const movieId = Number(row.id);
   const seed = Number.isFinite(movieId) && movieId > 0 ? movieId : "fallback";
-  return `${FALLBACK_POSTER_PREFIX}${seed}/600/900`;
+  return getDefaultMoviePosterUrl(seed);
 }
 
 function mapMovieRow(row, options = {}) {
@@ -337,6 +339,9 @@ function mapMovieRow(row, options = {}) {
     subtitleLanguage: String(row.subtitle_language || ""),
     age: Number.isFinite(Number(row.age)) ? Number(row.age) : null,
     country: decodeHtmlEntities(row.country_name_fr || row.country_name_eng || ""),
+    country_name_fr: decodeHtmlEntities(row.country_name_fr || ""),
+    country_name_eng: decodeHtmlEntities(row.country_name_eng || ""),
+    country_name_ar: decodeHtmlEntities(row.country_name_ar || ""),
     countryAlpha2: countryCode,
     countryFlagPath,
     countryId: Number.isFinite(Number(row.country_id)) ? Number(row.country_id) : null,

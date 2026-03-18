@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { getLocalizedMoviePath } from "../../utils/localizedRoutes";
+import { applyMoviePosterFallback, resolveMoviePosterSrc } from "../../utils/moviePoster";
 
 const CAROUSEL_SHIFT = "clamp(62px, 16vw, 240px)";
 const CAROUSEL_POSITIONS = [
@@ -77,6 +78,7 @@ export default function GalleryHeroCarousel({
                   topMovies.length;
                 const pos = activeCarouselPositions[positionIndex];
                 if (!pos) return null;
+                const posterSrc = resolveMoviePosterSrc(movie.img, movie.id || movie.title);
 
                 return (
                   <Link
@@ -98,9 +100,12 @@ export default function GalleryHeroCarousel({
                       }`}
                     >
                       <img
-                        src={movie.img}
+                        src={posterSrc}
                         alt={movie.title}
                         className="w-full h-full object-cover opacity-95 group-hover:opacity-40 transition-all duration-700"
+                        onError={(event) => {
+                          applyMoviePosterFallback(event, movie.id || movie.title);
+                        }}
                       />
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div

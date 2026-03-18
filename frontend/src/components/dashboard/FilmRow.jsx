@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { resolveCountryFlagPath } from "../../utils/countryFlags";
+import { applyMoviePosterFallback, resolveMoviePosterSrc } from "../../utils/moviePoster";
 
 const COUNTRY_NAME_TO_CODE = {
   france: "fr",
@@ -89,9 +90,11 @@ export default function FilmRow({
     film.director || film.submittedBy || film.submitted_by || "Anonyme",
   ).trim() || "Anonyme";
   const countryCode = resolveCountryCode(film);
-  const posterUrl = String(
+  const posterSeed = movieId ?? filmSlug ?? filmTitle;
+  const posterUrl = resolveMoviePosterSrc(
     film.img || film.poster || film.posterUrl || film.poster_url || "",
-  ).trim();
+    posterSeed,
+  );
   const CardWrapper = hasMovieId ? Link : "div";
   const cardWrapperProps = hasMovieId ? { to: moviePath } : {};
   const isPhase2SelectionBusy =
@@ -102,19 +105,14 @@ export default function FilmRow({
       <div className="grid gap-5 lg:grid-cols-[260px_1fr_220px] lg:items-start">
         <CardWrapper className="group block text-inherit" {...cardWrapperProps}>
           <div className="relative aspect-video overflow-hidden rounded-2xl border border-slate-500/35 bg-slate-950 shadow-xl">
-            {posterUrl ? (
-              <img
-                src={posterUrl}
-                alt={filmTitle}
-                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-800 to-slate-900 px-4 text-center">
-                <span className="text-xs font-black uppercase tracking-wide text-slate-200">
-                  {filmTitle}
-                </span>
-              </div>
-            )}
+            <img
+              src={posterUrl}
+              alt={filmTitle}
+              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+              onError={(event) => {
+                applyMoviePosterFallback(event, posterSeed);
+              }}
+            />
           </div>
           <div className="mt-3 px-1">
             <h4 className="truncate text-base font-black uppercase tracking-tight text-white">
