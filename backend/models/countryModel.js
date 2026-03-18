@@ -10,6 +10,7 @@ export async function listCountriesForUpload() {
         alpha2,
         name_fr,
         name_eng,
+        name_ar,
         flag_path
       FROM countries
       ORDER BY name_fr ASC, name_eng ASC, alpha2 ASC

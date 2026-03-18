@@ -5,7 +5,7 @@ import { validateForm, FORM_CONSTRAINTS, exceedsMaxLength } from '../utils/formv
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import usePhaseAccessController from "../controllers/usePhaseAccessController";
-import { getLocalizedPath } from "../utils/localizedRoutes";
+import { getLocalizedPath, normalizeLanguage } from "../utils/localizedRoutes";
 import { resolveCountryFlagPath } from "../utils/countryFlags";
 import {
     fetchAltchaChallenge,
@@ -197,6 +197,21 @@ function isTerminalYoutubeStatus(status) {
     );
 }
 
+function getLocalizedCountryName(country, language) {
+    if (!country) return '';
+
+    const normalizedLanguage = normalizeLanguage(language);
+    if (normalizedLanguage === 'ar') {
+        return country.nameAr || country.nameEn || country.nameFr || country.alpha2;
+    }
+
+    if (normalizedLanguage === 'en') {
+        return country.nameEn || country.nameFr || country.nameAr || country.alpha2;
+    }
+
+    return country.nameFr || country.nameEn || country.nameAr || country.alpha2;
+}
+
 function formatUploadElapsed(seconds) {
     const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
     const mins = Math.floor(safeSeconds / 60);
@@ -312,6 +327,7 @@ export default function YoutubeUpload() {
                             alpha2,
                             nameFr: String(row?.nameFr || row?.name_fr || '').trim(),
                             nameEn: String(row?.nameEn || row?.name_eng || '').trim(),
+                            nameAr: String(row?.nameAr || row?.name_ar || '').trim(),
                             flagPath: resolveCountryFlagPath(row?.flagPath || row?.flag_path || '', alpha2),
                         };
                     })
@@ -892,7 +908,7 @@ export default function YoutubeUpload() {
     const selectedCountryCode = String(countryAlpha2 || '').trim().toUpperCase();
     const selectedCountry = countries.find((country) => country.alpha2 === selectedCountryCode) || null;
     const selectedCountryName = selectedCountry
-        ? (selectedCountry.nameFr || selectedCountry.nameEn || selectedCountry.alpha2)
+        ? getLocalizedCountryName(selectedCountry, i18n.language)
         : '';
     const requiredLabel = t('upload.form.required');
     const optionalLabel = t('upload.form.optional');
@@ -1327,7 +1343,7 @@ export default function YoutubeUpload() {
                                 <option
                                     key={country.alpha2}
                                     value={country.alpha2}
-                                    label={`${country.alpha2} - ${country.nameFr || country.nameEn || country.alpha2}`}
+                                    label={`${country.alpha2} - ${getLocalizedCountryName(country, i18n.language)}`}
                                 />
                             ))}
                         </datalist>

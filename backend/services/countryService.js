@@ -8,6 +8,7 @@ export function mapCountriesForUpload(rows) {
       alpha2,
       nameFr: String(row.name_fr || "").trim(),
       nameEn: String(row.name_eng || "").trim(),
+      nameAr: String(row.name_ar || "").trim(),
       flagPath: resolveCountryFlagPath(row.flag_path, alpha2),
     };
   });
