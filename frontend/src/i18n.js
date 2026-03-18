@@ -226,7 +226,7 @@ i18n.use(initReactI18next).init({
             last_name_placeholder: "Votre nom",
             age_label: "Age",
             age_placeholder: "Votre age",
-            age_hint: "Vous devez avoir au moins 18 ans.",
+            age_hint: "Vous devez avoir entre 18 et 116 ans.",
             title_label: "Titre de la video",
             title_placeholder: "Donnez un titre accrocheur a votre video",
             movie_title_label: "Titre de votre film",
@@ -346,6 +346,8 @@ i18n.use(initReactI18next).init({
             summary_title: "Veuillez corriger les champs suivants :",
           },
           validation: {
+            age_max:
+              "Si vous etes plus age(e) qu Ethel Caterham, merci de contacter le Guinness World Records avant de valider ce formulaire.",
             description_too_short:
               "La description doit contenir au moins {{min}} caracteres.",
             description_too_long:
@@ -650,7 +652,7 @@ i18n.use(initReactI18next).init({
             last_name_placeholder: "Your last name",
             age_label: "Age",
             age_placeholder: "Your age",
-            age_hint: "You must be at least 18 years old.",
+            age_hint: "You must be between 18 and 116 years old.",
             title_label: "Video title",
             title_placeholder: "Give a catchy title to your video",
             movie_title_label: "Your movie title",
@@ -1064,7 +1066,7 @@ i18n.use(initReactI18next).init({
             last_name_placeholder: "اسم عائلتك",
             age_label: "العمر",
             age_placeholder: "عمرك",
-            age_hint: "يجب أن يكون عمرك 18 عاماً على الأقل.",
+            age_hint: "يجب أن يكون عمرك بين 18 و116 عاماً.",
             title_label: "عنوان الفيديو",
             title_placeholder: "اختر عنواناً جذاباً لفيديوهاتك",
             movie_title_label: "عنوان فيلمك",
@@ -1483,6 +1485,8 @@ const extraTranslations = {
         age_required: "Age is required.",
         age_number: "Age must be a valid number.",
         age_min: "You must be at least 18 years old to participate.",
+        age_max:
+          "If you are older than Ethel Caterham, please contact Guinness World Records before submitting this form.",
         title_required: "Title is required.",
         title_invalid:
           "Title must contain between 2 and 100 characters (letters, numbers and basic punctuation).",
@@ -1667,6 +1671,8 @@ const extraTranslations = {
         age_required: "العمر إلزامي.",
         age_number: "العمر يجب أن يكون رقما صالحا.",
         age_min: "يجب أن يكون عمرك 18 عاما على الأقل للمشاركة.",
+        age_max:
+          "إذا كان عمرك أكبر من عمر إيثل كاترهام، يرجى التواصل مع موسوعة غينيس للأرقام القياسية قبل إرسال هذا النموذج.",
         title_required: "عنوان الفيلم إلزامي.",
         title_invalid: "العنوان يجب أن يكون بين 2 و100 حرفا.",
         description_too_short: "يجب أن يحتوي الوصف على {{min}} أحرف على الأقل.",

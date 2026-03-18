@@ -23,6 +23,7 @@ export const FORM_CONSTRAINTS = {
 
   AGE: {
     MIN_VALUE: 18,
+    MAX_VALUE: 116,
     PATTERN: /^\d+$/,
     ERROR_MSG: "Vous devez avoir au moins 18 ans pour participer au concours",
   },
@@ -161,6 +162,18 @@ export const validateField = (fieldName, value, t) => {
       return {
         isValid: false,
         error: translate(t, FIELD_ERROR_KEYS.AGE, constraint.ERROR_MSG),
+        cleaned,
+      };
+    }
+
+    if (constraint.MAX_VALUE && ageValue > constraint.MAX_VALUE) {
+      return {
+        isValid: false,
+        error: translate(
+          t,
+          "upload.validation.age_max",
+          "Si vous etes plus age(e) qu Ethel Caterham, merci de contacter le Guinness World Records avant de valider ce formulaire.",
+        ),
         cleaned,
       };
     }

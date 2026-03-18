@@ -21,6 +21,7 @@ export const FORM_CONSTRAINTS = {
 
   AGE: {
     MIN_VALUE: 18,
+    MAX_VALUE: 116,
     PATTERN: /^\d+$/
   },
 
@@ -199,6 +200,13 @@ export const validateFormData = (req, res, next) => {
     console.log(` [VALIDATION] Âge trop jeune: ${age} ans`);
     return res.status(400).json({
       error: `Vous devez avoir au moins ${FORM_CONSTRAINTS.AGE.MIN_VALUE} ans pour participer`
+    });
+  }
+
+  if (FORM_CONSTRAINTS.AGE.MAX_VALUE && age > FORM_CONSTRAINTS.AGE.MAX_VALUE) {
+    console.log(` [VALIDATION] Ã‚ge trop eleve: ${age} ans`);
+    return res.status(400).json({
+      error: "Si vous etes plus age(e) qu Ethel Caterham, merci de contacter le Guinness World Records avant de valider ce formulaire."
     });
   }
 

@@ -31,6 +31,14 @@ describe("formvalidation utils", () => {
     expect(result.cleaned).toBe("28");
   });
 
+  it("validateField bloque un age superieur a 116", () => {
+    const result = validateField("AGE", "117");
+    expect(result.isValid).toBe(false);
+    expect(result.error).toBe(
+      "Si vous etes plus age(e) qu Ethel Caterham, merci de contacter le Guinness World Records avant de valider ce formulaire.",
+    );
+  });
+
   it("validateForm valide un payload complet", () => {
     const result = validateForm({
       email: "USER@Example.com",

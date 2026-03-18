@@ -1194,6 +1194,7 @@ export default function YoutubeUpload() {
                             type="number"
                             placeholder={t('upload.form.age_placeholder')}
                             min="18"
+                            max={String(FORM_CONSTRAINTS.AGE.MAX_VALUE)}
                             className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.age ? 'border-red-500 bg-red-50' : 'border-slate-200'
                                 }`}
                             value={age}
