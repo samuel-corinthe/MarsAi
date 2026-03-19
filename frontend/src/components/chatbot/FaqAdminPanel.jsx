@@ -69,20 +69,6 @@ function TranslationEditor({
           placeholder={copy.answerPlaceholder}
         />
       </label>
-
-      <label className="block space-y-1">
-        <span className={`text-[11px] uppercase tracking-[0.14em] ${labelClass}`}>
-          {copy.keywordsLabel}
-        </span>
-        <input
-          type="text"
-          value={value.keywords}
-          disabled={disabled}
-          onChange={(event) => onChange(language, "keywords", event.target.value)}
-          className={`w-full rounded-xl border px-3 py-2 text-sm outline-none transition ${inputClass}`}
-          placeholder={copy.keywordsPlaceholder}
-        />
-      </label>
     </section>
   );
 }

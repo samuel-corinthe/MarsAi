@@ -339,21 +339,6 @@ export const validateForm = (formData, t) => {
     }
   }
 
-  if (!formData.language || !formData.language.trim()) {
-    errors.language = translate(
-      t,
-      "upload.validation.language_required",
-      "La langue est requise",
-    );
-  } else {
-    const validation = validateField("LANGUAGE", formData.language, t);
-    if (!validation.isValid) {
-      errors.language = validation.error;
-    } else {
-      cleanedData.language = validation.cleaned;
-    }
-  }
-
   if (!formData.aiTools || !formData.aiTools.trim()) {
     errors.aiTools = translate(
       t,

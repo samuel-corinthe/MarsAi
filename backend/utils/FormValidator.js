@@ -250,16 +250,16 @@ export const validateFormData = (req, res, next) => {
   req.body.countryAlpha2 = alpha2;
 
   
-  if (!req.body?.language) {
-    console.log(' [VALIDATION]  La langue est  manquante');
-    return res.status(400).json({ error: ' La langue du film  est requise' });
+  if (req.body?.language && String(req.body.language).trim()) {
+    const langValidation = validateField('LANGUAGE', req.body.language);
+    if (!langValidation.valid) {
+      console.log(' [VALIDATION] Langue invalide:', langValidation.error);
+      return res.status(400).json({ error: langValidation.error });
+    }
+    req.body.language = langValidation.cleaned;
+  } else {
+    req.body.language = '';
   }
-  const langValidation = validateField('LANGUAGE', req.body.language);
-  if (!langValidation.valid) {
-    console.log(' [VALIDATION] Langue invalide:', langValidation.error);
-    return res.status(400).json({ error: langValidation.error });
-  }
-  req.body.language = langValidation.cleaned;
 
  
   if (!req.body?.aiTools) {

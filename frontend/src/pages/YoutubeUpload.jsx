@@ -38,9 +38,7 @@ const STEP_2_FIELDS = [
     'title',
     'description',
     'countryAlpha2',
-    'language',
     'aiTools',
-    'bio',
     'socialWebsite',
     'socialInstagram',
     'socialFacebook',
@@ -252,9 +250,7 @@ export default function YoutubeUpload() {
     const [countryAlpha2, setCountryAlpha2] = useState('');
     const [countries, setCountries] = useState([]);
     const [countriesLoading, setCountriesLoading] = useState(false);
-    const [language, setLanguage] = useState('');
     const [aiTools, setAiTools] = useState('');
-    const [bio, setBio] = useState('');
     const [socialWebsite, setSocialWebsite] = useState('');
     const [socialInstagram, setSocialInstagram] = useState('');
     const [socialFacebook, setSocialFacebook] = useState('');
@@ -470,9 +466,7 @@ export default function YoutubeUpload() {
         title,
         description,
         countryAlpha2,
-        language,
         aiTools,
-        bio,
         socialWebsite,
         socialInstagram,
         socialFacebook,
@@ -486,9 +480,7 @@ export default function YoutubeUpload() {
         title,
         description,
         countryAlpha2,
-        language,
         aiTools,
-        bio,
         socialWebsite,
         socialInstagram,
         socialFacebook,
@@ -754,10 +746,8 @@ export default function YoutubeUpload() {
         formData.append('title', validation.cleanedData.title);
         formData.append('description', validation.cleanedData.description);
         formData.append('countryAlpha2', validation.cleanedData.countryAlpha2);
-        formData.append('language', validation.cleanedData.language);
         formData.append('lang', i18n.language);
         formData.append('aiTools', validation.cleanedData.aiTools);
-        if (validation.cleanedData.bio) formData.append('bio', validation.cleanedData.bio);
         if (validation.cleanedData.socialWebsite) formData.append('socialWebsite', validation.cleanedData.socialWebsite);
         if (validation.cleanedData.socialInstagram) formData.append('socialInstagram', validation.cleanedData.socialInstagram);
         if (validation.cleanedData.socialFacebook) formData.append('socialFacebook', validation.cleanedData.socialFacebook);
@@ -837,9 +827,7 @@ export default function YoutubeUpload() {
             setTitle('');
             setDescription('');
             setCountryAlpha2('');
-            setLanguage('');
             setAiTools('');
-            setBio('');
             setSocialWebsite('');
             setSocialInstagram('');
             setSocialFacebook('');
@@ -927,9 +915,7 @@ export default function YoutubeUpload() {
         title: t('upload.form.movie_title_label'),
         description: t('upload.form.description_label'),
         countryAlpha2: t('upload.form.country_label'),
-        language: t('upload.form.language_label'),
         aiTools: t('upload.form.ai_tools_label'),
-        bio: t('upload.form.bio_label'),
         socialWebsite: t('upload.form.website_label'),
         socialInstagram: t('upload.form.instagram_label'),
         socialFacebook: t('upload.form.facebook_label'),
@@ -1374,40 +1360,6 @@ export default function YoutubeUpload() {
                         )}
                     </div>
 
-                    {/* {t('upload.form.language_label')} */}
-                    <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                            <label htmlFor="language-input" className="block text-sm font-semibold text-slate-700">
-                                {t('upload.form.language_label')} <abbr title={requiredLabel} className="text-red-600 no-underline">*</abbr>
-                            </label>
-                            <span className={`text-xs ${language.length > FORM_CONSTRAINTS.LANGUAGE.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
-                                {language.length}/{FORM_CONSTRAINTS.LANGUAGE.MAX_LENGTH}
-                            </span>
-                        </div>
-                        <input
-                            id="language-input"
-                            type="text"
-                            placeholder={t('upload.form.language_placeholder')}
-                            maxLength={FORM_CONSTRAINTS.LANGUAGE.MAX_LENGTH}
-                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all ${errors.language ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
-                            value={language}
-                            onChange={(e) => {
-                                markFieldTouched('language');
-                                if (!exceedsMaxLength('LANGUAGE', e.target.value)) {
-                                    setLanguage(e.target.value);
-                                    clearError('language');
-                                }
-                            }}
-                            required
-                            aria-required="true"
-                            aria-invalid={!!errors.language}
-                            aria-describedby={errors.language ? "language-error" : undefined}
-                        />
-                        {errors.language && (
-                            <p id="language-error" className="text-red-600 text-sm mt-1" role="alert">{errors.language}</p>
-                        )}
-                    </div>
-
                     {/* Outils IA */}
                     <div className="space-y-2">
                         <div className="flex justify-between items-center">
@@ -1443,37 +1395,6 @@ export default function YoutubeUpload() {
                         <span id="aitools-hint" className="text-xs text-slate-500 block">
                             {t('upload.form.ai_tools_hint')}
                         </span>
-                    </div>
-
-                    {/* Bio */}
-                    <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                            <label htmlFor="bio-input" className="block text-sm font-semibold text-slate-700">
-                                {t('upload.form.bio_label')} <span className="text-slate-500 font-normal">({optionalLabel})</span>
-                            </label>
-                            <span className={`text-xs ${bio.length > FORM_CONSTRAINTS.BIO.MAX_LENGTH ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
-                                {bio.length}/{FORM_CONSTRAINTS.BIO.MAX_LENGTH}
-                            </span>
-                        </div>
-                        <textarea
-                            id="bio-input"
-                            placeholder={t('upload.form.bio_placeholder')}
-                            maxLength={FORM_CONSTRAINTS.BIO.MAX_LENGTH}
-                            className={`w-full border p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all h-24 resize-y ${errors.bio ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
-                            value={bio}
-                            onChange={(e) => {
-                                markFieldTouched('bio');
-                                if (!exceedsMaxLength('BIO', e.target.value)) {
-                                    setBio(e.target.value);
-                                    clearError('bio');
-                                }
-                            }}
-                            aria-invalid={!!errors.bio}
-                            aria-describedby={errors.bio ? "bio-error" : undefined}
-                        />
-                        {errors.bio && (
-                            <p id="bio-error" className="text-red-600 text-sm mt-1" role="alert">{errors.bio}</p>
-                        )}
                     </div>
 
                     {/* {t('upload.form.social_links_label')} */}
