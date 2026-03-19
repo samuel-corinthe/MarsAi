@@ -6,6 +6,7 @@ import {
 } from "../models/chatbotFaqModel.js";
 
 const SUPPORTED_LANGUAGES = new Set(["fr", "en", "ar"]);
+const THEME_ORDER = ["practical", "access", "inclusion", "projects"];
 
 const STOP_WORDS = new Set([
   "a",
@@ -275,6 +276,64 @@ function buildSuggestions(scoredTopics, language, currentTopicKey = "") {
   }
 
   return suggestions;
+}
+
+function normalizeThemeKey(value = "") {
+  const normalized = String(value || "").trim().toLowerCase();
+  return THEME_ORDER.includes(normalized) ? normalized : THEME_ORDER[0];
+}
+
+export async function getChatbotFaqCatalog({ language = "fr" } = {}) {
+  const outputLanguage = normalizeLanguage(language);
+  const pool = getDbPool();
+
+  await assertChatbotFaqTableReady(pool);
+
+  const faqEntries = await fetchActiveFaqEntries(pool);
+  if (!Array.isArray(faqEntries) || faqEntries.length === 0) {
+    return { themes: [] };
+  }
+
+  const topics = new Map();
+  faqEntries.forEach((entry) => {
+    const topicKey = getTopicKey(entry);
+    if (!topics.has(topicKey)) {
+      topics.set(topicKey, []);
+    }
+    topics.get(topicKey).push(entry);
+  });
+
+  const themedQuestions = new Map(THEME_ORDER.map((themeKey) => [themeKey, []]));
+
+  for (const [topicKey, variants] of topics.entries()) {
+    const variant = pickVariantForLanguage(
+      { variants, bestVariant: variants[0] || null },
+      outputLanguage,
+    );
+    if (!variant) continue;
+
+    const themeKey = normalizeThemeKey(variant.theme_key);
+    themedQuestions.get(themeKey).push({
+      faqKey: topicKey,
+      question: String(variant.question || "").trim(),
+      usageCount: Number(variant.usage_count || 0),
+    });
+  }
+
+  return {
+    themes: THEME_ORDER.map((themeKey) => ({
+      id: themeKey,
+      questions: themedQuestions
+        .get(themeKey)
+        .filter((item) => item.question)
+        .sort((left, right) => {
+          if (left.usageCount !== right.usageCount) {
+            return right.usageCount - left.usageCount;
+          }
+          return left.question.localeCompare(right.question, outputLanguage);
+        }),
+    })).filter((theme) => theme.questions.length > 0),
+  };
 }
 
 export async function getChatbotReply({ message, language = "fr" }) {

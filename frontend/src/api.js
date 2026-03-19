@@ -662,6 +662,87 @@ export async function getCurrentSessionUser({ signal } = {}) {
   return runCachedRequest(currentSessionCache, loadSession);
 }
 
+export async function getChatbotAdminFaqs({ signal } = {}) {
+  const res = await fetchBackend("/api/chatbot/admin/faqs", {
+    signal,
+    cache: "no-store",
+    credentials: "include",
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(payload?.details || payload?.error || `Chatbot FAQ API error ${res.status}`);
+  }
+
+  return payload;
+}
+
+export async function getChatbotFaqCatalog({ language = "fr", signal } = {}) {
+  const params = new URLSearchParams();
+  params.set("language", String(language || "fr"));
+
+  const res = await fetchBackend(`/api/chatbot/faqs?${params.toString()}`, {
+    signal,
+    cache: "no-store",
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(payload?.details || payload?.error || `Chatbot catalog API error ${res.status}`);
+  }
+
+  return payload;
+}
+
+export async function createChatbotAdminFaq(body) {
+  const res = await fetchBackend("/api/chatbot/admin/faqs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(body || {}),
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(payload?.details || payload?.error || `Chatbot FAQ API error ${res.status}`);
+  }
+
+  return payload;
+}
+
+export async function updateChatbotAdminFaq(faqKey, body) {
+  const safeFaqKey = encodeURIComponent(String(faqKey || "").trim());
+  const res = await fetchBackend(`/api/chatbot/admin/faqs/${safeFaqKey}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(body || {}),
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(payload?.details || payload?.error || `Chatbot FAQ API error ${res.status}`);
+  }
+
+  return payload;
+}
+
+export async function deleteChatbotAdminFaq(faqKey, { signal } = {}) {
+  const safeFaqKey = encodeURIComponent(String(faqKey || "").trim());
+  const res = await fetchBackend(`/api/chatbot/admin/faqs/${safeFaqKey}`, {
+    method: "DELETE",
+    signal,
+    credentials: "include",
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(payload?.details || payload?.error || `Chatbot FAQ API error ${res.status}`);
+  }
+
+  return payload;
+}
+
 export async function logoutSession() {
   clearRequestCache(currentSessionCache);
   const res = await fetchBackend("/api/auth/logout", {
