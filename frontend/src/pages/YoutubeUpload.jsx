@@ -225,6 +225,11 @@ function estimateUploadPayloadSize({ videoFile, posterFile, subtitleFile }) {
     return Math.max(1, videoSize + posterSize + subtitleSize + multipartOverheadBytes);
 }
 
+function trackGa4Event(eventName, eventParams = {}) {
+    if (typeof window === 'undefined' || typeof window.gtag !== 'function') return;
+    window.gtag('event', eventName, eventParams);
+}
+
 export default function YoutubeUpload() {
     const { t, i18n } = useTranslation();
     const { isLight } = useTheme();
@@ -798,6 +803,10 @@ export default function YoutubeUpload() {
                 },
             );
             setProgress(100);
+            trackGa4Event('generer_film_succes', {
+                event_category: 'engagement',
+                event_label: 'Formulaire Mars AI',
+            });
             const uploadedVideoId = String(responsePayload.videoId || '').trim();
             if (uploadedVideoId) {
                 setYoutubeVideoId(uploadedVideoId);

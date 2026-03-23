@@ -1433,9 +1433,7 @@ export default function Dashboard({ onSessionCleared = null }) {
               <p className="text-xs text-slate-200/85">
                 {currentPhase.description}
               </p>
-              <div className="text-xs text-slate-100/85">
-                Selection : {currentPhase.selected}/{quotaTarget} Films deposes : {currentPhase.submitted}
-              </div>
+
               <div className="bar-track h-2">
                 <div
                   className="bar-fill"
