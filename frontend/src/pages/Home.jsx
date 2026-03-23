@@ -37,6 +37,7 @@ export default function Home({ page }) {
   const currentPhaseKey = String(sitePhase?.currentPhase || "phase_1").toLowerCase();
   const isCallForProjectsVisible = currentPhaseKey === "phase_1";
   const isCallForProjectsPhase = currentPhaseKey === "phase_1";
+  const showIntroFirst = currentPhaseKey === "phase_2" || currentPhaseKey === "phase_3";
   const heroCtaPath = isCallForProjectsPhase ? submitFilmPath : moviesPath;
   const heroCtaBadge = isCallForProjectsPhase
     ? t("home.hero_cta.call_badge")
@@ -302,6 +303,123 @@ export default function Home({ page }) {
       focusColor: "#38bdf8",
     };
 
+  const heroSectionClassName = showIntroFirst
+    ? "relative min-h-[72vh] w-full overflow-hidden md:min-h-[82vh]"
+    : "relative min-h-screen w-full overflow-hidden";
+  const heroLinkClassName = showIntroFirst
+    ? "relative z-20 flex min-h-[72vh] w-full items-center justify-center px-4 py-14 text-center sm:px-6 md:min-h-[82vh]"
+    : "relative z-20 flex min-h-screen w-full items-center justify-center px-4 text-center sm:px-6";
+  const heroTopBlendClassName = showIntroFirst
+    ? `pointer-events-none absolute inset-x-0 top-0 z-30 h-28 md:h-36 bg-gradient-to-b ${
+      isLight
+        ? "from-[#d8e9ff] via-[#cfe4ff]/76 to-transparent"
+        : "from-[#0f172a] via-[#0b1428]/72 to-transparent"
+    }`
+    : "";
+  const heroBottomBlendClassName = `pointer-events-none absolute inset-x-0 bottom-0 z-30 h-44 md:h-56 bg-gradient-to-b ${
+    isLight
+      ? "from-transparent via-[#cfe4ff]/76 to-[#d8e9ff]"
+      : "from-transparent via-[#0b1428]/72 to-[#0f172a]"
+  }`;
+  const heroCurveClassName = `pointer-events-none absolute -bottom-10 left-1/2 z-30 h-24 w-[140%] -translate-x-1/2 rounded-t-[100%] blur-[1px] ${
+    isLight ? "bg-[#d8e9ff]/98" : "bg-[#0f172a]/98"
+  }`;
+
+  const heroSection = (
+    <section className={heroSectionClassName}>
+      <video
+        className="absolute inset-0 h-full w-full object-cover"
+        src={participateVideoUrl}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        aria-hidden="true"
+      />
+      <div className={`absolute inset-0 bg-gradient-to-b ${theme.heroOverlay}`} />
+      <div className={`absolute inset-0 ${theme.heroHalo}`} />
+      {showIntroFirst ? <div aria-hidden className={heroTopBlendClassName} /> : null}
+
+      <Link
+        to={heroCtaPath}
+        aria-label={heroCtaAria}
+        className={heroLinkClassName}
+      >
+        <div className={`group w-full max-w-3xl rounded-[2rem] border px-4 py-8 backdrop-blur-md transition-all duration-500 hover:scale-[1.02] sm:rounded-[2.5rem] sm:px-8 sm:py-10 md:px-14 md:py-14 ${theme.heroCard}`}>
+          <p className={`mb-4 text-[11px] font-black uppercase tracking-[0.22em] sm:text-[11px] sm:tracking-[0.35em] ${theme.heroBadge}`}>
+            {heroCtaBadge}
+          </p>
+          <h2 className={`text-4xl font-black uppercase tracking-tight sm:text-5xl md:text-7xl ${theme.heroTitle}`}>
+            {heroCtaTitle}
+          </h2>
+          <p className={`mt-5 text-xs font-semibold uppercase tracking-[0.16em] sm:mt-6 sm:text-sm sm:tracking-[0.2em] md:text-base ${theme.heroSubtitle}`}>
+            {heroCtaSubtitle}
+          </p>
+        </div>
+      </Link>
+
+      <div aria-hidden className={heroBottomBlendClassName} />
+      <div aria-hidden className={heroCurveClassName} />
+    </section>
+  );
+
+  const introSection = (
+    <section className={`relative py-16 md:py-24 ${theme.introSection}`}>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-10">
+        <div className={`rounded-[2.5rem] border p-8 md:p-12 ${theme.introCard}`}>
+          <h1
+            className={`text-3xl md:text-6xl font-black uppercase tracking-tight leading-[0.95] ${theme.introTitle}`}
+            dangerouslySetInnerHTML={{ __html: parsed.title }}
+          />
+
+          {parsed.heroLead && (
+            <p className={`mt-6 text-base md:text-xl max-w-3xl font-medium leading-relaxed ${theme.introLead}`}>
+              {parsed.heroLead}
+            </p>
+          )}
+
+          <div className="mt-10 flex flex-col sm:flex-row gap-4">
+            {parsed.heroLinks
+              .filter((l) => isCallForProjectsVisible || !isCallForProjectsHref(l.href))
+              .map((l, i) =>
+              l.href.startsWith("/") ? (
+                <Link
+                  key={i}
+                  to={l.href}
+                  aria-label={t("home.hero_link_aria", { label: l.text })}
+                  className={`w-full sm:w-auto px-8 py-4 rounded-full font-black uppercase tracking-widest text-[11px] transition-colors shadow-lg text-center ${theme.introLink}`}
+                >
+                  {l.text}
+                </Link>
+              ) : (
+                <a
+                  key={i}
+                  href={l.href}
+                  aria-label={t("home.hero_link_aria", { label: l.text })}
+                  className={`w-full sm:w-auto px-8 py-4 rounded-full font-black uppercase tracking-widest text-[11px] transition-colors shadow-lg text-center ${theme.introLink}`}
+                >
+                  {l.text}
+                </a>
+              ),
+            )}
+          </div>
+
+          {phaseLoaded && currentPhaseKey !== "phase_3" && (
+            <div className="mt-8">
+              <PhaseCountdownBanner
+                sitePhase={sitePhase}
+                language={i18n.language}
+                variant="home"
+                isLight={isLight}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+
   return (
     <>
       <Seo title={seoTitle} description={seoDescription} />
@@ -316,110 +434,8 @@ export default function Home({ page }) {
       {/* Texture Grain - opacite reduite pour ne pas gener la lecture */}
       <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 mix-blend-overlay pointer-events-none z-[60]"></div>
 
-      {/* --- PARTICIPER CTA (plein ecran) --- */}
-      <section className="relative min-h-screen w-full overflow-hidden">
-        <video
-          className="absolute inset-0 h-full w-full object-cover"
-          src={participateVideoUrl}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          aria-hidden="true"
-        />
-        <div className={`absolute inset-0 bg-gradient-to-b ${theme.heroOverlay}`} />
-        <div className={`absolute inset-0 ${theme.heroHalo}`} />
-
-        <Link
-          to={heroCtaPath}
-          aria-label={heroCtaAria}
-          className="relative z-20 flex min-h-screen w-full items-center justify-center px-4 text-center sm:px-6"
-        >
-          <div className={`group w-full max-w-3xl rounded-[2rem] border px-4 py-8 backdrop-blur-md transition-all duration-500 hover:scale-[1.02] sm:rounded-[2.5rem] sm:px-8 sm:py-10 md:px-14 md:py-14 ${theme.heroCard}`}>
-            <p className={`mb-4 text-[11px] font-black uppercase tracking-[0.22em] sm:text-[11px] sm:tracking-[0.35em] ${theme.heroBadge}`}>
-              {heroCtaBadge}
-            </p>
-            <h2 className={`text-4xl font-black uppercase tracking-tight sm:text-5xl md:text-7xl ${theme.heroTitle}`}>
-              {heroCtaTitle}
-            </h2>
-            <p className={`mt-5 text-xs font-semibold uppercase tracking-[0.16em] sm:mt-6 sm:text-sm sm:tracking-[0.2em] md:text-base ${theme.heroSubtitle}`}>
-              {heroCtaSubtitle}
-            </p>
-          </div>
-        </Link>
-
-        {/* Transition douce vers la section suivante */}
-        <div
-          aria-hidden
-          className={`pointer-events-none absolute inset-x-0 bottom-0 z-30 h-44 md:h-56 bg-gradient-to-b ${
-            isLight
-              ? "from-transparent via-[#cfe4ff]/76 to-[#d8e9ff]"
-              : "from-transparent via-[#0b1428]/72 to-[#0f172a]"
-          }`}
-        />
-        <div
-          aria-hidden
-          className={`pointer-events-none absolute -bottom-10 left-1/2 z-30 h-24 w-[140%] -translate-x-1/2 rounded-t-[100%] blur-[1px] ${
-            isLight ? "bg-[#d8e9ff]/98" : "bg-[#0f172a]/98"
-          }`}
-        />
-      </section>
-
-      {/* --- INTRO + COMPTEUR --- */}
-      <section className={`relative py-16 md:py-24 ${theme.introSection}`}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 md:px-10">
-          <div className={`rounded-[2.5rem] border p-8 md:p-12 ${theme.introCard}`}>
-            <h1
-              className={`text-3xl md:text-6xl font-black uppercase tracking-tight leading-[0.95] ${theme.introTitle}`}
-              dangerouslySetInnerHTML={{ __html: parsed.title }}
-            />
-
-            {parsed.heroLead && (
-              <p className={`mt-6 text-base md:text-xl max-w-3xl font-medium leading-relaxed ${theme.introLead}`}>
-                {parsed.heroLead}
-              </p>
-            )}
-
-            <div className="mt-10 flex flex-col sm:flex-row gap-4">
-              {parsed.heroLinks
-                .filter((l) => isCallForProjectsVisible || !isCallForProjectsHref(l.href))
-                .map((l, i) =>
-                l.href.startsWith("/") ? (
-                  <Link
-                    key={i}
-                    to={l.href}
-                    aria-label={t("home.hero_link_aria", { label: l.text })}
-                    className={`w-full sm:w-auto px-8 py-4 rounded-full font-black uppercase tracking-widest text-[11px] transition-colors shadow-lg text-center ${theme.introLink}`}
-                  >
-                    {l.text}
-                  </Link>
-                ) : (
-                  <a
-                    key={i}
-                    href={l.href}
-                    aria-label={t("home.hero_link_aria", { label: l.text })}
-                    className={`w-full sm:w-auto px-8 py-4 rounded-full font-black uppercase tracking-widest text-[11px] transition-colors shadow-lg text-center ${theme.introLink}`}
-                  >
-                    {l.text}
-                  </a>
-                ),
-              )}
-            </div>
-
-            {phaseLoaded && currentPhaseKey !== "phase_3" && (
-              <div className="mt-8">
-                <PhaseCountdownBanner
-                  sitePhase={sitePhase}
-                  language={i18n.language}
-                  variant="home"
-                  isLight={isLight}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
+      {showIntroFirst ? introSection : heroSection}
+      {showIntroFirst ? heroSection : introSection}
 
       {/* --- ABOUT (Plus clair pour la lecture prolongee) --- */}
       {(parsed.aboutTitle || parsed.aboutText) && (
