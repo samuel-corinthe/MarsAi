@@ -1,4 +1,41 @@
 import { useHead } from "@unhead/react";
+import { resolvePublicAssetPath } from "../utils/assetUrl";
+
+const DEFAULT_SITE_ORIGIN = "https://samuel-corinthe.students-laplateforme.io";
+
+function normalizeBasePath(value = "/") {
+  const raw = String(value || "").trim();
+  if (!raw || raw === "/") return "/";
+  const prefixed = raw.startsWith("/") ? raw : `/${raw}`;
+  return prefixed.replace(/\/+$/, "");
+}
+
+function getSiteOrigin() {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin;
+  }
+
+  return DEFAULT_SITE_ORIGIN;
+}
+
+function getSiteBaseUrl() {
+  const basePath = normalizeBasePath(import.meta.env.BASE_URL || "/");
+  return basePath === "/" ? getSiteOrigin() : `${getSiteOrigin()}${basePath}`;
+}
+
+function toAbsoluteUrl(value = "/") {
+  const resolved = resolvePublicAssetPath(value);
+  if (!resolved) return getSiteBaseUrl();
+  if (/^(https?:|data:|blob:)/i.test(resolved)) return resolved;
+  const prefixed = resolved.startsWith("/") ? resolved : `/${resolved}`;
+  return `${getSiteOrigin()}${prefixed}`;
+}
+
+const SITE_BASE_URL = getSiteBaseUrl();
+const SITE_HOME_URL = `${SITE_BASE_URL}/accueil`;
+const SITE_AGENDA_URL = `${SITE_BASE_URL}/agenda`;
+const SITE_LOGO_URL = toAbsoluteUrl("/favicon.svg");
+const SITE_IMAGE_URL = toAbsoluteUrl("/images/marsai-illustration.png");
 
 // Schema pour l'organisation du festival
 export const OrganizationSchema = () => {
@@ -7,8 +44,8 @@ export const OrganizationSchema = () => {
     "@type": "Organization",
     "name": "marsAI Festival",
     "alternateName": "Festival marsAI",
-    "url": "https://marsai-festival.com",
-    "logo": "https://marsai-festival.com/logo.png",
+    "url": SITE_HOME_URL,
+    "logo": SITE_LOGO_URL,
     "description": "Le premier festival international dédié aux films créés avec l'intelligence artificielle. Une célébration de la créativité augmentée et de l'innovation cinématographique.",
     "foundingDate": "2026",
     "sameAs": [
@@ -60,15 +97,15 @@ export const EventSchema = ({
     "organizer": {
       "@type": "Organization",
       "name": "marsAI Festival",
-      "url": "https://marsai-festival.com"
+      "url": SITE_HOME_URL
     },
     "offers": {
       "@type": "Offer",
-      "url": "https://marsai-festival.com/agenda",
+      "url": SITE_AGENDA_URL,
       "availability": "https://schema.org/InStock",
       "priceCurrency": "EUR"
     },
-    "image": "https://marsai-festival.com/festival-image.jpg"
+    "image": SITE_IMAGE_URL
   };
 
   useHead({
@@ -83,17 +120,9 @@ export const WebSiteSchema = () => {
     "@context": "https://schema.org",
     "@type": "WebSite",
     "name": "marsAI Festival",
-    "url": "https://marsai-festival.com",
+    "url": SITE_HOME_URL,
     "description": "Le premier festival international dédié aux films créés avec l'intelligence artificielle.",
-    "inLanguage": ["fr", "en"],
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": {
-        "@type": "EntryPoint",
-        "urlTemplate": "https://marsai-festival.com/search?q={search_term_string}"
-      },
-      "query-input": "required name=search_term_string"
-    }
+    "inLanguage": ["fr", "en"]
   };
 
   useHead({
@@ -111,7 +140,7 @@ export const BreadcrumbSchema = ({ items = [] }) => {
       "@type": "ListItem",
       "position": index + 1,
       "name": item.name,
-      "item": item.url
+      "item": toAbsoluteUrl(item.url)
     }))
   };
 
@@ -127,7 +156,7 @@ export const ArticleSchema = ({
   description = "",
   datePublished = "",
   dateModified = "",
-  image = "https://marsai-festival.com/festival-image.jpg",
+  image = SITE_IMAGE_URL,
   authorName = "marsAI Festival"
 }) => {
   const stripHtml = (html) =>
@@ -144,14 +173,14 @@ export const ArticleSchema = ({
     "author": {
       "@type": "Organization",
       "name": authorName,
-      "url": "https://marsai-festival.com"
+      "url": SITE_HOME_URL
     },
     "publisher": {
       "@type": "Organization",
       "name": "marsAI Festival",
       "logo": {
         "@type": "ImageObject",
-        "url": "https://marsai-festival.com/logo.png"
+        "url": SITE_LOGO_URL
       }
     }
   };
@@ -192,7 +221,7 @@ export const MovieSchema = ({
     "productionCompany": {
       "@type": "Organization",
       "name": "marsAI Festival",
-      "url": "https://marsai-festival.com"
+      "url": SITE_HOME_URL
     }
   };
 
