@@ -61,6 +61,11 @@ function toCountdownParts(remainingMs) {
   };
 }
 
+function buildPhaseCountdown(targetTs, title, next, nowTs) {
+  if (!Number.isFinite(targetTs) || nowTs >= targetTs) return null;
+  return { title, next, targetTs };
+}
+
 function resolvePhaseCountdown(sitePhase, nowTs, language) {
   const copy = getPhaseCountdownCopy(language);
   const currentPhaseKey = String(sitePhase?.currentPhase || "phase_1").toLowerCase();
@@ -73,23 +78,18 @@ function resolvePhaseCountdown(sitePhase, nowTs, language) {
     ? new Date(sitePhase.phase2EndsAt).getTime()
     : NaN;
 
-  if (Number.isFinite(phase1EndTs) && nowTs < phase1EndTs) {
-    return {
-      title: copy.endPhase1,
-      next: copy.phase2,
-      targetTs: phase1EndTs,
-    };
+  if (currentPhaseKey === "phase_1") {
+    return buildPhaseCountdown(phase1EndTs, copy.endPhase1, copy.phase2, nowTs);
   }
 
-  if (Number.isFinite(phase2EndTs) && nowTs < phase2EndTs) {
-    return {
-      title: copy.endPhase2,
-      next: copy.phase3,
-      targetTs: phase2EndTs,
-    };
+  if (currentPhaseKey === "phase_2") {
+    return buildPhaseCountdown(phase2EndTs, copy.endPhase2, copy.phase3, nowTs);
   }
 
-  return null;
+  return (
+    buildPhaseCountdown(phase1EndTs, copy.endPhase1, copy.phase2, nowTs)
+    || buildPhaseCountdown(phase2EndTs, copy.endPhase2, copy.phase3, nowTs)
+  );
 }
 
 const VARIANTS = {

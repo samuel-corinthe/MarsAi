@@ -322,15 +322,22 @@ export default function Dashboard({ onSessionCleared = null }) {
   const phaseProgress = Math.min(100, (elapsed / (phaseDuration || 1)) * 100);
   const phase1EndTs = sitePhase?.phase1EndsAt ? new Date(sitePhase.phase1EndsAt).getTime() : NaN;
   const phase2EndTs = sitePhase?.phase2EndsAt ? new Date(sitePhase.phase2EndsAt).getTime() : NaN;
+  const buildPhaseCountdownMeta = (label, targetTs) => {
+    if (!Number.isFinite(targetTs) || nowTs >= targetTs) return null;
+    return { label, targetTs };
+  };
   const phaseCountdownMeta = (() => {
     if (activeSitePhaseKey === "phase_3") return null;
-    if (Number.isFinite(phase1EndTs) && nowTs < phase1EndTs) {
-      return { label: "Fin phase 1", targetTs: phase1EndTs };
+    if (activeSitePhaseKey === "phase_1") {
+      return buildPhaseCountdownMeta("Fin phase 1", phase1EndTs);
     }
-    if (Number.isFinite(phase2EndTs) && nowTs < phase2EndTs) {
-      return { label: "Fin phase 2", targetTs: phase2EndTs };
+    if (activeSitePhaseKey === "phase_2") {
+      return buildPhaseCountdownMeta("Fin phase 2", phase2EndTs);
     }
-    return null;
+    return (
+      buildPhaseCountdownMeta("Fin phase 1", phase1EndTs)
+      || buildPhaseCountdownMeta("Fin phase 2", phase2EndTs)
+    );
   })();
   const phaseCountdownMs = phaseCountdownMeta
     ? Math.max(0, phaseCountdownMeta.targetTs - nowTs)
