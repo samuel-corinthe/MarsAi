@@ -15,7 +15,7 @@ describe("PhaseCountdownBanner", () => {
     vi.useRealTimers();
   });
 
-  it("affiche le decompte de phase 2 quand currentPhase vaut phase_2", async () => {
+  it("affiche un message visiteur pour la selection des gagnants en phase 2", async () => {
     render(
       <PhaseCountdownBanner
         sitePhase={{
@@ -32,8 +32,8 @@ describe("PhaseCountdownBanner", () => {
       await vi.advanceTimersByTimeAsync(0);
     });
 
-    expect(screen.getByText("Fin de phase 2")).toBeInTheDocument();
-    expect(screen.getByText("Phase 3")).toBeInTheDocument();
+    expect(screen.getByText("Les gagnants seront selectionnes dans")).toBeInTheDocument();
+    expect(screen.getByText("Date prevue :")).toBeInTheDocument();
     expect(screen.queryByText("Fin de phase 1")).not.toBeInTheDocument();
   });
 });

@@ -3,24 +3,24 @@ import { useEffect, useMemo, useState } from "react";
 const ZERO = { days: 0, hours: 0, minutes: 0, seconds: 0 };
 const PHASE_COUNTDOWN_COPY = {
   fr: {
-    endPhase1: "Fin de phase 1",
-    endPhase2: "Fin de phase 2",
-    nextPhase: "Prochaine phase:",
+    endPhase1: "Les 50 films seront choisis dans",
+    endPhase2: "Les gagnants seront selectionnes dans",
+    nextPhase: "Date prevue :",
     phase2: "Phase 2",
     phase3: "Phase 3",
-    phase3Active: "La phase 3 est active : le decompte est desactive.",
+    phase3Active: "Les gagnants ont ete annonces.",
     days: "J",
     hours: "H",
     minutes: "M",
     seconds: "S",
   },
   en: {
-    endPhase1: "End of phase 1",
-    endPhase2: "End of phase 2",
-    nextPhase: "Next phase:",
+    endPhase1: "The 50 films will be selected in",
+    endPhase2: "The winners will be selected in",
+    nextPhase: "Scheduled date:",
     phase2: "Phase 2",
     phase3: "Phase 3",
-    phase3Active: "Phase 3 is active: countdown is disabled.",
+    phase3Active: "The winners have been announced.",
     days: "D",
     hours: "H",
     minutes: "M",
@@ -51,6 +51,13 @@ function getPhaseCountdownCopy(language = "fr") {
   return PHASE_COUNTDOWN_COPY[normalizeLanguage(language)] || PHASE_COUNTDOWN_COPY.fr;
 }
 
+function getCountdownLocale(language = "fr") {
+  const normalized = normalizeLanguage(language);
+  if (normalized === "ar") return "ar-EG";
+  if (normalized === "en") return "en-US";
+  return "fr-FR";
+}
+
 function toCountdownParts(remainingMs) {
   const safeMs = Math.max(0, Number(remainingMs) || 0);
   return {
@@ -59,6 +66,16 @@ function toCountdownParts(remainingMs) {
     minutes: Math.floor((safeMs % 3600000) / 60000),
     seconds: Math.floor((safeMs % 60000) / 1000),
   };
+}
+
+function formatTargetDate(targetTs, language) {
+  if (!Number.isFinite(targetTs)) return "";
+  return new Intl.DateTimeFormat(getCountdownLocale(language), {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(targetTs);
 }
 
 function buildPhaseCountdown(targetTs, title, next, nowTs) {
@@ -125,6 +142,10 @@ export default function PhaseCountdownBanner({
   const phaseCountdown = useMemo(
     () => resolvePhaseCountdown(sitePhase, nowTs, language),
     [sitePhase, nowTs, language],
+  );
+  const formattedTargetDate = useMemo(
+    () => (phaseCountdown ? formatTargetDate(phaseCountdown.targetTs, language) : ""),
+    [phaseCountdown, language],
   );
   const countdown = useMemo(
     () => (phaseCountdown ? toCountdownParts(phaseCountdown.targetTs - nowTs) : ZERO),
@@ -213,7 +234,7 @@ export default function PhaseCountdownBanner({
         <p className={`${inlineNextClassName} ${homeNextClassName}`}>
           {copy.nextPhase}{" "}
           <span className={isLight ? "font-black text-slate-900" : "font-black text-cyan-100"}>
-            {phaseCountdown.next}
+            {formattedTargetDate}
           </span>
         </p>
       </div>
@@ -242,7 +263,7 @@ export default function PhaseCountdownBanner({
       </div>
       <p className={styles.nextTextClassName}>
         {copy.nextPhase}{" "}
-        <span className="font-semibold">{phaseCountdown.next}</span>
+        <span className="font-semibold">{formattedTargetDate}</span>
       </p>
     </div>
   );
