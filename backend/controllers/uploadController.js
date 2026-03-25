@@ -22,7 +22,6 @@ import { mapCountriesForUpload } from "../services/countryService.js";
 import { fetchYoutubeStatus, mapYoutubeStatus } from "../services/youtubeStatusService.js";
 import { enqueueUploadJob, getUploadJob, setUploadJobStage } from "../services/uploadJobService.js";
 
-const MAX_SRT_SIZE_BYTES = 1024 * 1024;
 const DEFAULT_POSTER_SEED = "marsai";
 const ANALYZE_VIDEO_TIMEOUT_MS = Number(process.env.ANALYZE_VIDEO_TIMEOUT_MS || 45_000);
 const YOUTUBE_UPLOAD_TIMEOUT_MS = Number(process.env.YOUTUBE_UPLOAD_TIMEOUT_MS || 480_000);
@@ -181,25 +180,6 @@ function buildYoutubeDescription({ description, bio, socialLinks }) {
   return sections.join("\n\n").trim() || "Video uploadee via MarsAI";
 }
 
-function validateSrtContent(filePath) {
-  const content = fs.readFileSync(filePath, "utf-8");
-
-  if (content.length > MAX_SRT_SIZE_BYTES) {
-    return { valid: false, error: "Fichier SRT trop volumineux (max 1 Mo)" };
-  }
-
-  const srtPattern = /\d+\r?\n\d{2}:\d{2}:\d{2},\d{3}\s*-->\s*\d{2}:\d{2}:\d{2},\d{3}/;
-  if (!srtPattern.test(content)) {
-    return { valid: false, error: "Le fichier ne semble pas etre un SRT valide" };
-  }
-
-  if (/<script/i.test(content)) {
-    return { valid: false, error: "Le contenu du fichier SRT n'est pas autorise" };
-  }
-
-  return { valid: true };
-}
-
 function cloneUploadFile(file) {
   if (!file) return null;
   return {
@@ -309,16 +289,6 @@ async function processQueuedYoutubeUpload({ jobId, payload }) {
         cacheControl: "public, max-age=31536000, immutable",
       });
       posterUrl = storedPoster.url;
-    }
-
-    if (subtitleFile?.path) {
-      const subtitleName = `${slug}-${youtubeId}.srt`;
-      await uploadFileToObjectStorage({
-        localFilePath: subtitleFile.path,
-        objectKey: `subtitles/${subtitleName}`,
-        contentType: "application/x-subrip",
-        cacheControl: "public, max-age=31536000, immutable",
-      });
     }
 
     setUploadJobStage(jobId, "database_save", "Enregistrement de la soumission...");
@@ -478,16 +448,6 @@ export async function submitYoutubeUpload(req, res) {
       error: "Stockage Scaleway S3 non configure.",
       details: `Variables manquantes: ${getObjectStorageMissingEnv().join(", ")}`,
     });
-  }
-
-  if (subtitleFile) {
-    const srtValidation = validateSrtContent(subtitleFile.path);
-    if (!srtValidation.valid) {
-      cleanupFile(videoFile.path);
-      cleanupFile(subtitleFile.path);
-      cleanupFile(posterFile?.path);
-      return res.status(400).json({ error: srtValidation.error });
-    }
   }
 
   try {

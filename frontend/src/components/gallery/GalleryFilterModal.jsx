@@ -7,6 +7,11 @@ export default function GalleryFilterModal({
   sortOptions,
   sortBy,
   onSortChange,
+  showPhase3Categories,
+  availableCategories,
+  selectedCategories,
+  onToggleCategory,
+  onClearCategories,
   minRating,
   maxRating,
   onMinRatingChange,
@@ -76,7 +81,7 @@ export default function GalleryFilterModal({
         <div className="space-y-8">
           <div>
             <p className="mb-3 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-              Trier par
+              {t("gallery.sortBy", "Trier par")}
             </p>
             <div className="grid grid-cols-2 gap-2">
               {sortOptions.map((option) => (
@@ -99,10 +104,60 @@ export default function GalleryFilterModal({
             </div>
           </div>
 
+          {showPhase3Categories && (
+            <div>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+                  {t("gallery.category_filter_title", "Categories")}
+                </p>
+                {selectedCategories.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={onClearCategories}
+                    className={`text-[10px] font-black uppercase tracking-widest ${
+                      isLight ? "text-indigo-700 hover:text-indigo-900" : "text-indigo-600 hover:text-indigo-700"
+                    }`}
+                  >
+                    {t("gallery.category_filter_clear", "Effacer")}
+                  </button>
+                )}
+              </div>
+              {availableCategories.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {availableCategories.map((categoryName) => {
+                    const isSelected = selectedCategories.includes(categoryName);
+                    return (
+                      <button
+                        key={categoryName}
+                        type="button"
+                        onClick={() => onToggleCategory(categoryName)}
+                        className={`rounded-full px-3 py-2 text-[11px] font-black uppercase tracking-[0.15em] transition-colors ${
+                          isSelected
+                            ? isLight
+                              ? "bg-indigo-700 text-white"
+                              : "bg-indigo-600 text-white"
+                            : isLight
+                              ? "bg-indigo-50 text-indigo-800 hover:bg-indigo-100"
+                              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        }`}
+                      >
+                        {categoryName}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400">
+                  {t("gallery.category_filter_empty", "Aucune categorie disponible pour le moment.")}
+                </p>
+              )}
+            </div>
+          )}
+
           <div>
             <div className="mb-3 flex items-center justify-between">
               <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-                Note (min - max)
+                {t("gallery.ratingRange", "Note (min - max)")}
               </p>
               <span
                 className={`text-sm font-black ${
@@ -118,7 +173,7 @@ export default function GalleryFilterModal({
                   htmlFor="rating-min"
                   className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400"
                 >
-                  Min
+                  {t("gallery.min", "Min")}
                 </label>
                 <input
                   id="rating-min"
@@ -139,7 +194,7 @@ export default function GalleryFilterModal({
                   htmlFor="rating-max"
                   className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400"
                 >
-                  Max
+                  {t("gallery.max", "Max")}
                 </label>
                 <input
                   id="rating-max"
@@ -166,7 +221,7 @@ export default function GalleryFilterModal({
                 : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
             }`}
           >
-            Reinitialiser
+            {t("gallery.reset", "Reinitialiser")}
           </button>
         </div>
       </div>

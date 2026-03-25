@@ -18,8 +18,10 @@ import {
   deleteMyMovieRating,
   getCurrentSessionUser,
   getMovieById,
+  getMoviePhase3Categories,
   getMyMovieRating,
   getSitePhaseState,
+  patchMoviePhase3Categories,
   updateMovieYoutubeUrl,
   upsertMyMovieRating,
 } from "../api";
@@ -311,6 +313,11 @@ const MovieDetails = () => {
   const [youtubeUrlSaving, setYoutubeUrlSaving] = useState(false);
   const [youtubeUrlError, setYoutubeUrlError] = useState("");
   const [youtubeUrlSuccess, setYoutubeUrlSuccess] = useState("");
+  const [phase3CategoryModalOpen, setPhase3CategoryModalOpen] = useState(false);
+  const [phase3CategoryItems, setPhase3CategoryItems] = useState([]);
+  const [phase3CategoryInput, setPhase3CategoryInput] = useState("");
+  const [phase3CategoryLoading, setPhase3CategoryLoading] = useState(false);
+  const [phase3CategoryError, setPhase3CategoryError] = useState("");
   const heroVideoRef = useRef(null);
 
   const movieId = Number.parseInt(id, 10);
@@ -354,6 +361,8 @@ const MovieDetails = () => {
 
   const shouldUseYoutubePlayer =
     activeSitePhase === "phase_2" || activeSitePhase === "phase_3";
+  const canManagePhase3Categories =
+    sessionChecked && isAdmin && activeSitePhase === "phase_2";
   const directPlayerVideoUrl = toDirectPreviewVideoUrl(movie?.videoUrl, movie?.rawVideoUrl);
   const heroPreviewVideoUrl = directPlayerVideoUrl;
 
@@ -586,6 +595,85 @@ const MovieDetails = () => {
     }
   };
 
+  const openPhase3CategoryModal = async () => {
+    if (!canManagePhase3Categories || !movie?.id) return;
+
+    setPhase3CategoryModalOpen(true);
+    setPhase3CategoryItems([]);
+    setPhase3CategoryInput("");
+    setPhase3CategoryError("");
+    setPhase3CategoryLoading(true);
+
+    try {
+      const categories = await getMoviePhase3Categories(movie.id);
+      setPhase3CategoryItems(Array.isArray(categories) ? categories : []);
+    } catch (error) {
+      setPhase3CategoryError(
+        error?.message || "Impossible de charger les categories phase 3.",
+      );
+    } finally {
+      setPhase3CategoryLoading(false);
+    }
+  };
+
+  const closePhase3CategoryModal = () => {
+    if (phase3CategoryLoading) return;
+    setPhase3CategoryModalOpen(false);
+    setPhase3CategoryItems([]);
+    setPhase3CategoryInput("");
+    setPhase3CategoryError("");
+  };
+
+  const handleAddPhase3Category = () => {
+    const categoryName = String(phase3CategoryInput || "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (!categoryName) return;
+
+    const alreadyExists = phase3CategoryItems.some(
+      (item) => String(item || "").toLowerCase() === categoryName.toLowerCase(),
+    );
+    if (alreadyExists) {
+      setPhase3CategoryInput("");
+      return;
+    }
+
+    setPhase3CategoryItems((prev) => [...prev, categoryName]);
+    setPhase3CategoryInput("");
+    setPhase3CategoryError("");
+  };
+
+  const handleRemovePhase3Category = (categoryNameToRemove) => {
+    if (phase3CategoryLoading) return;
+    setPhase3CategoryItems((prev) =>
+      prev.filter((item) => item !== categoryNameToRemove),
+    );
+  };
+
+  const handleSavePhase3Categories = async () => {
+    if (!canManagePhase3Categories || !movie?.id) return;
+
+    setPhase3CategoryError("");
+    setPhase3CategoryLoading(true);
+
+    try {
+      const nextCategories = [...phase3CategoryItems];
+      await patchMoviePhase3Categories(movie.id, nextCategories);
+      setMovie((prev) => (prev ? { ...prev, genre: nextCategories } : prev));
+      setPhase3CategoryModalOpen(false);
+      setPhase3CategoryItems([]);
+      setPhase3CategoryInput("");
+      setYoutubeUrlSuccess("");
+    } catch (error) {
+      setPhase3CategoryError(
+        error?.message || "Impossible d'enregistrer les categories phase 3.",
+      );
+    } finally {
+      setPhase3CategoryLoading(false);
+    }
+  };
+
   const handleNativeShare = async () => {
     const url = toYouTubeWatchUrl(movie?.youtubeUrl) || (typeof window !== "undefined" ? window.location.href : "");
     const shareData = {
@@ -688,6 +776,13 @@ const MovieDetails = () => {
   const downloadableVideoUrl = buildMovieDownloadPath(movie.id);
   const movieSchemaDurationMinutes = extractDurationMinutes(movie.duration);
   const movieGenreList = Array.isArray(movie.genre) ? movie.genre : [];
+  const phase3CategoryList = movieGenreList
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .filter((value) => value.toLowerCase() !== "uncategorized");
+  const showPublicPhase3Categories =
+    activeSitePhase === "phase_3" || canManagePhase3Categories;
+  const visiblePhase3Categories = showPublicPhase3Categories ? phase3CategoryList : [];
   const breadcrumbItems = [
     {
       name: t("nav.home", "Accueil"),
@@ -807,7 +902,7 @@ const MovieDetails = () => {
         datePublished={releaseDateDisplay}
         image={moviePosterSrc}
         duration={movieSchemaDurationMinutes}
-        genre={movieGenreList}
+        genre={visiblePhase3Categories}
       />
       <BreadcrumbSchema items={breadcrumbItems} />
       <div
@@ -874,6 +969,23 @@ const MovieDetails = () => {
                   <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></span>
                   <span>{durationDisplay}</span>
                 </div>
+
+                {visiblePhase3Categories.length > 0 && (
+                  <div className="mb-8 flex flex-wrap items-center justify-center gap-2 md:justify-start">
+                    {visiblePhase3Categories.map((categoryName) => (
+                      <span
+                        key={categoryName}
+                        className={`rounded-full px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] ${
+                          isLight
+                            ? "bg-white/85 text-sky-800"
+                            : "bg-cyan-500/15 text-cyan-100"
+                        }`}
+                      >
+                        {categoryName}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
                   {canWatchMovie ? (
@@ -1118,13 +1230,25 @@ const MovieDetails = () => {
                         {officialComment || t("movie_details.admin_no_comment")}
                       </p>
                     </div>
-                    <button
-                      onClick={openRatingModal}
-                      className={`font-black px-10 py-4 rounded-2xl transition-all uppercase tracking-widest text-sm disabled:opacity-60 ${theme.adminBtn}`}
-                      disabled={ratingLoading}
-                    >
-                      {ratingLoading ? "..." : t("movie_details.admin_manage_note")}
-                    </button>
+                    <div className="flex flex-col gap-3 sm:items-end">
+                      <button
+                        onClick={openRatingModal}
+                        className={`font-black px-10 py-4 rounded-2xl transition-all uppercase tracking-widest text-sm disabled:opacity-60 ${theme.adminBtn}`}
+                        disabled={ratingLoading}
+                      >
+                        {ratingLoading ? "..." : t("movie_details.admin_manage_note")}
+                      </button>
+                      {canManagePhase3Categories && (
+                        <button
+                          type="button"
+                          onClick={openPhase3CategoryModal}
+                          className={`font-black px-8 py-3 rounded-2xl transition-all uppercase tracking-widest text-xs disabled:opacity-60 ${theme.adminBtn}`}
+                          disabled={phase3CategoryLoading}
+                        >
+                          {phase3CategoryLoading ? "..." : "Categories phase 3"}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
                 {ratingError && (
@@ -1370,6 +1494,90 @@ const MovieDetails = () => {
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+        {canManagePhase3Categories && phase3CategoryModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div
+              className={`absolute inset-0 backdrop-blur-md ${theme.modalOverlay}`}
+              onClick={closePhase3CategoryModal}
+            ></div>
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="phase3-categories-modal-title"
+              className="relative w-full max-w-sm rounded-[50px] bg-white p-12 text-center shadow-2xl"
+            >
+              <h3
+                id="phase3-categories-modal-title"
+                className="mb-6 text-3xl font-black uppercase tracking-tighter text-blue-950"
+              >
+                Categories phase 3
+              </h3>
+              <p className="mb-6 truncate text-sm font-bold uppercase tracking-wider text-slate-500">
+                {movie?.title}
+              </p>
+
+              <div className="mb-6 flex flex-wrap justify-center gap-2">
+                {phase3CategoryItems.map((categoryName) => (
+                  <span
+                    key={categoryName}
+                    className="flex items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-400/15 px-3 py-1 text-sm font-bold text-cyan-900"
+                  >
+                    {categoryName}
+                    <button
+                      type="button"
+                      className="text-cyan-700 hover:text-blue-950 disabled:opacity-60"
+                      onClick={() => handleRemovePhase3Category(categoryName)}
+                      disabled={phase3CategoryLoading}
+                    >
+                      x
+                    </button>
+                  </span>
+                ))}
+                {phase3CategoryItems.length === 0 && !phase3CategoryLoading && (
+                  <p className="text-sm text-slate-500">Aucune categorie</p>
+                )}
+              </div>
+
+              <div className="mb-6 flex gap-2">
+                <input
+                  type="text"
+                  value={phase3CategoryInput}
+                  onChange={(event) => setPhase3CategoryInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      handleAddPhase3Category();
+                    }
+                  }}
+                  placeholder="Nouvelle categorie"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-sky-400"
+                  disabled={phase3CategoryLoading}
+                />
+                <button
+                  type="button"
+                  className="rounded-2xl bg-sky-600 px-4 py-3 text-sm font-black uppercase tracking-widest text-white transition hover:bg-sky-500 disabled:opacity-60"
+                  onClick={handleAddPhase3Category}
+                  disabled={phase3CategoryLoading}
+                >
+                  Ajouter
+                </button>
+              </div>
+
+              {phase3CategoryError && (
+                <p className="mb-4 text-sm font-semibold text-rose-500">{phase3CategoryError}</p>
+              )}
+
+              <button
+                type="button"
+                onClick={handleSavePhase3Categories}
+                className="w-full rounded-2xl bg-blue-950 py-5 font-black uppercase tracking-widest text-white transition-all hover:bg-blue-800 disabled:opacity-60"
+                disabled={phase3CategoryLoading}
+              >
+                {phase3CategoryLoading ? "..." : "Enregistrer"}
+              </button>
             </div>
           </div>
         )}

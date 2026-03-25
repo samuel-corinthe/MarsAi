@@ -481,6 +481,7 @@ export async function getMoviesPaginated({
   sortBy,
   minRating,
   maxRating,
+  categories,
 } = {}) {
   const query = new URLSearchParams();
   if (page != null && Number.isFinite(Number(page))) {
@@ -501,6 +502,15 @@ export async function getMoviesPaginated({
   if (maxRating != null && Number.isFinite(Number(maxRating))) {
     query.set("maxRating", String(Number(maxRating)));
   }
+  if (Array.isArray(categories) && categories.length > 0) {
+    query.set(
+      "categories",
+      categories
+        .map((value) => String(value || "").trim())
+        .filter(Boolean)
+        .join(","),
+    );
+  }
 
   const querySuffix = query.toString() ? `?${query.toString()}` : "";
   const { payload } = await fetchWith404Fallback(
@@ -512,17 +522,22 @@ export async function getMoviesPaginated({
   if (Array.isArray(payload)) {
     return {
       movies: payload,
+      availableCategories: [],
       pagination: null,
     };
   }
   if (Array.isArray(payload?.movies)) {
     return {
       movies: payload.movies,
+      availableCategories: Array.isArray(payload?.availableCategories)
+        ? payload.availableCategories
+        : [],
       pagination: payload?.pagination || null,
     };
   }
   return {
     movies: [],
+    availableCategories: [],
     pagination: null,
   };
 }
@@ -1109,6 +1124,40 @@ export async function deleteMyMovieRating(movieId) {
   if (!res.ok) {
     throw new Error(payload?.details || payload?.error || `Rating API error ${res.status}`);
   }
+  return payload;
+}
+
+export async function getMoviePhase3Categories(movieId) {
+  const res = await fetchBackend(`/api/movies/${movieId}/phase3-categories`, {
+    credentials: "include",
+    cache: "no-store",
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      payload?.details || payload?.error || `Phase 3 categories API error ${res.status}`,
+    );
+  }
+
+  return Array.isArray(payload?.categories) ? payload.categories : [];
+}
+
+export async function patchMoviePhase3Categories(movieId, categories) {
+  const res = await fetchBackend(`/api/movies/${movieId}/phase3-categories`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ categories }),
+  });
+
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      payload?.details || payload?.error || `Phase 3 categories API error ${res.status}`,
+    );
+  }
+
   return payload;
 }
 

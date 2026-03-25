@@ -18,6 +18,7 @@ import {
   getSitePhaseState,
   patchPhase2Selection,
   patchPhase3Selection,
+  patchMoviePhase3Categories,
   rebalanceMovieReviews,
   releaseMovieAssignment,
   logoutSession,
@@ -26,6 +27,7 @@ import {
   validatePhase3Selection,
   upsertMyMovieRating,
   updateCurrentSessionProfile,
+  getMoviePhase3Categories,
 } from "../api";
 
 const DEFAULT_ASSIGNMENT_META = {
@@ -111,6 +113,11 @@ export default function Dashboard({ onSessionCleared = null }) {
   const [distributionBusy, setDistributionBusy] = useState(false);
   const [ratingModalFilm, setRatingModalFilm] = useState(null);
   const [ratingModalScore, setRatingModalScore] = useState(0);
+  const [phase3CategoryModalFilm, setPhase3CategoryModalFilm] = useState(null);
+  const [phase3CategoryModalItems, setPhase3CategoryModalItems] = useState([]);
+  const [phase3CategoryModalInput, setPhase3CategoryModalInput] = useState("");
+  const [phase3CategoryModalLoading, setPhase3CategoryModalLoading] = useState(false);
+  const [phase3CategoryModalError, setPhase3CategoryModalError] = useState("");
   const [ratingModalComment, setRatingModalComment] = useState("");
   const [ratingModalLoading, setRatingModalLoading] = useState(false);
   const [ratingModalError, setRatingModalError] = useState("");
@@ -369,6 +376,7 @@ export default function Dashboard({ onSessionCleared = null }) {
   const hasEnoughPhase2Selection = phase2SelectionCount >= phase2SelectionMinRequired;
   const canManageSelectionForCurrentPhase =
     canManagePhase && (isSelectionForPhase2 || isSelectionForPhase3);
+  const canManagePhase3Categories = canManagePhase && isSelectionForPhase3;
   const phase3EligibilityEnforced = phase3EligibilityLoaded && phase3EligibleMovieIds.size >= 50;
   const selectionCardTitle = isSelectionForPhase2
     ? "Présélection phase 2"
@@ -874,6 +882,90 @@ export default function Dashboard({ onSessionCleared = null }) {
     }
   };
 
+  const handleOpenPhase3CategoryModal = async (film) => {
+    if (!canManagePhase3Categories) return;
+
+    const movieId = resolveMovieId(film);
+    if (!movieId) return;
+
+    setPhase3CategoryModalFilm({ ...film, id: movieId });
+    setPhase3CategoryModalItems([]);
+    setPhase3CategoryModalInput("");
+    setPhase3CategoryModalError("");
+    setPhase3CategoryModalLoading(true);
+
+    try {
+      const categories = await getMoviePhase3Categories(movieId);
+      setPhase3CategoryModalItems(Array.isArray(categories) ? categories : []);
+    } catch (error) {
+      setPhase3CategoryModalError(
+        error?.message || "Impossible de charger les categories phase 3.",
+      );
+    } finally {
+      setPhase3CategoryModalLoading(false);
+    }
+  };
+
+  const handleClosePhase3CategoryModal = () => {
+    if (phase3CategoryModalLoading) return;
+    setPhase3CategoryModalFilm(null);
+    setPhase3CategoryModalItems([]);
+    setPhase3CategoryModalInput("");
+    setPhase3CategoryModalError("");
+  };
+
+  const handleAddPhase3Category = () => {
+    const categoryName = String(phase3CategoryModalInput || "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (!categoryName) return;
+    const alreadyExists = phase3CategoryModalItems.some(
+      (item) => String(item || "").toLowerCase() === categoryName.toLowerCase(),
+    );
+    if (alreadyExists) {
+      setPhase3CategoryModalInput("");
+      return;
+    }
+
+    setPhase3CategoryModalItems((prev) => [...prev, categoryName]);
+    setPhase3CategoryModalInput("");
+    setPhase3CategoryModalError("");
+  };
+
+  const handleRemovePhase3Category = (categoryNameToRemove) => {
+    if (phase3CategoryModalLoading) return;
+    setPhase3CategoryModalItems((prev) =>
+      prev.filter((item) => item !== categoryNameToRemove),
+    );
+  };
+
+  const handleSavePhase3Categories = async () => {
+    if (!phase3CategoryModalFilm) return;
+
+    setPhase3CategoryModalError("");
+    setPhase3CategoryModalLoading(true);
+
+    try {
+      await patchMoviePhase3Categories(
+        phase3CategoryModalFilm.id,
+        phase3CategoryModalItems,
+      );
+      setPhase3CategoryModalFilm(null);
+      setPhase3CategoryModalItems([]);
+      setPhase3CategoryModalInput("");
+      setAssignmentInfoSuccess(
+        `Categories phase 3 enregistrees pour "${phase3CategoryModalFilm.title}".`,
+      );
+    } catch (error) {
+      setPhase3CategoryModalError(
+        error?.message || "Impossible d'enregistrer les categories phase 3.",
+      );
+    } finally {
+      setPhase3CategoryModalLoading(false);
+    }
+  };
+
   const handleAutoAssign = async () => {
     if (!isSuperAdmin) return;
     setAssignmentInfoError("");
@@ -1375,7 +1467,9 @@ export default function Dashboard({ onSessionCleared = null }) {
                     onClaim={handleClaimFilm}
                     onRelease={handleReleaseFilm}
                     onRate={handleOpenRatingModal}
+                    onManagePhase3Categories={handleOpenPhase3CategoryModal}
                     canManagePhase2Selection={canManageSelectionForCurrentPhase}
+                    canManagePhase3Categories={canManagePhase3Categories}
                     isPhase2Selected={phase2SelectedMovieIds.has(Number(compactFilm.id))}
                     isSelectionQuotaReached={isSelectionQuotaReachedForMovie(compactFilm.id)}
                     isSelectionDisabled={isSelectionDisabledForMovie(compactFilm.id)}
@@ -1396,7 +1490,9 @@ export default function Dashboard({ onSessionCleared = null }) {
                     onClaim={handleClaimFilm}
                     onRelease={handleReleaseFilm}
                     onRate={handleOpenRatingModal}
+                    onManagePhase3Categories={handleOpenPhase3CategoryModal}
                     canManagePhase2Selection={canManageSelectionForCurrentPhase}
+                    canManagePhase3Categories={canManagePhase3Categories}
                     isPhase2Selected={phase2SelectedMovieIds.has(Number(film.id))}
                     isSelectionQuotaReached={isSelectionQuotaReachedForMovie(film.id)}
                     isSelectionDisabled={isSelectionDisabledForMovie(film.id)}
@@ -1827,6 +1923,85 @@ export default function Dashboard({ onSessionCleared = null }) {
                   </button>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {phase3CategoryModalFilm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-slate-950/90 backdrop-blur-md"
+              onClick={handleClosePhase3CategoryModal}
+            ></div>
+            <div className="relative w-full max-w-sm rounded-[50px] border border-slate-500/35 bg-slate-900 p-12 text-center shadow-2xl">
+              <h3 className="mb-8 text-3xl font-black uppercase tracking-tighter text-white">
+                Categories phase 3
+              </h3>
+              <p className="mb-6 truncate text-sm font-bold uppercase tracking-wider text-slate-500">
+                {phase3CategoryModalFilm.title}
+              </p>
+
+              <div className="mb-6 flex flex-wrap justify-center gap-2">
+                {phase3CategoryModalItems.map((categoryName) => (
+                  <span
+                    key={categoryName}
+                    className="flex items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-400/15 px-3 py-1 text-sm font-bold text-cyan-200"
+                  >
+                    {categoryName}
+                    <button
+                      type="button"
+                      className="text-cyan-300 hover:text-white disabled:opacity-60"
+                      onClick={() => handleRemovePhase3Category(categoryName)}
+                      disabled={phase3CategoryModalLoading}
+                    >
+                      x
+                    </button>
+                  </span>
+                ))}
+                {phase3CategoryModalItems.length === 0 && !phase3CategoryModalLoading && (
+                  <p className="text-sm text-slate-500">Aucune categorie</p>
+                )}
+              </div>
+
+              <div className="mb-8 flex gap-2">
+                <input
+                  type="text"
+                  value={phase3CategoryModalInput}
+                  onChange={(event) => setPhase3CategoryModalInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      handleAddPhase3Category();
+                    }
+                  }}
+                  placeholder="Nouvelle categorie"
+                  className="flex-1 rounded-2xl border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-300"
+                  disabled={phase3CategoryModalLoading}
+                />
+                <button
+                  type="button"
+                  className="rounded-2xl bg-slate-700 px-4 py-2 text-sm font-black text-white hover:bg-slate-600 disabled:opacity-60"
+                  onClick={handleAddPhase3Category}
+                  disabled={phase3CategoryModalLoading}
+                >
+                  Ajouter
+                </button>
+              </div>
+
+              {phase3CategoryModalError && (
+                <p className="mb-4 text-sm font-semibold text-rose-500">
+                  {phase3CategoryModalError}
+                </p>
+              )}
+
+              <button
+                type="button"
+                className="w-full rounded-2xl bg-gradient-to-r from-cyan-300 to-sky-400 py-5 font-black uppercase tracking-widest text-slate-950 transition-all hover:brightness-105 disabled:opacity-60"
+                onClick={handleSavePhase3Categories}
+                disabled={phase3CategoryModalLoading}
+              >
+                {phase3CategoryModalLoading ? "..." : "Enregistrer"}
+              </button>
             </div>
           </div>
         )}

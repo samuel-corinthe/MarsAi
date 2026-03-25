@@ -18,6 +18,8 @@ export default function GallerySearchToolbar({
   activeSortLabel,
   onResetSort,
   onResetRating,
+  selectedCategories,
+  onRemoveCategory,
   canManagePhaseSelection,
   canManagePhase2Selection,
   phase2SelectedCount,
@@ -75,6 +77,10 @@ export default function GallerySearchToolbar({
             >
               {suggestions.map((movie) => {
                 const posterSrc = resolveMoviePosterSrc(movie.img, movie.id || movie.title);
+                const categoryList = (Array.isArray(movie?.genre) ? movie.genre : [])
+                  .map((value) => String(value || "").trim())
+                  .filter(Boolean)
+                  .filter((value) => value.toLowerCase() !== "uncategorized");
                 return (
                 <Link
                   key={movie.id}
@@ -102,6 +108,13 @@ export default function GallerySearchToolbar({
                     >
                       {movie.title}
                     </p>
+                    {categoryList.length > 0 && (
+                      <p className={`mt-1 text-[10px] font-bold uppercase tracking-[0.14em] ${
+                        isLight ? "text-slate-500" : "text-slate-400"
+                      }`}>
+                        {categoryList.slice(0, 2).join(" • ")}
+                      </p>
+                    )}
                   </div>
                 </Link>
                 );
@@ -137,7 +150,7 @@ export default function GallerySearchToolbar({
         </button>
       </div>
 
-      {(sortBy !== "default" || minRating > 0 || maxRating < 5) && (
+      {(sortBy !== "default" || minRating > 0 || maxRating < 5 || selectedCategories.length > 0) && (
         <div className="mt-3 flex flex-wrap gap-2">
           {sortBy !== "default" && (
             <button
@@ -159,6 +172,19 @@ export default function GallerySearchToolbar({
               {t("gallery.rating_chip", { min: minRating, max: maxRating })} x
             </button>
           )}
+          {selectedCategories.map((categoryName) => (
+            <button
+              key={categoryName}
+              onClick={() => onRemoveCategory(categoryName)}
+              className={`rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wider ${
+                isLight
+                  ? "bg-indigo-100 text-indigo-800 hover:bg-indigo-200"
+                  : "bg-indigo-500/15 text-indigo-100 hover:bg-indigo-500/25"
+              }`}
+            >
+              {t("gallery.category_chip", { label: categoryName, defaultValue: categoryName })} x
+            </button>
+          ))}
         </div>
       )}
 

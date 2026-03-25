@@ -14,6 +14,12 @@ import {
   downloadObjectFromPublicUrl,
   isPublicObjectStorageUrl,
 } from "../services/objectStorageService.js";
+import { getDbPool } from "../db.js";
+import {
+  findMovieById,
+  listPhase3MovieCategories,
+  replacePhase3MovieCategories,
+} from "../models/movieModel.js";
 
 const MOVIE_SORT_VALUES = new Set([
   "default",
@@ -21,14 +27,80 @@ const MOVIE_SORT_VALUES = new Set([
   "title_desc",
   "year_asc",
   "year_desc",
+  "category_asc",
+  "category_desc",
 ]);
 const MOVIES_PAGE_SIZE = 20;
+const MAX_PHASE3_CATEGORY_COUNT = 12;
+const MAX_PHASE3_CATEGORY_LENGTH = 100;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const LOCAL_VIDEO_UPLOADS_DIR = path.resolve(__dirname, "../uploads/videos");
 
 function isAdminSession(session) {
   return ["admin", "superadmin"].includes(String(session?.role || "").toLowerCase());
+}
+
+function createHttpError(statusCode, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
+function normalizePhase3Categories(rawCategories) {
+  if (!Array.isArray(rawCategories)) {
+    throw createHttpError(400, "categories doit etre un tableau.");
+  }
+
+  const seen = new Set();
+  const normalized = [];
+
+  for (const rawCategory of rawCategories) {
+    const categoryName = String(rawCategory ?? "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (!categoryName) continue;
+    if (categoryName.length > MAX_PHASE3_CATEGORY_LENGTH) {
+      throw createHttpError(
+        400,
+        `Chaque categorie doit contenir au maximum ${MAX_PHASE3_CATEGORY_LENGTH} caracteres.`,
+      );
+    }
+
+    const dedupeKey = categoryName.toLowerCase();
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+    normalized.push(categoryName);
+
+    if (normalized.length > MAX_PHASE3_CATEGORY_COUNT) {
+      throw createHttpError(
+        400,
+        `Maximum ${MAX_PHASE3_CATEGORY_COUNT} categories par film.`,
+      );
+    }
+  }
+
+  return normalized;
+}
+
+async function ensureMovieExists(pool, movieId) {
+  const movie = await findMovieById(pool, movieId);
+  if (!movie) {
+    throw createHttpError(404, "Film introuvable.");
+  }
+}
+
+async function enforcePhase3CategoryEditionWindow() {
+  const sitePhase = await getSitePhaseState();
+  const phaseKey = String(sitePhase?.currentPhase || "").toLowerCase();
+
+  if (phaseKey !== "phase_2") {
+    throw createHttpError(
+      409,
+      "Les categories phase 3 peuvent etre modifiees uniquement pendant la selection phase 3.",
+    );
+  }
 }
 
 async function enforceMovieAccessForCurrentPhase(req) {
@@ -80,6 +152,27 @@ function normalizeSortBy(value) {
   return normalized;
 }
 
+function normalizeCategoryFilters(rawCategories) {
+  const sourceValues = Array.isArray(rawCategories) ? rawCategories : [rawCategories];
+  const seen = new Set();
+  const normalized = [];
+
+  sourceValues.forEach((rawValue) => {
+    String(rawValue || "")
+      .split(",")
+      .map((value) => value.replace(/\s+/g, " ").trim())
+      .filter(Boolean)
+      .forEach((value) => {
+        const dedupeKey = value.toLowerCase();
+        if (seen.has(dedupeKey)) return;
+        seen.add(dedupeKey);
+        normalized.push(value);
+      });
+  });
+
+  return normalized.slice(0, MAX_PHASE3_CATEGORY_COUNT);
+}
+
 function toDownloadFileName(title) {
   const normalized = String(title || "film")
     .trim()
@@ -108,8 +201,14 @@ function isRemoteMp4Url(value) {
   return /^https?:\/\/[^?#]+\.mp4(?:[?#].*)?$/i.test(String(value || "").trim());
 }
 
-function setDownloadHeaders(res, fileName, contentType, contentLength) {
-  res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+function setFileHeaders(
+  res,
+  fileName,
+  contentType,
+  contentLength,
+  disposition = "attachment",
+) {
+  res.setHeader("Content-Disposition", `${disposition}; filename="${fileName}"`);
   res.setHeader("Cache-Control", "no-store");
 
   if (contentType) {
@@ -126,21 +225,103 @@ function extractMovieYear(movie) {
   return Number(match?.[0] || 0);
 }
 
-function filterAndSortMovies(movies, { search, sortBy, minRating, maxRating }) {
+function getMovieCategoryList(movie) {
+  return (Array.isArray(movie?.genre) ? movie.genre : [])
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .filter((value) => value.toLowerCase() !== "uncategorized");
+}
+
+function getMovieCategorySearchText(movie) {
+  return getMovieCategoryList(movie).join(" ").toLowerCase();
+}
+
+function compareMoviesByCategory(a, b, direction = "asc") {
+  const aCategory = getMovieCategoryList(a)[0] || "";
+  const bCategory = getMovieCategoryList(b)[0] || "";
+
+  if (!aCategory && !bCategory) {
+    return String(a?.title || "").localeCompare(String(b?.title || ""), "fr", {
+      sensitivity: "base",
+    });
+  }
+  if (!aCategory) return 1;
+  if (!bCategory) return -1;
+
+  const categoryComparison = aCategory.localeCompare(bCategory, "fr", {
+    sensitivity: "base",
+  });
+  if (categoryComparison !== 0) {
+    return direction === "desc" ? -categoryComparison : categoryComparison;
+  }
+
+  const titleComparison = String(a?.title || "").localeCompare(String(b?.title || ""), "fr", {
+    sensitivity: "base",
+  });
+  return direction === "desc" ? -titleComparison : titleComparison;
+}
+
+function stripPhase3Categories(movie) {
+  if (!movie || typeof movie !== "object") return movie;
+  return {
+    ...movie,
+    genre: [],
+  };
+}
+
+function shouldExposePhase3Categories({ session, phaseKey }) {
+  return isAdminSession(session) || phaseKey === "phase_3";
+}
+
+function getAvailableMovieCategories(movies) {
+  const uniqueCategories = new Map();
+
+  (Array.isArray(movies) ? movies : []).forEach((movie) => {
+    getMovieCategoryList(movie).forEach((categoryName) => {
+      const dedupeKey = categoryName.toLowerCase();
+      if (!uniqueCategories.has(dedupeKey)) {
+        uniqueCategories.set(dedupeKey, categoryName);
+      }
+    });
+  });
+
+  return [...uniqueCategories.values()].sort((a, b) =>
+    a.localeCompare(b, "fr", { sensitivity: "base" }),
+  );
+}
+
+function filterAndSortMovies(movies, {
+  search,
+  sortBy,
+  minRating,
+  maxRating,
+  selectedCategories = [],
+  includeCategorySearch = true,
+}) {
   const searchToken = String(search || "").trim().toLowerCase();
   const filtered = (Array.isArray(movies) ? movies : []).filter((movie) => {
     const movieTitle = String(movie?.title || "").toLowerCase();
     const movieDirector = String(movie?.director || "").toLowerCase();
     const movieCountry = String(movie?.country || "").toLowerCase();
+    const movieCategoryList = getMovieCategoryList(movie);
+    const movieCategories = getMovieCategorySearchText(movie);
     const movieRating = Number(movie?.rating || 0);
+    const matchesSelectedCategories =
+      selectedCategories.length === 0
+      || selectedCategories.some((selectedCategory) =>
+        movieCategoryList.some(
+          (categoryName) => categoryName.toLowerCase() === String(selectedCategory || "").toLowerCase(),
+        ),
+      );
 
     const matchesSearch = !searchToken
       || movieTitle.includes(searchToken)
       || movieDirector.includes(searchToken)
-      || movieCountry.includes(searchToken);
+      || movieCountry.includes(searchToken)
+      || (includeCategorySearch && movieCategories.includes(searchToken));
     const matchesRating = movieRating >= minRating && movieRating <= maxRating;
 
-    return matchesSearch && matchesRating;
+    return matchesSearch && matchesRating && matchesSelectedCategories;
   });
 
   const sorted = [...filtered].sort((a, b) => {
@@ -156,6 +337,12 @@ function filterAndSortMovies(movies, { search, sortBy, minRating, maxRating }) {
     if (sortBy === "year_desc") {
       return extractMovieYear(b) - extractMovieYear(a);
     }
+    if (sortBy === "category_asc") {
+      return compareMoviesByCategory(a, b, "asc");
+    }
+    if (sortBy === "category_desc") {
+      return compareMoviesByCategory(a, b, "desc");
+    }
     return Number(b?.id || 0) - Number(a?.id || 0);
   });
 
@@ -164,10 +351,12 @@ function filterAndSortMovies(movies, { search, sortBy, minRating, maxRating }) {
 
 export async function getAllMovies(req, res) {
   try {
+    const session = getSessionFromRequest(req);
     const page = toPositiveInt(req.query?.page, 1, 1, 1000000);
     const pageSize = MOVIES_PAGE_SIZE;
     const search = String(req.query?.search || "").trim();
-    const sortBy = normalizeSortBy(req.query?.sortBy);
+    const requestedSortBy = normalizeSortBy(req.query?.sortBy);
+    const requestedCategories = normalizeCategoryFilters(req.query?.categories);
     const minRating = toBoundedNumber(req.query?.minRating, 0, 0, 5);
     const maxRating = Math.max(minRating, toBoundedNumber(req.query?.maxRating, 5, 0, 5));
 
@@ -180,11 +369,27 @@ export async function getAllMovies(req, res) {
     const visibleMovies = visibility.visibleIds
       ? movies.filter((movie) => visibility.visibleIds.has(Number(movie?.id)))
       : movies;
-    const filteredMovies = filterAndSortMovies(visibleMovies, {
+    const canExposeCategories = shouldExposePhase3Categories({
+      session,
+      phaseKey: visibility.phaseKey,
+    });
+    const sanitizedMovies = canExposeCategories
+      ? visibleMovies
+      : visibleMovies.map(stripPhase3Categories);
+    const availableCategories = canExposeCategories
+      ? getAvailableMovieCategories(sanitizedMovies)
+      : [];
+    const sortBy = !canExposeCategories && requestedSortBy.startsWith("category_")
+      ? "default"
+      : requestedSortBy;
+    const selectedCategories = canExposeCategories ? requestedCategories : [];
+    const filteredMovies = filterAndSortMovies(sanitizedMovies, {
       search,
       sortBy,
       minRating,
       maxRating,
+      selectedCategories,
+      includeCategorySearch: canExposeCategories,
     });
 
     const totalItems = filteredMovies.length;
@@ -196,6 +401,7 @@ export async function getAllMovies(req, res) {
     return res.json({
       ok: true,
       movies: paginatedMovies,
+      availableCategories,
       pagination: {
         page: safePage,
         pageSize,
@@ -237,7 +443,14 @@ export async function getMovieById(req, res) {
       return res.status(404).json({ error: "Film introuvable." });
     }
 
-    return res.json({ ok: true, movie });
+    const safeMovie = shouldExposePhase3Categories({
+      session,
+      phaseKey: visibility.phaseKey,
+    })
+      ? movie
+      : stripPhase3Categories(movie);
+
+    return res.json({ ok: true, movie: safeMovie });
   } catch (error) {
     if (error?.statusCode) {
       return res.status(error.statusCode).json({ error: error.message });
@@ -270,6 +483,58 @@ export async function patchMovieYoutubeUrl(req, res) {
     console.error("[MOVIES] patch youtube url error:", error.message);
     return res.status(500).json({
       error: "Impossible de mettre a jour le lien YouTube.",
+      details: error.message,
+    });
+  }
+}
+
+export async function getMoviePhase3Categories(req, res) {
+  const movieId = toMovieId(req.params.id);
+  if (!movieId) {
+    return res.status(400).json({ error: "movieId invalide." });
+  }
+
+  try {
+    const pool = getDbPool();
+    await ensureMovieExists(pool, movieId);
+    const categories = await listPhase3MovieCategories(pool, movieId);
+
+    return res.json({ ok: true, categories });
+  } catch (error) {
+    if (error?.statusCode) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+    console.error("[MOVIES] get phase3 categories error:", error.message);
+    return res.status(500).json({
+      error: "Impossible de lire les categories phase 3.",
+      details: error.message,
+    });
+  }
+}
+
+export async function patchMoviePhase3Categories(req, res) {
+  const movieId = toMovieId(req.params.id);
+  if (!movieId) {
+    return res.status(400).json({ error: "movieId invalide." });
+  }
+
+  try {
+    const categories = normalizePhase3Categories(req.body?.categories);
+    const actorUserId = Number(req.auth?.userId) || null;
+    const pool = getDbPool();
+
+    await ensureMovieExists(pool, movieId);
+    await enforcePhase3CategoryEditionWindow();
+    await replacePhase3MovieCategories(pool, movieId, categories, actorUserId);
+
+    return res.json({ ok: true, categories });
+  } catch (error) {
+    if (error?.statusCode) {
+      return res.status(error.statusCode).json({ error: error.message });
+    }
+    console.error("[MOVIES] patch phase3 categories error:", error.message);
+    return res.status(500).json({
+      error: "Impossible de mettre a jour les categories phase 3.",
       details: error.message,
     });
   }
@@ -313,11 +578,12 @@ export async function downloadMovieById(req, res) {
         return res.status(404).json({ error: "Impossible de recuperer le fichier video." });
       }
 
-      setDownloadHeaders(
+      setFileHeaders(
         res,
         downloadFileName,
         objectPayload.contentType || "video/mp4",
         objectPayload.contentLength,
+        "attachment",
       );
 
       objectPayload.stream.on("error", (streamError) => {
@@ -335,7 +601,7 @@ export async function downloadMovieById(req, res) {
 
     const localVideoPath = toLocalVideoPath(sourceUrl);
     if (localVideoPath && fs.existsSync(localVideoPath)) {
-      setDownloadHeaders(res, downloadFileName, "video/mp4");
+      setFileHeaders(res, downloadFileName, "video/mp4", null, "attachment");
       return res.sendFile(localVideoPath);
     }
 
@@ -345,11 +611,12 @@ export async function downloadMovieById(req, res) {
         return res.status(502).json({ error: "Source video distante indisponible." });
       }
 
-      setDownloadHeaders(
+      setFileHeaders(
         res,
         downloadFileName,
         upstream.headers.get("content-type") || "video/mp4",
         Number(upstream.headers.get("content-length") || 0) || null,
+        "attachment",
       );
 
       if (!upstream.body) {

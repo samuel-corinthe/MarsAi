@@ -64,7 +64,9 @@ export default function FilmRow({
   onClaim,
   onRelease,
   onRate,
+  onManagePhase3Categories,
   canManagePhase2Selection,
+  canManagePhase3Categories,
   isPhase2Selected,
   isSelectionQuotaReached,
   isSelectionDisabled,
@@ -204,6 +206,16 @@ export default function FilmRow({
             >
               Noter
             </button>
+
+            {canManagePhase3Categories && (
+              <button
+                className="btn-ghost justify-center rounded-xl border border-white/10 px-3 py-2 disabled:opacity-60"
+                onClick={() => onManagePhase3Categories?.({ ...film, id: movieId })}
+                disabled={!hasMovieId}
+              >
+                Categories
+              </button>
+            )}
 
             {canManagePhase2Selection && (
               <button

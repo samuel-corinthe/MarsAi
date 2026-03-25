@@ -1,0 +1,2 @@
+-- Script obsolete : le support SRT a ete retire.
+-- Ne rien executer pour cette migration.

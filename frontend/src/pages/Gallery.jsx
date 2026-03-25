@@ -18,10 +18,12 @@ import { resolveCountryFlagPath } from "../utils/countryFlags";
 import {
   getCurrentSessionUser,
   getMovies,
+  getMoviePhase3Categories,
   getPhase2SelectionStatus,
   getPhase3SelectionStatus,
   getPhase3WinnersPublic,
   getSitePhaseState,
+  patchMoviePhase3Categories,
   patchPhase2Selection,
   patchPhase3Selection,
 } from "../api";
@@ -59,24 +61,24 @@ const Gallery = () => {
   const [phase2SelectionMinRequired, setPhase2SelectionMinRequired] = useState(50);
   const [phase2SelectionBusyMovieId, setPhase2SelectionBusyMovieId] = useState(null);
   const [phase2SelectionError, setPhase2SelectionError] = useState("");
+  const [phase3CategoryModalMovie, setPhase3CategoryModalMovie] = useState(null);
+  const [phase3CategoryModalItems, setPhase3CategoryModalItems] = useState([]);
+  const [phase3CategoryModalInput, setPhase3CategoryModalInput] = useState("");
+  const [phase3CategoryModalLoading, setPhase3CategoryModalLoading] = useState(false);
+  const [phase3CategoryModalError, setPhase3CategoryModalError] = useState("");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("default");
   const [minRating, setMinRating] = useState(0);
   const [maxRating, setMaxRating] = useState(5);
+  const [availableCategories, setAvailableCategories] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [serverTotalPages, setServerTotalPages] = useState(1);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const searchRef = useRef(null);
   const topCarouselVideoRef = useRef(null);
-  const sortOptions = [
-    { label: t("gallery.sortOptions.default"), value: "default" },
-    { label: t("gallery.sortOptions.title_asc"), value: "title_asc" },
-    { label: t("gallery.sortOptions.title_desc"), value: "title_desc" },
-    { label: t("gallery.sortOptions.year_asc"), value: "year_asc" },
-    { label: t("gallery.sortOptions.year_desc"), value: "year_desc" },
-  ];
 
   const pageSize = 20;
   const sessionRole = String(sessionUser?.role || "").toLowerCase();
@@ -86,7 +88,28 @@ const Gallery = () => {
   const canManagePhase3Selection =
     activeSitePhase === "phase_2" && hasAdminSession;
   const canManagePhaseSelection = canManagePhase2Selection || canManagePhase3Selection;
+  const canManagePhase3Categories = canManagePhase3Selection;
+  const showPhase3Categories = activeSitePhase === "phase_3" || canManagePhase3Categories;
   const phase3EligibilityEnforced = phase3EligibilityLoaded && phase3EligibleMovieIds.size >= 50;
+  const sortOptions = [
+    { label: t("gallery.sortOptions.default"), value: "default" },
+    { label: t("gallery.sortOptions.title_asc"), value: "title_asc" },
+    { label: t("gallery.sortOptions.title_desc"), value: "title_desc" },
+    { label: t("gallery.sortOptions.year_asc"), value: "year_asc" },
+    { label: t("gallery.sortOptions.year_desc"), value: "year_desc" },
+    ...(showPhase3Categories
+      ? [
+        {
+          label: t("gallery.sortOptions.category_asc", "Categorie (A-Z)"),
+          value: "category_asc",
+        },
+        {
+          label: t("gallery.sortOptions.category_desc", "Categorie (Z-A)"),
+          value: "category_desc",
+        },
+      ]
+      : []),
+  ];
 
   const toMovieIdSet = useCallback((list) =>
     new Set(
@@ -94,6 +117,26 @@ const Gallery = () => {
         .map((movie) => Number(movie?.id))
         .filter((movieId) => Number.isFinite(movieId) && movieId > 0),
     ), []);
+
+  const getMovieCategoryList = useCallback(
+    (movie) =>
+      (Array.isArray(movie?.genre) ? movie.genre : [])
+        .map((value) => String(value || "").trim())
+        .filter(Boolean)
+        .filter((value) => value.toLowerCase() !== "uncategorized"),
+    [],
+  );
+
+  const toggleSelectedCategory = useCallback((categoryName) => {
+    const normalizedCategory = String(categoryName || "").trim();
+    if (!normalizedCategory) return;
+
+    setSelectedCategories((prev) =>
+      prev.includes(normalizedCategory)
+        ? prev.filter((item) => item !== normalizedCategory)
+        : [...prev, normalizedCategory],
+    );
+  }, []);
 
   const applyPhase2SelectionSnapshot = useCallback((payload, fallbackMinRequired = 50) => {
     const selectedMovies = Array.isArray(payload?.selectedMovies) ? payload.selectedMovies : [];
@@ -147,12 +190,34 @@ const Gallery = () => {
   );
 
   const suggestions = movies
-    .filter((movie) => searchQuery.length > 0 && String(movie.title || "")
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase()))
+    .filter((movie) => {
+      if (searchQuery.length <= 0) return false;
+      const normalizedQuery = searchQuery.toLowerCase();
+      const normalizedTitle = String(movie.title || "").toLowerCase();
+      const normalizedCategories = getMovieCategoryList(movie).join(" ").toLowerCase();
+      return normalizedTitle.includes(normalizedQuery) || normalizedCategories.includes(normalizedQuery);
+    })
     .slice(0, 5);
   const totalPages = Math.max(1, Number(serverTotalPages || 1));
   const paginatedMovies = movies;
+
+  useEffect(() => {
+    if (
+      !showPhase3Categories
+      && (sortBy === "category_asc" || sortBy === "category_desc")
+    ) {
+      setSortBy("default");
+    }
+  }, [showPhase3Categories, sortBy]);
+
+  useEffect(() => {
+    if (!showPhase3Categories && selectedCategories.length > 0) {
+      setSelectedCategories([]);
+    }
+    if (!showPhase3Categories && availableCategories.length > 0) {
+      setAvailableCategories([]);
+    }
+  }, [showPhase3Categories, selectedCategories.length, availableCategories.length]);
 
   useEffect(() => {
     let cancelled = false;
@@ -295,13 +360,18 @@ const Gallery = () => {
           sortBy,
           minRating,
           maxRating,
+          categories: selectedCategories,
         });
         if (cancelled) return;
         const rows = Array.isArray(payload?.movies) ? payload.movies : [];
+        const nextAvailableCategories = Array.isArray(payload?.availableCategories)
+          ? payload.availableCategories
+          : [];
         const nextTotalPages = Math.max(1, Number(payload?.pagination?.totalPages || 1));
         const nextPage = Math.max(1, Number(payload?.pagination?.page || currentPage));
 
         setMovies(rows);
+        setAvailableCategories(nextAvailableCategories);
         setServerTotalPages(nextTotalPages);
         if (nextPage !== currentPage) {
           setCurrentPage(nextPage);
@@ -309,6 +379,7 @@ const Gallery = () => {
         } catch (error) {
         if (!cancelled) {
           setMovies([]);
+          setAvailableCategories([]);
           setServerTotalPages(1);
           setMoviesError(error?.message || t("gallery.load_error"));
         }
@@ -322,11 +393,21 @@ const Gallery = () => {
     return () => {
       cancelled = true;
     };
-  }, [accessLoading, isGalleryAllowed, currentPage, searchQuery, sortBy, minRating, maxRating, t]);
+  }, [
+    accessLoading,
+    isGalleryAllowed,
+    currentPage,
+    searchQuery,
+    sortBy,
+    minRating,
+    maxRating,
+    selectedCategories,
+    t,
+  ]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, sortBy, minRating, maxRating]);
+  }, [searchQuery, sortBy, minRating, maxRating, selectedCategories]);
 
   useEffect(() => {
     document.body.style.overflow = isFilterModalOpen ? "hidden" : "unset";
@@ -461,6 +542,96 @@ const Gallery = () => {
     }
   };
 
+  const handleOpenPhase3CategoryModal = async (movie) => {
+    if (!canManagePhase3Categories) return;
+
+    const movieId = Number(movie?.id);
+    if (!Number.isFinite(movieId) || movieId <= 0) return;
+
+    setPhase3CategoryModalMovie(movie);
+    setPhase3CategoryModalItems([]);
+    setPhase3CategoryModalInput("");
+    setPhase3CategoryModalError("");
+    setPhase3CategoryModalLoading(true);
+
+    try {
+      const categories = await getMoviePhase3Categories(movieId);
+      setPhase3CategoryModalItems(Array.isArray(categories) ? categories : []);
+    } catch (error) {
+      setPhase3CategoryModalError(
+        error?.message || "Impossible de charger les categories phase 3.",
+      );
+    } finally {
+      setPhase3CategoryModalLoading(false);
+    }
+  };
+
+  const handleClosePhase3CategoryModal = () => {
+    if (phase3CategoryModalLoading) return;
+    setPhase3CategoryModalMovie(null);
+    setPhase3CategoryModalItems([]);
+    setPhase3CategoryModalInput("");
+    setPhase3CategoryModalError("");
+  };
+
+  const handleAddPhase3Category = () => {
+    const categoryName = String(phase3CategoryModalInput || "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (!categoryName) return;
+
+    const alreadyExists = phase3CategoryModalItems.some(
+      (item) => String(item || "").toLowerCase() === categoryName.toLowerCase(),
+    );
+    if (alreadyExists) {
+      setPhase3CategoryModalInput("");
+      return;
+    }
+
+    setPhase3CategoryModalItems((prev) => [...prev, categoryName]);
+    setPhase3CategoryModalInput("");
+    setPhase3CategoryModalError("");
+  };
+
+  const handleRemovePhase3Category = (categoryNameToRemove) => {
+    if (phase3CategoryModalLoading) return;
+    setPhase3CategoryModalItems((prev) =>
+      prev.filter((item) => item !== categoryNameToRemove),
+    );
+  };
+
+  const handleSavePhase3Categories = async () => {
+    if (!phase3CategoryModalMovie) return;
+
+    setPhase3CategoryModalError("");
+    setPhase3CategoryModalLoading(true);
+
+    try {
+      const nextCategories = [...phase3CategoryModalItems];
+      await patchMoviePhase3Categories(
+        phase3CategoryModalMovie.id,
+        nextCategories,
+      );
+      setMovies((prev) =>
+        prev.map((movie) =>
+          Number(movie?.id) === Number(phase3CategoryModalMovie?.id)
+            ? { ...movie, genre: nextCategories }
+            : movie,
+        ),
+      );
+      setPhase3CategoryModalMovie(null);
+      setPhase3CategoryModalItems([]);
+      setPhase3CategoryModalInput("");
+    } catch (error) {
+      setPhase3CategoryModalError(
+        error?.message || "Impossible d'enregistrer les categories phase 3.",
+      );
+    } finally {
+      setPhase3CategoryModalLoading(false);
+    }
+  };
+
   if (accessLoading) {
     return <PageLoader message={t("ui.loading_gallery_access", "Checking gallery access...")} />;
   }
@@ -494,6 +665,7 @@ const Gallery = () => {
     setMinRating(0);
     setMaxRating(5);
     setSearchQuery("");
+    setSelectedCategories([]);
   };
 
   return (
@@ -556,6 +728,12 @@ const Gallery = () => {
                     setMinRating(0);
                     setMaxRating(5);
                   }}
+                  selectedCategories={selectedCategories}
+                  onRemoveCategory={(categoryName) => {
+                    setSelectedCategories((prev) =>
+                      prev.filter((item) => item !== categoryName),
+                    );
+                  }}
                   canManagePhaseSelection={canManagePhaseSelection}
                   canManagePhase2Selection={canManagePhase2Selection}
                   phase2SelectedCount={phase2SelectedCount}
@@ -609,12 +787,15 @@ const Gallery = () => {
                         isLight={isLight}
                         flagSrc={flagSrc}
                         flagAlt={flagAlt}
+                        showPhase3Categories={showPhase3Categories}
                         canManagePhaseSelection={canManagePhaseSelection}
+                        canManagePhase3Categories={canManagePhase3Categories}
                         isSelectionDisabled={isSelectionDisabled}
                         isSelectionBusy={isSelectionBusy}
                         isSelectedForPhase2={isSelectedForPhase2}
                         isQuotaReachedForAdd={isQuotaReachedForAdd}
                         canManagePhase2Selection={canManagePhase2Selection}
+                        onManagePhase3Categories={() => handleOpenPhase3CategoryModal(movie)}
                         onToggleSelection={() =>
                           handleTogglePhase2Selection(movieId, isSelectedForPhase2)
                         }
@@ -640,6 +821,85 @@ const Gallery = () => {
         </section>
       </div>
 
+      {phase3CategoryModalMovie && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-950/90 backdrop-blur-md"
+            onClick={handleClosePhase3CategoryModal}
+          ></div>
+          <div className="relative w-full max-w-sm rounded-[40px] border border-slate-500/35 bg-slate-900 p-10 text-center shadow-2xl">
+            <h3 className="mb-6 text-2xl font-black uppercase tracking-tight text-white">
+              Categories phase 3
+            </h3>
+            <p className="mb-6 truncate text-sm font-bold uppercase tracking-wider text-slate-400">
+              {phase3CategoryModalMovie.title}
+            </p>
+
+            <div className="mb-6 flex flex-wrap justify-center gap-2">
+              {phase3CategoryModalItems.map((categoryName) => (
+                <span
+                  key={categoryName}
+                  className="flex items-center gap-1 rounded-full border border-cyan-300/40 bg-cyan-400/15 px-3 py-1 text-sm font-bold text-cyan-200"
+                >
+                  {categoryName}
+                  <button
+                    type="button"
+                    className="text-cyan-300 hover:text-white disabled:opacity-60"
+                    onClick={() => handleRemovePhase3Category(categoryName)}
+                    disabled={phase3CategoryModalLoading}
+                  >
+                    x
+                  </button>
+                </span>
+              ))}
+              {phase3CategoryModalItems.length === 0 && !phase3CategoryModalLoading && (
+                <p className="text-sm text-slate-500">Aucune categorie</p>
+              )}
+            </div>
+
+            <div className="mb-6 flex gap-2">
+              <input
+                type="text"
+                value={phase3CategoryModalInput}
+                onChange={(event) => setPhase3CategoryModalInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    handleAddPhase3Category();
+                  }
+                }}
+                placeholder="Nouvelle categorie"
+                className="flex-1 rounded-2xl border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-300"
+                disabled={phase3CategoryModalLoading}
+              />
+              <button
+                type="button"
+                className="rounded-2xl bg-slate-700 px-4 py-2 text-sm font-black text-white hover:bg-slate-600 disabled:opacity-60"
+                onClick={handleAddPhase3Category}
+                disabled={phase3CategoryModalLoading}
+              >
+                Ajouter
+              </button>
+            </div>
+
+            {phase3CategoryModalError && (
+              <p className="mb-4 text-sm font-semibold text-rose-500">
+                {phase3CategoryModalError}
+              </p>
+            )}
+
+            <button
+              type="button"
+              className="w-full rounded-2xl bg-gradient-to-r from-cyan-300 to-sky-400 py-4 font-black uppercase tracking-widest text-slate-950 transition-all hover:brightness-105 disabled:opacity-60"
+              onClick={handleSavePhase3Categories}
+              disabled={phase3CategoryModalLoading}
+            >
+              {phase3CategoryModalLoading ? "..." : "Enregistrer"}
+            </button>
+          </div>
+        </div>
+      )}
+
       <GalleryFilterModal
         isOpen={isFilterModalOpen}
         isLight={isLight}
@@ -647,6 +907,11 @@ const Gallery = () => {
         sortOptions={sortOptions}
         sortBy={sortBy}
         onSortChange={setSortBy}
+        showPhase3Categories={showPhase3Categories}
+        availableCategories={availableCategories}
+        selectedCategories={selectedCategories}
+        onToggleCategory={toggleSelectedCategory}
+        onClearCategories={() => setSelectedCategories([])}
         minRating={minRating}
         maxRating={maxRating}
         onMinRatingChange={(nextMin) => {
