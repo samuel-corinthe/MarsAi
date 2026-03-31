@@ -1,11 +1,11 @@
 import { resolvePublicAssetPath } from "./assetUrl";
 
-export const DEFAULT_MOVIE_POSTER_PATH = "/images/default-movie-poster.png";
+export const DEFAULT_MOVIE_POSTER_PATH = "/images/default-movie-poster.webp";
 
 function isDefaultMoviePosterLike(value) {
   const raw = String(value || "").trim();
   if (!raw) return true;
-  if (/default-movie-poster\.png/i.test(raw)) return true;
+  if (/default-movie-poster\.webp/i.test(raw)) return true;
   return /^https?:\/\/picsum\.photos\/seed\//i.test(raw);
 }
 
