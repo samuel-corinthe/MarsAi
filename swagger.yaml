@@ -1,0 +1,637 @@
+swagger: '2.0'
+info:
+  description: API documentation
+  version: 1.0.7
+  title: MARS AI
+  termsOfService: http://swagger.io/terms/
+  contact:
+    email: apiteam@swagger.io
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+host: marsaifestival.alwaysdata.net
+tags:
+  - name: newsletter
+    description: Operations about newsletter
+    
+  - name: contact
+    description: Operations about contact form
+
+  - name: movies
+    description: Operations about movies
+
+  - name: site-phase
+    description: Operations about phases
+  
+  
+schemes:
+  - https
+  - http
+paths:
+  /api/movies:
+    get:
+      tags:
+        - movies
+      summary: Get the list of all movies
+      operationId: getAllMovies
+      consumes:
+        - application/json
+        - application/xml
+      produces:
+        - application/json
+        - application/xml
+      
+      responses:
+        '200':
+          description: Success
+        '403':
+          description: Error
+        '500':
+          description: Error
+  /api/movies/{movieId}/me:
+   get:
+      tags:
+        - movies
+      summary: Find a movie rating by ID
+      operationId: getMyRating
+      consumes:
+        - application/json
+        - application/xml
+      produces:
+        - application/json
+        - application/xml
+      parameters:
+        - name: movieId
+          in: path
+          description: ID of movie download that needs to be fetched
+          required: true
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: Success
+        '401':
+          description: Error session
+        '403':
+          description: Error
+        '500':
+          description: Error
+   patch:  
+    tags:
+      - movies
+    summary: Add category for movie in phase3
+    operationId: patchMyRating
+    consumes:
+      - application/json
+      - application/xml
+    produces:
+      - application/json
+      - application/xml
+    parameters:
+      - name: movieId
+        in: path
+        description: ID of movie that needs to be fetched
+        required: true
+        type: integer
+        format: int64
+        schema:
+          $ref: '#/definitions/Movies'
+    responses:
+      '200':
+        description: Success
+      '400':
+        description: Error
+      '500':
+        description: Error 
+   delete:  
+      tags:
+        - movies
+      summary: delete a rating of movie
+      operationId: deleteMyRating
+      consumes:
+        - application/json
+        - application/xml
+      produces:
+        - application/json
+        - application/xml
+      parameters:
+        - name: movieId
+          in: path
+          description: ID of movie's rating that needs to be deleted
+          required: true
+          type: integer
+          format: int64
+          schema:
+            $ref: '#/definitions/Movies'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Error
+        '500':
+          description: Error       
+  /api/movies/{movieId}:
+   get:
+      tags:
+        - movies
+      summary: Find a movie by ID
+      operationId: getMoviebyID
+      consumes:
+        - application/json
+        - application/xml
+      produces:
+        - application/json
+        - application/xml
+      parameters:
+        - name: movieId
+          in: path
+          description: ID of movie download that needs to be fetched
+          required: true
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: Success
+        '401':
+          description: Error session
+        '403':
+          description: Error
+        '500':
+          description: Error
+   
+  
+  /api/movies/{movieId}/download:
+   get:
+      tags:
+        - movies
+      summary: Find a movie download by ID
+      operationId: downloadMovieById
+      consumes:
+        - application/json
+        - application/xml
+      produces:
+        - application/json
+        - application/xml
+      parameters:
+        - name: movieId
+          in: path
+          description: ID of movie download that needs to be fetched
+          required: true
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: Success
+        '401':
+          description: Error session
+        '403':
+          description: Error
+        '500':
+          description: Error
+        
+   patch:  
+      tags:
+        - movies
+      summary: Add category for movie in phase3
+      operationId: patchMoviePhase3Categories
+      consumes:
+        - application/json
+        - application/xml
+      produces:
+        - application/json
+        - application/xml
+      parameters:
+        - name: movieId
+          in: path
+          description: ID of movie that needs to be fetched
+          required: true
+          type: integer
+          format: int64
+          schema:
+            $ref: '#/definitions/Movies'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Error
+        '500':
+          description: Error  
+  /api/movies/{movieId}/phase3-categories:
+   get:
+      tags:
+        - movies
+      summary: Find a movie by ID
+      operationId: getMoviePhase3Categories
+      consumes:
+        - application/json
+        - application/xml
+      produces:
+        - application/json
+        - application/xml
+      parameters:
+        - name: movieId
+          in: path
+          description: ID of movie that needs to be fetched
+          required: true
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: Success
+        '401':
+          description: Error authentification
+        '403':
+          description: Error
+        '500':
+          description: Error
+      security: 
+        - movie_auth:
+          - write:movies
+          - read:movies
+   
+
+  /api/movies/{movieId}/youtube-url:
+    patch:
+      tags:
+        - movies
+      summary: 
+      operationId: patchMovieYoutubeUrl
+      consumes:
+        - application/json
+        - application/xml
+      produces:
+        - application/json
+        - application/xml
+      parameters:
+        - name: movieId
+          in: path
+          description: ID of movie that needs to be edited
+          required: true
+          type: integer
+          format: int64
+          schema:
+            $ref: '#/definitions/Movies'
+        - name: youtubeUrl
+          in: query
+          description: Youtube Url of movie that needs to be edited
+          required: true
+          type: string
+          
+          
+      responses:
+        '200':
+          description: Success
+        '401':
+          description: Error
+        '500':
+          description: Error
+  /api/subscribe-newsletter:
+    post:
+      tags:
+        - newsletter
+      summary: Subscribe to the newsletter
+      operationId: subscribeNewsletter
+      consumes:
+        - application/json
+        - application/xml
+      produces:
+        - application/json
+        - application/xml
+      parameters:
+        - in: body
+          name: body
+          description: Newsletter form inputs
+          required: true
+          schema:
+            $ref: '#/definitions/Newsletter'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Email,firstName invalid or required
+        '500':
+          description: Error
+      
+  
+  /api/send-email:
+    post:
+      tags:
+        - contact
+      summary: Send an email
+      operationId: sendEmail
+      consumes:
+        - application/json
+        - application/xml
+      produces:
+        - application/json
+        - application/xml
+      parameters:
+        - in: body
+          name: body
+          description: Contact form inputs
+          required: true
+          schema:
+            $ref: '#/definitions/Contact'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Email invalid or all fields required
+        '500':
+          description: Error
+
+  /api/site-phase/:
+    get:
+      tags:
+        - site-phase
+      summary: Get site phase 
+      operationId: getSitePhase
+      consumes:
+        - application/json
+        - application/xml
+      produces:
+        - application/json
+        - application/xml
+      
+      responses:
+        '200':
+          description: Success
+        '403':
+          description: Error
+        '500':
+          description: Error
+    patch:
+      tags:
+        - site-phase
+      summary: Edit phase site
+      operationId: patchSitePhase
+      consumes:
+        - application/json
+        - application/xml
+      produces:
+        - application/json
+        - application/xml
+      parameters:
+        - in: body
+          name: body
+          description: 
+          required: true
+          schema:
+            $ref: '#/definitions/Sitephase'
+      responses:
+        '200':
+          description: Success
+        '401':
+          description: Error
+        '500':
+          description: Error 
+  /api/site-phase/phase3-winners:
+    get:
+      tags:
+        - site-phase
+      summary: Get phase3 winners 
+      operationId: getPhase3Winners
+      consumes:
+        - application/json
+        - application/xml
+      produces:
+        - application/json
+        - application/xml
+      
+      responses:
+        '200':
+          description: Success
+        '403':
+          description: Error
+        '500':
+          description: Error
+  /api/site-phase/phase2-selection:
+    get:
+      tags:
+        - site-phase
+      summary: Get phase2 selection 
+      operationId: getPhase2Selection
+      consumes:
+        - application/json
+        - application/xml
+      produces:
+        - application/json
+        - application/xml
+      
+      responses:
+        '200':
+          description: Success
+        '403':
+          description: Error
+        '500':
+          description: Error
+    patch:
+      tags:
+        - site-phase
+      summary: Edit phase2 selection
+      operationId: patchPhase2Selection
+      consumes:
+        - application/json
+        - application/xml
+      produces:
+        - application/json
+        - application/xml
+      parameters:
+        - in: body
+          name: body
+          description: 
+          required: true
+          schema:
+            $ref: '#/definitions/Sitephase'
+        
+      responses:
+        '200':
+          description: Success
+        '401':
+          description: Error
+        '500':
+          description: Error 
+  /api/site-phase/phase3-selection:
+    get:
+      tags:
+        - site-phase
+      summary: Get phase3 selection 
+      operationId: getPhase3Selection
+      consumes:
+        - application/json
+        - application/xml
+      produces:
+        - application/json
+        - application/xml
+      
+      responses:
+        '200':
+          description: Success
+        '403':
+          description: Error
+        '500':
+          description: Error
+    patch:
+      tags:
+        - site-phase
+      summary: Edit phase3 selection
+      operationId: patchPhase3Selection
+      consumes:
+        - application/json
+        - application/xml
+      produces:
+        - application/json
+        - application/xml
+      parameters:
+        - in: body
+          name: body
+          description: 
+          required: true
+          schema:
+            $ref: '#/definitions/Sitephase'
+        
+      responses:
+        '200':
+          description: Success
+        '401':
+          description: Error
+        '500':
+          description: Error
+  /api/site-phase/phase2-selection/validate:
+    post:
+      tags:
+        - site-phase
+      summary: Validate Phase2 Selection
+      operationId: postValidatePhase2Selection
+      consumes:
+        - application/json
+        - application/xml
+      produces:
+        - application/json
+        - application/xml
+      parameters:
+        - in: body
+          name: body
+          description: 
+          required: true
+          schema:
+            $ref: '#/definitions/Sitephase'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Error
+        '500':
+          description: Error
+  /api/site-phase/phase3-selection/validate:
+     post:
+      tags:
+        - site-phase
+      summary: Validate Phase3 Selection
+      operationId: postValidatePhase3Selection
+      consumes:
+        - application/json
+        - application/xml
+      produces:
+        - application/json
+        - application/xml
+      parameters:
+        - in: body
+          name: body
+          description: 
+          required: true
+          schema:
+            $ref: '#/definitions/Sitephase'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Error
+        '500':
+          description: Error
+definitions:
+  Movies:
+    type: object
+    required:
+      - movieId
+      - score
+      - adminId
+      
+    properties: 
+      movieId:
+        type: integer
+      score:
+        type: integer
+      adminId:
+        type: integer
+      
+      
+    
+  Contact:
+    type: object
+    required:
+      - name
+      - email
+      - subject
+      - message
+    properties:
+      name:
+        type: string
+      email:
+        type: string
+      subject:
+        type: string
+      message:
+        type: string
+      lang:
+        type: string
+    
+  Newsletter:
+    type: object
+    required:
+      - firstName
+      - email
+      - preferences 
+    properties:
+      firstName:
+        type: string
+      email:
+        type: string
+      preferences:
+        type: array
+        items:
+          type: string
+      lang:
+        type: string
+  Sitephase:
+      type: object
+      required:
+        - movieId
+        - selected
+        - actorAdminId
+        - currentPhase 
+        - mode
+        - updatedBy
+        - actorRole
+      properties:
+        movieId:
+          type: integer
+        selected:
+          type: boolean
+        actorAdminId:
+          type: integer
+        currentPhase:
+          type: integer
+        mode:
+          type: string
+        updatedBy:
+          type: integer 
+        actorRole:
+          type: string 
+      
+    
+     
+    
+externalDocs:
+  description: Find out more about Swagger
+  url: http://swagger.io
