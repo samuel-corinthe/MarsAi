@@ -35,7 +35,7 @@ const SITE_BASE_URL = getSiteBaseUrl();
 const SITE_HOME_URL = `${SITE_BASE_URL}/accueil`;
 const SITE_AGENDA_URL = `${SITE_BASE_URL}/agenda`;
 const SITE_LOGO_URL = toAbsoluteUrl("/favicon.svg");
-const SITE_IMAGE_URL = toAbsoluteUrl("/images/marsai-illustration.png");
+const SITE_IMAGE_URL = toAbsoluteUrl("/images/marsai-illustration.webp");
 
 // Schema pour l'organisation du festival
 export const OrganizationSchema = () => {

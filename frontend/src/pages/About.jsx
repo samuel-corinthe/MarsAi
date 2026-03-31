@@ -202,7 +202,7 @@ export default function About() {
 
             <aside className="space-y-4">
               <img
-                src={resolvePublicAssetPath("/images/marsai-illustration.png")}
+                src={resolvePublicAssetPath("/images/marsai-illustration.webp")}
                 alt="MarsAI"
                 className={`w-full rounded-[28px] border object-cover ${theme.imageBorder}`}
                 onError={(event) => {
