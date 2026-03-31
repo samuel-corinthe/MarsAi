@@ -21,8 +21,8 @@ export default function Home({ page }) {
     `${import.meta.env.BASE_URL}models/walking_robot_mr.glb`;
   const modelPoster = import.meta.env.VITE_HOME_MODEL_POSTER_URL || "";
   const modelFallbackSrc = isLight
-    ? resolvePublicAssetPath("/images/robot_light.png")
-    : resolvePublicAssetPath("/images/robot.png");
+    ? resolvePublicAssetPath("/images/robot_light.webp")
+    : resolvePublicAssetPath("/images/robot.webp");
   const currentLanguage = normalizeLanguage(i18n.language);
   const isArabic = currentLanguage === "ar";
   const submitFilmPath = getLocalizedPath("submitFilm", i18n.language);

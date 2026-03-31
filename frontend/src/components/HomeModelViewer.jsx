@@ -2,7 +2,7 @@ import { useState } from "react";
 import useHomeModelViewerController from "../controllers/useHomeModelViewerController";
 import { resolvePublicAssetPath } from "../utils/assetUrl";
 
-const DEFAULT_ROBOT_IMAGE = resolvePublicAssetPath("/images/robot.png");
+const DEFAULT_ROBOT_IMAGE = resolvePublicAssetPath("/images/robot.webp");
 
 function SafeFallbackImage({ src, alt }) {
   const [resolvedSrc, setResolvedSrc] = useState(src || DEFAULT_ROBOT_IMAGE);
