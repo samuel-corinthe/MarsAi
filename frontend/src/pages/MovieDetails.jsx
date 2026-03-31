@@ -72,7 +72,7 @@ const SHARE_PLATFORMS = [
       `https://wa.me/?text=${encodeURIComponent(`${title} ${url}`)}`,
   },
 ];
-const DEFAULT_CAST_PROFILE_SRC = resolvePublicAssetPath("/images/profile-default.png");
+const DEFAULT_CAST_PROFILE_SRC = resolvePublicAssetPath("/images/profile-default.webp");
 
 function toExternalUrl(value) {
   const raw = String(value || "").trim();
