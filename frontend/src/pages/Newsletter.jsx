@@ -59,11 +59,17 @@ export default function Newsletter() {
     setFlashMessage(null);
 
     try {
-      await subscribeNewsletterForm({
-        ...formData,
-        lang: i18n.language,
-      });
-      setIsSubmitted(true);
+await subscribeNewsletterForm({
+  ...formData,
+  lang: i18n.language,
+});
+if (typeof window !== "undefined" && typeof window.gtag === "function") {
+  window.gtag("event", "newsletter_signup_success", {
+    method: "newsletter_page",
+  });
+}
+
+setIsSubmitted(true);
       setFlashMessage({
         type: "success",
         title: t("newsletter.form.success_title"),
