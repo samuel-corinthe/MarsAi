@@ -1603,43 +1603,6 @@ export default function YoutubeUpload() {
                         </span>
                     </div>
 
-                    {/* Fichier sous-titres SRT */}
-                    <div className="space-y-2">
-                        <label htmlFor="subtitle-upload" className="block text-sm font-semibold text-slate-700">
-                            {t('upload.form.subtitle_label')} <span className="text-slate-500 font-normal">({optionalLabel})</span>
-                        </label>
-                        <input
-                            id="subtitle-upload"
-                            type="file"
-                            accept=".srt"
-                            onChange={(e) => {
-                                const selected = e.target.files[0];
-                                if (selected) {
-                                    if (!selected.name.toLowerCase().endsWith('.srt')) {
-                                        setErrors(prev => ({ ...prev, subtitle: t('upload.errors.subtitle_format') }));
-                                        setSubtitleFile(null);
-                                        return;
-                                    }
-                                    if (selected.size > 1024 * 1024) {
-                                        setErrors(prev => ({ ...prev, subtitle: t('upload.errors.subtitle_too_large') }));
-                                        setSubtitleFile(null);
-                                        return;
-                                    }
-                                    setSubtitleFile(selected);
-                                    clearError('subtitle');
-                                }
-                            }}
-                            className={`w-full border p-3 rounded-lg text-sm ${errors.subtitle ? 'border-red-500 bg-red-50' : 'border-slate-200'}`}
-                        />
-                        {subtitleFile && (
-                            <p className="text-slate-700 text-sm" aria-live="polite">{subtitleFile.name}</p>
-                        )}
-                        {errors.subtitle && (
-                            <p className="text-red-600 text-sm mt-1" role="alert">{errors.subtitle}</p>
-                        )}
-                    </div>
-
-                    {/* HONEYPOT - Champ piÃ¨ge dynamique invisible */}
                     {honeypotFieldName && (
                         <div
                             style={{
