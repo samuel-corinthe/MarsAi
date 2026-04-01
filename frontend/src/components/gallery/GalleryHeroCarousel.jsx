@@ -38,7 +38,7 @@ export default function GalleryHeroCarousel({
         />
       )}
       <div
-        className={`absolute inset-0 ${isLight ? "bg-black/55" : "bg-black/55"}`}
+        className={`absolute inset-0 ${isLight ? "bg-white/00" : "bg-white/00"}`}
       />
       <div
         className={`absolute inset-0 ${
