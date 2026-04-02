@@ -25,33 +25,28 @@ Cet exemple se lit en 2 temps :
 ```mermaid
 flowchart TD
     subgraph A[Flux 1 : login]
-        A1[User ouvre /dashboard]
-        A2[DashboardEntry.jsx]
-        A3[loginWithWordPress]
-        A4[POST /api/auth/wordpress/login]
-        A5[Route auth]
-        A6[Auth controller]
-        A7[Auth service]
-        A8[Cookie de session]
+        A1[Frontend]
+        A2[Route auth]
+        A3[Auth controller]
+        A4[Auth service]
+        A5[Cookie de session]
 
-        A1 --> A2 --> A3 --> A4 --> A5 --> A6 --> A7 --> A8
+        A1 --> A2 --> A3 --> A4 --> A5
     end
 
     subgraph B[Flux 2 : dashboard protege]
-        B1[Frontend appelle /api/dashboard]
-        B2[requireAuth]
-        B3[requireRole]
-        B4[Route dashboard]
-        B5[Dashboard controller]
-        B6[Dashboard service]
-        B7[Dashboard model]
-        B8[(Base de donnees)]
-        B9[JSON retourne au frontend]
+        B1[Frontend]
+        B2[Middleware auth]
+        B3[Route dashboard]
+        B4[Dashboard controller]
+        B5[Dashboard service]
+        B6[Dashboard model]
+        B7[(Base de donnees)]
 
-        B1 --> B2 --> B3 --> B4 --> B5 --> B6 --> B7 --> B8 --> B9
+        B1 --> B2 --> B3 --> B4 --> B5 --> B6 --> B7
     end
 
-    A8 --> B1
+    A5 --> B1
 ```
 
 ### Etapes
