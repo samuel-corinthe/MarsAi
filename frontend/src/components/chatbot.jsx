@@ -1107,7 +1107,7 @@ export default function FaqChatbot() {
   );
 
   return (
-    <div className={`fixed z-[70] font-sans ${rootPositionClass}`}>
+    <div className={`fixed z-[90] font-sans ${rootPositionClass}`}>
       <div
         className={`backdrop-blur-lg transition-all duration-300 ${
           isRtl ? "origin-bottom-left" : "origin-bottom-right"
