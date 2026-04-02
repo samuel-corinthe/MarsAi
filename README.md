@@ -18,38 +18,40 @@ Frontend -> Backend -> (WordPress + MySQL + services externes)
 
 ## Exemple de flux : connexion au dashboard
 
-Cet exemple montre un parcours complet, de l'ouverture de la page jusqu'au chargement des donnees dashboard.
+Cet exemple se lit en 2 temps :
+- d'abord le login, qui cree la session
+- ensuite l'appel au dashboard, qui passe par les middlewares de protection
 
 ```mermaid
 flowchart TD
-    A[User ouvre /dashboard] --> B[App.jsx route /dashboard]
-    B --> C[DashboardEntry.jsx]
-    C --> D{Session existante ?}
-    D -- Oui --> E[getCurrentSessionUser]
-    D -- Non --> F[Formulaire login]
-    F --> G[loginWithWordPress dans api.js]
-    G --> H[POST /api/auth/wordpress/login]
+    subgraph A[Flux 1 : login]
+        A1[User ouvre /dashboard]
+        A2[DashboardEntry.jsx]
+        A3[loginWithWordPress]
+        A4[POST /api/auth/wordpress/login]
+        A5[Route auth]
+        A6[Auth controller]
+        A7[Auth service]
+        A8[Cookie de session]
 
-    H --> I[routes/auth.js]
-    I --> J[authController.wordpressLogin]
-    J --> K[authService.fetchWordPressIdentity]
-    K --> L[authService.mapWpRolesToAppRole]
-    L --> M[authService.upsertLocalUser]
-    M --> N[authService.setSessionCookie]
+        A1 --> A2 --> A3 --> A4 --> A5 --> A6 --> A7 --> A8
+    end
 
-    N --> O[Session cookie creee]
-    O --> P[Frontend appelle /api/dashboard]
-    P --> Q[app.js adminGuard]
-    Q --> R[requireAuth]
-    R --> S[getSessionFromRequest]
-    S --> T[requireRole]
-    T --> U[routes/dashboard.js]
-    U --> V[dashboardController.getDashboard]
-    V --> W[dashboardService.getDashboardPayload]
-    W --> X[dashboardModel SQL]
-    X --> Y[(Base de donnees)]
-    Y --> Z[JSON retourne au frontend]
-    Z --> AA[Affichage du dashboard]
+    subgraph B[Flux 2 : dashboard protege]
+        B1[Frontend appelle /api/dashboard]
+        B2[requireAuth]
+        B3[requireRole]
+        B4[Route dashboard]
+        B5[Dashboard controller]
+        B6[Dashboard service]
+        B7[Dashboard model]
+        B8[(Base de donnees)]
+        B9[JSON retourne au frontend]
+
+        B1 --> B2 --> B3 --> B4 --> B5 --> B6 --> B7 --> B8 --> B9
+    end
+
+    A8 --> B1
 ```
 
 ### Etapes
@@ -72,16 +74,16 @@ flowchart TD
    - service : [`dashboardService.js`](backend/services/dashboardService.js#L171)
    - modele SQL : [`dashboardModel.js`](backend/models/dashboardModel.js#L14)
 
-## Ce que ce flux illustre
+## Schéma global
 
-- une route frontend
-- un appel API
-- une route backend
-- un middleware de securite
-- un controleur
-- un service metier
-- un modele SQL
-- puis le retour JSON vers l'interface
+- route frontend
+- appel API
+- route backend
+- middleware de securite
+- controleur
+- service metier
+- modele SQL
+- retour JSON vers l'interface
 
 ## Documentation complementaire
 
