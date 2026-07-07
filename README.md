@@ -2,6 +2,68 @@
 
 Application web avec frontend React/Vite et backend Express, connectee a WordPress pour l'authentification et a MySQL pour les donnees metier.
 
+## Demarrage du projet
+
+### Prerequis
+
+- Node.js 18+ (teste avec Node 22)
+- Une base MySQL ou MariaDB accessible
+- ffmpeg / ffprobe installes (ou definir `FFMPEG_PATH` / `FFPROBE_PATH` dans le `.env` backend)
+- Un site WordPress accessible (source d'identite pour l'authentification)
+- Des identifiants Scaleway Object Storage (S3) si vous testez l'upload de video
+
+### 1. Cloner le depot
+
+```bash
+git clone <url-du-depot>
+cd MarsAi-prod
+```
+
+### 2. Backend
+
+```bash
+cd backend
+npm install
+cp .env.example .env
+```
+
+Completer le `.env` avec au minimum : les identifiants de connexion a la base (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`), le port d'ecoute du serveur (`PORT`, 3000 par defaut) et les variables Scaleway/S3 deja presentes dans `.env.example`.
+
+Creer la base de donnees puis executer les scripts SQL du dossier `backend/sql/` dans l'ordre numerique (`01_...` a `08_...`) pour mettre en place le schema.
+
+Demarrer le serveur :
+
+```bash
+node index.js
+```
+
+Le backend demarre par defaut sur `http://localhost:3000`.
+
+### 3. Frontend
+
+Dans un second terminal :
+
+```bash
+cd frontend
+npm install
+cp .env.example .env
+```
+
+Completer le `.env` avec `VITE_WORDPRESS_URL` (l'URL de votre site WordPress) et `VITE_BACKEND_API_ORIGIN` (l'URL du backend demarre a l'etape precedente).
+
+Demarrer le serveur de developpement :
+
+```bash
+npm run dev
+```
+
+Le frontend est alors accessible sur `http://localhost:5173`.
+
+### 4. Verification
+
+- `npm run lint` (frontend) pour verifier la qualite du code.
+- `npm run test:run` (frontend) pour lancer la suite de tests Vitest.
+
 ## Architecture
 
 - Frontend React/Vite : pages publiques, dashboard, upload, navigation, composants UI.
