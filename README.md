@@ -61,7 +61,6 @@ Le frontend est alors accessible sur `http://localhost:5173`.
 
 ### 4. Verification
 
-- `npm run lint` (frontend) pour verifier la qualite du code.
 - `npm run test:run` (frontend) pour lancer la suite de tests Vitest.
 
 ## Architecture
