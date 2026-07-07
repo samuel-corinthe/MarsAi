@@ -15,7 +15,7 @@ Application web avec frontend React/Vite et backend Express, connectee a WordPre
 ### 1. Cloner le depot
 
 ```bash
-git clone <url-du-depot>
+git clone https://github.com/samuel-corinthe/MarsAi.git
 cd MarsAi-prod
 ```
 
